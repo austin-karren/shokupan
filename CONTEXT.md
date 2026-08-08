@@ -47,9 +47,21 @@ that itself contains no identity. `~/.gitconfig.local` is the reference example;
 _Avoid_: secrets file, private config
 
 **Base**:
-CachyOS, and the bridge repo that layered Omarchy onto it (ADR-0001). The bottom
-of the three layers, and the one this repo has least control over.
+CachyOS: the kernel, the znver4 repos, the bootloader and snapper. The bottom of
+the three layers, and **not Omarchy's to manage** (ADR-0034). Layered onto by the
+bridge repo when this machine was built (ADR-0001); that bridge is retired going
+forward and the install path becomes this repo's (ADR-0035).
 _Avoid_: distro, system, OS (each is ambiguous between the base and Omarchy)
+
+**Bridge**:
+[mroboff/omarchy-on-cachyos][bridge], which patches Omarchy's installer so it
+leaves the base alone. Historical: it built this machine, and its nine
+uncommitted edits still sit in Omarchy's checkout, but five of them target files
+quattro deleted. Say _bridge_ only about that repo — the concern it addresses is
+the **layer contract**, which outlives it.
+_Avoid_: the installer (Omarchy has one; the bridge only edits it)
+
+[bridge]: https://github.com/mroboff/omarchy-on-cachyos
 
 **Displaced**:
 Of a tracked config: overwritten by an upstream update, so the symlink is gone

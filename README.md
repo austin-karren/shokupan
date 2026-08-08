@@ -256,6 +256,7 @@ are the to-do list.
 | [0032](./docs/adr/0032-flathub-on-the-web-with-a-ref-handler.md) | Flathub on the web, with a ref handler | accepted |
 | [0033](./docs/adr/0033-quattro-is-a-hyprland-rewrite-not-a-bar-swap.md) | Quattro is a Hyprland rewrite, not a bar swap | proposed |
 | [0034](./docs/adr/0034-omarchy-is-clay-cachyos-is-the-base.md) | Omarchy is clay; CachyOS is the base | accepted |
+| [0035](./docs/adr/0035-shokupan-owns-the-install-path.md) | Shokupan owns the install path; the bridge is retired | proposed |
 
 ## To do
 
