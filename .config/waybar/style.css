@@ -124,6 +124,7 @@
 #custom-ratio,
 #bluetooth,
 #network,
+#custom-tailscale,
 #pulseaudio,
 #battery {
   margin: 0 8.6px;
@@ -162,6 +163,20 @@
 
 #network.ethernet {
   min-width: 10px;
+}
+
+/* Tailscale carries state by opacity, not by a second glyph, so ONE width covers
+   every state -- the same arrangement as #custom-ratio, and the reason there is no
+   per-state row for it in the table above. Ink measured the same way as the rest:
+   the module was painted a flat colour and the painted span read off a grim capture
+   at 1.67x. 18 physical px -> 18/1.67 = 10.8 logical. */
+#custom-tailscale {
+  min-width: 10.8px;
+}
+
+#custom-tailscale.disconnected,
+#custom-tailscale.needs-login {
+  opacity: 0.5;
 }
 
 #pulseaudio {

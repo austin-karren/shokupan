@@ -16,6 +16,7 @@
     "custom/ratio",
     "bluetooth",
     "network",
+    "custom/tailscale",
     "pulseaudio",
     "battery"
   ],
@@ -145,6 +146,26 @@
     "spacing": 1,
     // Same toggle treatment as bluetooth above.
     "on-click": "window-toggle org.omarchy.impala omarchy-launch-wifi"
+  },
+  // Sits immediately right of network because it answers the next question up the
+  // stack: network says whether this machine is on the internet, tailscale whether it
+  // is on the tailnet. See ADR-0029.
+  //
+  // One glyph for every state, state carried by the CSS class -- the same trick
+  // custom/ratio uses, and the reason this module needs only one measured ink width
+  // instead of one per state. Backed by ~/.local/bin/tailscale-icon.
+  //
+  // The interval is a fallback: clicking signals the bar immediately, but the tailnet
+  // can also go up or down without us (daemon restart, network loss, `tailscale` from
+  // a terminal), so the state is re-read periodically to stay honest.
+  "custom/tailscale": {
+    "format": "{}",
+    "exec": "tailscale-icon --status",
+    "return-type": "json",
+    "signal": 13,
+    "interval": 10,
+    "on-click": "tailscale-icon --toggle",
+    "on-click-right": "omarchy-launch-or-focus-webapp Tailscale \"https://login.tailscale.com/admin/machines\""
   },
   "battery": {
     "format": "{capacity}% {icon}",
