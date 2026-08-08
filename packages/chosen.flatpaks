@@ -1,0 +1,18 @@
+# Flatpaks chosen deliberately, on top of the pacman manifest.
+#
+# This is the Flatpak half of the manifest. `packages/chosen.packages` covers the
+# pacman repos and the AUR; neither it nor `packages.txt` can see a Flatpak, so an
+# app installed this way appears in no other file (see Source, in CONTEXT.md).
+#
+# Reach for a Flatpak only when neither `omarchy install <thing>` nor
+# `omarchy pkg add <packages...>` covers the app -- it is not packaged for Arch, it
+# is proprietary, or it is worth sandboxing. See ADR-0032.
+#
+# Format: one application ID per line, # comments. `loaf flatpaks` diffs this file
+# against what is installed, and installs what is missing with --install.
+#
+# Installs are system-wide, matching the system-level flathub remote.
+
+# Minecraft launcher. Not in the Arch repos; the AUR build is a wrapper around the
+# same upstream binary, so the Flatpak is the lower-maintenance route.
+gg.dawn.Launcher

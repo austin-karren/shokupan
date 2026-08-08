@@ -238,6 +238,16 @@ else
   bad "manifest" "manifest and system disagree" "run 'loaf packages' for the diff"
 fi
 
+# Flatpaks are a separate Source and appear in neither chosen.packages nor
+# packages.txt, so a missing one is invisible to the check above.
+if command -v flatpak &>/dev/null; then
+  if loaf-flatpaks --quiet 2>/dev/null; then
+    ok "flatpaks" "all chosen flatpaks installed"
+  else
+    bad "flatpaks" "flatpak manifest and system disagree" "run 'loaf flatpaks' for the diff"
+  fi
+fi
+
 layer "Migrations"
 
 pending=0

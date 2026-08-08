@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# loaf:summary=Diff the Flatpak manifest against what is installed
+# loaf:args=[--quiet] [--install]
+
+# The Flatpak half of `loaf packages`. Kept as its own command rather than folded
+# into that one because the two answer to different tooling: pacman knows nothing
+# about Flatpaks, and a missing Flatpak is fixed by a different command than a
+# missing package.
+#
+# A Ref installed from flathub.org (ADR-0032) leaves an Origin remote named after
+# the Ref rather than after Flathub, so this compares application IDs only and
+# never the remote an app came from.
+
+set -uo pipefail
+
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
+MANIFEST="$LOAF_ROOT/packages/chosen.flatpaks"
+
+quiet=false
+install=false
+for arg in "$@"; do
+  case $arg in
+  --quiet) quiet=true ;;
+  --install) install=true ;;
+  *)
+    echo "usage: loaf flatpaks [--quiet] [--install]" >&2
+    exit 64
+    ;;
+  esac
+done
+
+if [[ ! -f $MANIFEST ]]; then
+  $quiet || echo "loaf: no flatpak manifest at $MANIFEST" >&2
+  exit 1
+fi
+
+if ! command -v flatpak &>/dev/null; then
+  $quiet && exit 1
+  printf '\033[33m!\033[0m flatpak is not installed — nothing to check\n'
+  exit 1
+fi
+
+mapfile -t chosen < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$MANIFEST" | sort -u)
+
+# --app so runtimes and platform extensions are ignored: they arrive as
+# dependencies and are not choices.
+mapfile -t installed < <(flatpak list --app --columns=application 2>/dev/null | sort -u)
+
+missing=()
+for id in "${chosen[@]}"; do
+  printf '%s\n' "${installed[@]}" | grep -qxF "$id" || missing+=("$id")
+done
+
+if ((${#missing[@]} == 0)); then
+  $quiet && exit 0
+  printf '\033[32m✓\033[0m all %d chosen flatpaks installed\n' "${#chosen[@]}"
+else
+  $quiet && exit 1
+  printf '\033[31m✗\033[0m %d chosen flatpak(s) not installed:\n' "${#missing[@]}"
+  printf '    %s\n' "${missing[@]}"
+  if $install; then
+    printf '\n  installing from flathub...\n'
+    for id in "${missing[@]}"; do
+      flatpak install -y flathub "$id" || printf '\033[31m✗\033[0m %s failed\n' "$id"
+    done
+  else
+    printf '\n  install them:  loaf flatpaks --install\n'
+  fi
+fi
+
+$quiet && exit 0
+
+# The reverse direction: installed but not chosen. Unlike packages.txt there is no
+# separate record for Flatpaks, so anything here is either worth adding to the
+# manifest or worth removing from the machine.
+untracked=()
+for id in "${installed[@]}"; do
+  [[ -n $id ]] || continue
+  printf '%s\n' "${chosen[@]}" | grep -qxF "$id" || untracked+=("$id")
+done
+if ((${#untracked[@]})); then
+  printf '\n\033[33m!\033[0m %d flatpak(s) installed but not in the manifest:\n' "${#untracked[@]}"
+  printf '    %s\n' "${untracked[@]}"
+  printf '    add them to %s, or remove them\n' "${MANIFEST/#$LOAF_HOME/\~}"
+fi
