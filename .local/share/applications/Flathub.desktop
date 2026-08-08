@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Flathub
+Comment=Flathub
+Exec=omarchy-launch-webapp https://flathub.org/en
+Terminal=false
+Type=Application
+Icon=/home/austinkarren/.local/share/applications/icons/Flathub.png
+StartupNotify=true

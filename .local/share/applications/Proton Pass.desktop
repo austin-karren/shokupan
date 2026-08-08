@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Proton Pass
+Comment=Proton Pass
+Exec=omarchy-launch-webapp https://pass.proton.me/
+Terminal=false
+Type=Application
+Icon=/home/austinkarren/.local/share/applications/icons/Proton Pass.png
+StartupNotify=true

@@ -103,7 +103,9 @@ it can also override anything the tracked `.bashrc` set.
 | `.bashrc` | Thin — sources Omarchy's `default/bash/rc` |
 | `.local/bin/` | The `loaf` CLI, plus every script a keybinding or bar module depends on. The npx shims (`codex`, `gemini`, …) stay untracked — they are generated, not config |
 | `.config/omarchy/hooks/post-update.d/` | Runs `loaf heal` after each `omarchy update` — the sanctioned hook directory, not a patched Omarchy file |
-| `packages/`, `migrations/` | Repo-only: the package manifest, and one-shot fixes for state that lives outside the repo |
+| `.local/share/applications/` | The web apps (`omarchy-launch-webapp` entries) and their icons, plus the Flatpak ref handler. Tracked because a rebuild would otherwise come up with no web apps at all |
+| `.config/mimeapps.list` | Which application handles what. Load-bearing, not incidental: it is the half of ADR-0032 that actually activates the Flatpak ref handler |
+| `packages/`, `migrations/` | Repo-only: the package manifests (pacman and Flatpak), and one-shot fixes for state that lives outside the repo |
 
 ### Deliberately not tracked
 
