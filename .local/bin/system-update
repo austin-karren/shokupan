@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Update the base — CachyOS and Arch packages, the AUR, and Flatpaks — without
+# touching Omarchy. `omarchy update` is the other half: it pulls Omarchy's own
+# checkout and then runs the system packages too. This one deliberately does not,
+# so the base can be updated on its own and a problem afterwards is attributable to
+# one layer rather than two. That separation is the whole point (ADR-0033 sequences
+# a CachyOS update before the quattro migration for exactly this reason).
+#
+# Runs interactively rather than --noconfirm: pacman's own prompts are where you
+# see replacements and .pacnew warnings, and those are worth reading on a machine
+# with a bridged install (ADR-0001). Omarchy's updater passes --noconfirm; this one
+# does not, on purpose.
+#
+# Launch it from the System Palette ("Update System"), which wraps it in Omarchy's
+# floating terminal presentation.
+
+set -uo pipefail
+
+step() { printf '\n\e[32m%s\e[0m\n' "$1"; }
+skip() { printf '\n\e[33m%s\e[0m\n' "$1"; }
+
+failed=()
+
+step "Update system packages"
+if sudo pacman -Syu; then :; else failed+=("pacman"); fi
+
+if command -v yay &>/dev/null; then
+  step "Update AUR packages"
+  # --devel would also rebuild -git packages against their upstream HEAD, which
+  # turns a routine update into an unbounded build. Left off deliberately.
+  yay -Sua || failed+=("aur")
+else
+  skip "No AUR helper found — skipping AUR"
+fi
+
+if command -v flatpak &>/dev/null; then
+  step "Update flatpaks"
+  flatpak update || failed+=("flatpak")
+else
+  skip "Flatpak not installed — skipping"
+fi
+
+# The rice sits on top of all of it, and a package update can displace a symlink
+# (ADR-0028). Re-assert it here so the update ends with the desktop in a known
+# state rather than leaving it to the next `omarchy update` hook.
+if command -v loaf &>/dev/null; then
+  step "Re-assert the rice"
+  loaf heal
+fi
+
+if ((${#failed[@]})); then
+  printf '\n\e[31mFinished with problems in: %s\e[0m\n' "${failed[*]}"
+  printf 'Run \e[1mloaf doctor\e[0m once they are resolved.\n'
+  exit 1
+fi
+
+step "Done"
+printf 'Run \e[1mloaf doctor\e[0m to confirm all three layers agree.\n'

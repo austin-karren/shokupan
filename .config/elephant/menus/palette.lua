@@ -199,6 +199,12 @@ function GetEntries()
     Actions = { activate = "omarchy-menu update" },
   })
   add({
+    Text = "Update System",
+    Icon = "",
+    Keywords = {"update", "upgrade", "cachyos", "arch", "pacman", "aur", "flatpak", "system"},
+    Actions = { activate = "omarchy-launch-floating-terminal-with-presentation system-update" },
+  })
+  add({
     Text = "Start Screensaver",
     Icon = "󱄄",
     Keywords = {"screensaver", "blank"},
