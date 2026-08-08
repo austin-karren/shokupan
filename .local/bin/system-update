@@ -20,6 +20,30 @@ set -uo pipefail
 step() { printf '\n\e[32m%s\e[0m\n' "$1"; }
 skip() { printf '\n\e[33m%s\e[0m\n' "$1"; }
 
+# Same confirmation shape as omarchy-update-confirm, for the same reason: this is a
+# long, uninterruptible operation and the screen is the last chance to back out.
+# Deliberately not a call to that script -- its copy names Omarchy's releases page
+# and warns about Omarchy's update, neither of which is true here.
+if command -v gum &>/dev/null; then
+  gum style --border normal --padding "1 2" \
+    "Ready to update the system?" \
+    "" \
+    "• CachyOS and Arch packages, the AUR, and Flatpaks" \
+    "• Omarchy itself is NOT touched — that is 'Update Omarchy Desktop'" \
+    "• You cannot stop the update once it starts" \
+    "" \
+    "Pacman will prompt before replacing anything. Read those." \
+    "" \
+    "Answering the AUR rebuild prompts can take a while."
+
+  echo
+
+  if ! gum confirm "Continue with update?"; then
+    echo "Update cancelled"
+    exit 1
+  fi
+fi
+
 failed=()
 
 step "Update system packages"

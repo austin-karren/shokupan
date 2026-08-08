@@ -193,9 +193,9 @@ function GetEntries()
     Actions = { activate = "omarchy-menu remove" },
   })
   add({
-    Text = "Update",
+    Text = "Update Omarchy Desktop",
     Icon = "",
-    Keywords = {"update", "upgrade", "omarchy", "system"},
+    Keywords = {"update", "upgrade", "omarchy", "desktop", "shell", "bar"},
     Actions = { activate = "omarchy-menu update" },
   })
   add({
