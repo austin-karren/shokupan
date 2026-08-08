@@ -82,6 +82,28 @@ layer "Desktop (Omarchy)"
 if [[ -d $OMARCHY_ROOT/.git ]]; then
   ok "checkout" "$(git -C "$OMARCHY_ROOT" describe --tags --always 2>/dev/null || echo present)"
 
+  # Which Omarchy this rice was last VERIFIED against, versus what is installed.
+  # The rice reaches into upstream's files -- bar modules, menu overrides, window
+  # rules -- so "does this work" is only answerable together with a version. Each
+  # verified state is tagged omarchy-vX.Y.Z; see the README.
+  #
+  # The tag on the checkout is the source of truth, NOT `omarchy-version`: that
+  # just cats $OMARCHY_PATH/version, a file written at install time which lags.
+  # Measured 2026-08-08: it said 3.8.3 on a tree whose tag was v3.8.4.
+  #
+  # A mismatch is a WARNING, not a failure. Upstream moving ahead is normal; it
+  # means the rice has not been re-verified there yet, which is a prompt to walk
+  # the inventory and re-tag, not a broken machine.
+  installed_omarchy=$(git -C "$OMARCHY_ROOT" describe --tags --always 2>/dev/null)
+  rice_pin=$(git -C "$LOAF_ROOT" tag -l 'omarchy-v*' 2>/dev/null | sort -V | tail -1)
+  if [[ -z $rice_pin ]]; then
+    warn "version pin" "no omarchy-v* tag — nothing records which Omarchy this was verified against"
+  elif [[ ${rice_pin#omarchy-} == "$installed_omarchy" ]]; then
+    ok "version pin" "verified against $installed_omarchy"
+  else
+    warn "version pin" "verified against ${rice_pin#omarchy-}, Omarchy is $installed_omarchy — re-verify, then re-tag"
+  fi
+
   # Omarchy's tree is NOT pristine here and should not be. The bridge installer
   # seds CachyOS adaptations directly into it (ADR-0001), so these files are
   # expected to show as modified. They are uncommitted, which means an

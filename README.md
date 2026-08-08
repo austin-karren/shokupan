@@ -189,6 +189,17 @@ the workflow is to rebuild forward from the tag rather than to guess what broke 
 out the tag, read the ADRs that touch what upstream changed, and re-apply them against
 the new version.
 
+`loaf doctor` reports the pin against what is installed, so drift is visible without
+having to remember to look:
+
+```
+✓ version pin    verified against v3.8.4
+! version pin    verified against v3.8.4, Omarchy is v3.9.0 — re-verify, then re-tag
+```
+
+A mismatch is a warning, not a failure: upstream moving ahead is normal and only means
+the rice has not been re-verified there yet.
+
 Tag a state once it is verified working, not when the update completes:
 
 ```bash
