@@ -169,6 +169,33 @@ it `man` pipes into a missing binary in any interactive terminal.
 Language runtimes stay out of both files — [mise](https://mise.jdx.dev) owns
 those, pinned per-project in `~/.config/mise/config.toml`.
 
+## Which Omarchy a commit was built against
+
+The rice is written against a specific Omarchy. Bar modules, menu overrides and window
+rules all reach into upstream's files, so "does this work" is only answerable together
+with a version.
+
+Every state known to work is therefore tagged `omarchy-vX.Y.Z`:
+
+```bash
+git tag -l 'omarchy-*'                       # every pinned state
+git show omarchy-v3.8.4 --stat               # what the rice looked like for that release
+git diff omarchy-v3.8.4..HEAD                # what has changed since
+```
+
+The tag is a claim about *compatibility*, not just chronology: it says this tree ran
+against that Omarchy with the inventory in `~/snapshots/` passing. When upstream moves,
+the workflow is to rebuild forward from the tag rather than to guess what broke — check
+out the tag, read the ADRs that touch what upstream changed, and re-apply them against
+the new version.
+
+Tag a state once it is verified working, not when the update completes:
+
+```bash
+git tag -a "omarchy-v$(omarchy-version)" -m "verified against Omarchy vX.Y.Z"
+git push --tags
+```
+
 ## Why things are the way they are
 
 [`CONTEXT.md`](./CONTEXT.md) is the glossary. Worth reading first if you are going

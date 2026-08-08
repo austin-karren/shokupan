@@ -169,3 +169,25 @@ indicators rather than at the end of a row of icons.
 Nothing checks any of this. `loaf doctor` verifies that the config files are the
 repo's, not what they contain, so a future upstream Waybar default that reintroduces
 `cpu` would be caught as a displaced symlink but a hand-edit would not.
+
+## Addendum: tailscale sits with the radios, not with network
+
+Added 2026-08-08. The tailscale module landed to the right of `network`, on the reading
+that it answers the next question up the same stack — network says whether this machine
+is on the internet, tailscale whether it is on the tailnet. That is a defensible
+application of the rule above and it is not the one this bar uses.
+
+It now sits **left of bluetooth**, at the head of the radios: `ratio | tailscale |
+bluetooth | network | pulseaudio`.
+
+The distinction the rule was missing: the right cluster is not uniformly "state you
+read". Bluetooth and tailscale are things you **turn on and off** — one click, an
+immediate change to what this machine is connected to. Network and battery you only
+read. Sorting by the question alone put a toggle between two readings; sorting by what
+you *do* with it keeps the toggles adjacent and the readings adjacent.
+
+So the rule stands, with a tiebreak: **when two modules answer related questions, group
+by whether you act on them or only read them.**
+
+No measurement changed — every box in the cluster carries a uniform margin and a width
+derived from its own glyph, so reordering moves no gap. Verified after the move.

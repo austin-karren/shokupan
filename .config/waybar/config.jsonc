@@ -14,9 +14,9 @@
     "group/tray-expander",
     "custom/apexshot",
     "custom/ratio",
+    "custom/tailscale",
     "bluetooth",
     "network",
-    "custom/tailscale",
     "pulseaudio",
     "battery"
   ],
@@ -147,9 +147,10 @@
     // Same toggle treatment as bluetooth above.
     "on-click": "window-toggle org.omarchy.impala omarchy-launch-wifi"
   },
-  // Sits immediately right of network because it answers the next question up the
-  // stack: network says whether this machine is on the internet, tailscale whether it
-  // is on the tailnet. See ADR-0029.
+  // Sits left of bluetooth, at the head of the radios, because it is the connectivity
+  // you TOGGLE rather than the connectivity you read. It was briefly next to network on
+  // the reading that it answers the next question up the stack (internet, then tailnet);
+  // grouping by what you do with it won. See ADR-0029.
   //
   // One glyph for every state, state carried by the CSS class -- the same trick
   // custom/ratio uses, and the reason this module needs only one measured ink width
