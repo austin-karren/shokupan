@@ -21,9 +21,13 @@ newsreader) in `cachyos-extra-znver4` and would collide if ever installed.
 _Avoid_: rice (the old name), shokupan (that is the rice, not the tool)
 
 **Omarchy**:
-The upstream desktop layer installed at `~/.local/share/omarchy`, managed by its
-own git checkout and updated with `omarchy update`. Read-only to us.
-_Avoid_: the distro, upstream
+The upstream desktop layer installed at `~/.local/share/omarchy`, managed by its own
+git checkout. Read-only to us, and **source material rather than an authority**: what
+upstream ships is adopted when it is worth adopting, so this desktop lags Omarchy's
+releases by however long porting takes (ADR-0034). Mirroring closely is the default,
+not an obligation.
+_Avoid_: the distro, upstream, the desktop (Shokupan is the desktop; Omarchy is what
+it is made from)
 
 **Rice**:
 The set of deliberate deviations from a stock Omarchy install — everything this

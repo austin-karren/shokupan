@@ -73,6 +73,58 @@ else
   ok "stale clone" "no ~/omarchy"
 fi
 
+# Omarchy is a DESKTOP layer here and nothing more. The base is CachyOS, and the
+# base is not Omarchy's to manage -- see ADR-0034.
+#
+# The specific hazard: `omarchy-channel-set` calls `omarchy-refresh-pacman`, which
+# does `cp -f $OMARCHY_PATH/default/pacman/pacman-<channel>.conf /etc/pacman.conf`
+# and then `pacman -Syyuu --noconfirm`. That replaces the repo list with Omarchy's
+# vanilla-Arch one and the second `u` permits DOWNGRADES, so every znver4-optimised
+# package rolls back to stock Arch and linux-cachyos loses its repo. It nearly ran
+# on this machine on 2026-08-08 and was stopped only by an unrelated failure
+# short-circuiting the `&&`.
+#
+# A PATH shim cannot guard this: Omarchy's bin sits ahead of ~/.local/bin in PATH
+# (index 2 vs 14), so a same-named script here would never be reached. Hence a
+# check, which at least makes the damage loud and immediate.
+
+if [[ -f /etc/pacman.conf ]]; then
+  cachyos_repos=$(grep -c '^\[cachyos' /etc/pacman.conf 2>/dev/null || echo 0)
+  if ((cachyos_repos >= 1)); then
+    ok "repos" "$cachyos_repos CachyOS repo section(s)"
+  else
+    bad "repos" "no CachyOS repos in /etc/pacman.conf" \
+      "the base has been replaced with stock Arch — restore /etc/pacman.conf.bak" \
+      "then re-run the bridge installer; do NOT run omarchy-channel-set"
+  fi
+
+  # A bridge adaptation with a side effect on /etc rather than in the checkout, so
+  # the "cachyos patch" check below cannot see it. CachyOS ships its own walker,
+  # which would otherwise overwrite Omarchy's.
+  if grep -q '^IgnorePkg *=.*walker' /etc/pacman.conf 2>/dev/null; then
+    ok "walker hold" "IgnorePkg keeps CachyOS's walker out"
+  else
+    warn "walker hold" "IgnorePkg = walker is gone from /etc/pacman.conf — CachyOS's walker can replace Omarchy's"
+  fi
+fi
+
+# The other bridge side effect on /etc. Losing it does not break the desktop, but
+# it silently changes which wifi backend is in use.
+nm_conf=/etc/NetworkManager/NetworkManager.conf
+if [[ -f $nm_conf ]]; then
+  if grep -q '^wifi.backend=iwd' "$nm_conf" 2>/dev/null; then
+    ok "wifi backend" "iwd"
+  else
+    warn "wifi backend" "wifi.backend=iwd is gone from NetworkManager.conf"
+  fi
+fi
+
+if [[ $(uname -r) == *cachyos* ]]; then
+  ok "kernel" "$(uname -r)"
+else
+  warn "kernel" "running $(uname -r) — not a CachyOS kernel"
+fi
+
 # ---------------------------------------------------------
 # Desktop — Omarchy
 # ---------------------------------------------------------
@@ -240,7 +292,11 @@ fi
 
 # Flatpaks are a separate Source and appear in neither chosen.packages nor
 # packages.txt, so a missing one is invisible to the check above.
-if command -v flatpak &>/dev/null; then
+# Guarded on the manifest existing as well as on flatpak being installed: a repo
+# with no chosen.flatpaks has made no claim about Flatpaks, and "no claim" is not
+# a disagreement. Without this the check fails on any tree that predates the
+# manifest — including the test fixtures.
+if command -v flatpak &>/dev/null && [[ -f $LOAF_ROOT/packages/chosen.flatpaks ]]; then
   if loaf-flatpaks --quiet 2>/dev/null; then
     ok "flatpaks" "all chosen flatpaks installed"
   else
