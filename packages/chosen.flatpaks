@@ -16,3 +16,6 @@
 # Minecraft launcher. Not in the Arch repos; the AUR build is a wrapper around the
 # same upstream binary, so the Flatpak is the lower-maintenance route.
 gg.dawn.Launcher
+
+# Proofreading assistant. GNOME app, Flathub-only.
+re.sonny.Eloquent

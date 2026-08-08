@@ -108,7 +108,6 @@ gnome-control-center
 gnome-disk-utility
 gnome-keyring
 gnome-themes-extra
-google-chrome
 gpu-screen-recorder
 grim
 gsfonts
