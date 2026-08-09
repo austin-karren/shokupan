@@ -6,15 +6,16 @@
 // by the same `bar.centerSectionRevealHeld` property that
 // plugins/bar/widgets/Indicators.qml binds to.
 //
-// It mirrors the indicators' semantics rather than hiding unconditionally:
-// when the zen ratio is ON the glyph stays visible, and when it is OFF the
-// module collapses until you hover the centre of the bar. That keeps ADR-0013's
-// point — the toggle is out of a menu and legible at a glance when it is doing
-// something — while keeping the bar quiet the rest of the time. To make it
-// hover-only in both states, drop `|| active` from `revealed` below.
+// Hover-only in BOTH states, like its neighbours in the hidden group: the
+// toggle should not be seen unless the centre is hovered, on or off. State
+// still shows while revealed — the glyph takes the theme's active colour when
+// the constraint is on. (An earlier revision kept the glyph visible while on,
+// mirroring the indicators; the deliberate choice is uniformity with the
+// hover group instead.)
 //
-// State still comes from `ratio-toggle --status`, which emits Waybar-style JSON
-// and is unchanged from the Waybar era. The absolute path is deliberate:
+// State still comes from `ratio-toggle --status`, whose Waybar-style JSON
+// contract survived that script's rewrite for the Hyprland port (it now reads
+// the .lua flag's existence; see ADR-0026). The absolute path is deliberate:
 // quickshell runs these through `bash -lc`, whose PATH does not include
 // ~/.local/bin (see .config/uwsm/env, not currently installed).
 
@@ -33,7 +34,7 @@ Item {
   property bool active: false
   property string tip: ""
 
-  readonly property bool revealed: active || (bar && bar.centerSectionRevealHeld === true)
+  readonly property bool revealed: bar && bar.centerSectionRevealHeld === true
 
   implicitWidth: revealed ? label.implicitWidth + 13 : 0
   implicitHeight: bar ? bar.barSize : 26

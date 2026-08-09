@@ -457,3 +457,14 @@ o.bind("SUPER + CTRL + ALT + C", "Float centre", function() float_snap("center")
 shokupan.window_resize = window_resize
 shokupan.float_snap = float_snap
 shokupan.usable_area = usable_area
+
+-- ApexShot. Its own docs say "add these lines to your hyprland.conf", and until
+-- the quattro port they lived in apexshot.conf sourced from exactly there — a
+-- file the Lua config manager never reads, which silently killed all six
+-- shortcuts. The .conf pair is retired; these are the same chords verbatim.
+o.bind("SUPER + SHIFT + 4", "Screenshot area", "/usr/bin/apexshot capture area")
+o.bind("CTRL + ALT + X", "Screenshot crosshair", "/usr/bin/apexshot capture crosshair")
+o.bind("SUPER + CTRL + ALT + S", "Screenshot screen", "/usr/bin/apexshot capture screen")
+o.bind("CTRL + ALT + P", "Show last screenshot", "/usr/bin/apexshot show-last-preview")
+o.bind("CTRL + ALT + R", "Record screen", "/usr/bin/apexshot record ui")
+o.bind("CTRL + ALT + SHIFT + S", "Stop recording", "/usr/bin/apexshot record stop")

@@ -45,6 +45,10 @@
           "id": "omarchy.indicators"
         },
         {
+          "id": "ratio",
+          "type": "qml"
+        },
+        {
           "id": "model-usage",
           "type": "qml",
           "providers": {
@@ -58,10 +62,6 @@
               "enabled": false
             }
           }
-        },
-        {
-          "id": "ratio",
-          "type": "qml"
         }
       ],
       "right": [
