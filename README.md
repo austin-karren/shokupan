@@ -18,7 +18,7 @@ This is a single flat Stow package: paths mirror `$HOME` directly.
 
 ```
 .bashrc                 -> ~/.bashrc
-.config/hypr/*.conf     -> ~/.config/hypr/*.conf
+.config/hypr/*.lua      -> ~/.config/hypr/*.lua    (quattro; .conf for the rest)
 .local/bin/*            -> ~/.local/bin/*
 ...
 ```
@@ -243,7 +243,7 @@ are the to-do list.
 | [0018](./docs/adr/0018-worktrunk-for-git-worktrees.md) | Manage worktrees with worktrunk | proposed |
 | [0019](./docs/adr/0019-idle-timings-for-a-remote-first-machine.md) | Retune the idle chain, keep the machine reachable | proposed |
 | [0020](./docs/adr/0020-super-w-closes-the-smallest-surface.md) | `SUPER+W` closes the smallest surface, not the window | accepted |
-| [0021](./docs/adr/0021-floating-mode-as-a-real-mode.md) | Make floating a real mode, toggleable from the bar | proposed (placement done in 0024) |
+| [0021](./docs/adr/0021-floating-mode-as-a-real-mode.md) | Make floating a real mode, toggleable from the bar | rejected — the capability shipped in 0024/0025, the mode is not wanted |
 | [0022](./docs/adr/0022-cycle-split-ratios-with-arrow-keys.md) | Cycle window sizes along a Size ladder | accepted |
 | [0023](./docs/adr/0023-arrow-modifiers-encode-scope.md) | Arrow-key modifiers encode what you are acting on | accepted |
 | [0024](./docs/adr/0024-floating-placement-keys.md) | Floating windows get placement keys | accepted |

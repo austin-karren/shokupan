@@ -4,7 +4,7 @@ status: accepted
 
 # Resize windows by dragging their borders
 
-Four settings in `general` (`~/.config/hypr/looknfeel.conf`), no scripts:
+Four settings in `general` (`~/.config/hypr/looknfeel.lua`), no scripts:
 
 | Setting | Value | Effect |
 |---|---|---|
@@ -93,3 +93,36 @@ this machine can synthesise a mouse drag — `wtype` is keyboard-only and `ydoto
 installed — so the settings were confirmed live via `hyprctl getoption` and the feel has
 to be judged by using it. That is acceptable here because every value is a preference
 knob with an obvious direction to adjust, not a correctness question.
+
+## Addendum: ported to quattro, 2026-08-09
+
+This ADR came through the quattro migration (ADR-0033) more cheaply than any other in
+the window-management set, because it was never anything but settings. The four values
+are unchanged; only the file and the syntax moved, from a `general { }` block in
+`looknfeel.conf` to an `hl.config({ general = { … } })` call in `looknfeel.lua`. Nested
+`snap` survives as a nested Lua table, so even the shape is the same.
+
+Re-confirmed by `hyprctl getoption` after `hyprctl reload`, all four plus the gaps they
+depend on:
+
+    resize_on_border         true    extend_border_grab_area  10
+    hover_icon_on_border     true    snap:enabled             true
+    snap:window_gap          8       snap:monitor_gap         8
+    gaps_in                  4       gaps_out                 8
+
+**Quattro re-asserted the Hyprland defaults this ADR overrides**, so none of this was
+inherited: `resize_on_border` was back to `false`, `extend_border_grab_area` to `15`,
+and `snap:enabled` to `false`. The port was necessary, not decorative.
+
+**`gaps_in`/`gaps_out` are listed above because they are load-bearing here, not as
+housekeeping.** Quattro's defaults are `5`/`10`, which both breaks the uniform-8 rule and
+widens every gap. `extend_border_grab_area = 10` is chosen against an 8px gap — against
+quattro's 10px gaps it would be the wrong number for the reason the section above gives.
+Porting this ADR without the gaps would have left the grab strip mistuned in a way no
+`getoption` check on the four settings alone would catch.
+
+One line got *shorter*: the `shadow { enabled = false }` block is gone. It existed because
+Omarchy set `range = 2`, too short to fade, so it drew a hard near-black line rather than
+a shadow. Quattro's `default/hypr/looknfeel.lua` now ships `shadow { enabled = false }`
+itself — measured as `decoration:shadow:enabled = false` with our file not mentioning it —
+so restating it would be a no-op impersonating a decision.

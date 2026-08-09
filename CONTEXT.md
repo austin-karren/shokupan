@@ -243,9 +243,11 @@ _Avoid_: screen, monitor, viewport
 
 **Floating mode**:
 A desktop-wide state in which windows keep their own size and position instead of
-being tiled — proposed, not built. Distinct from floating a single window with
-`SUPER+T`, which is one window opting out of a tiling layout that still governs
-everything else.
+being tiled — **rejected, not built** (ADR-0021). Kept in the glossary because the term
+is ambiguous rather than because the feature exists: it has to go on pointing at the
+distinction from floating a single window with `SUPER+T`, which is one window opting out
+of a tiling layout that still governs everything else, and which does exist. If someone
+says "floating mode", they almost certainly mean `SUPER+T` or `SUPER+O`.
 _Avoid_: floating, windowed mode
 
 ### Getting a window to another workspace

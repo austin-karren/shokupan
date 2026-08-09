@@ -1,8 +1,12 @@
 ---
-status: proposed
+status: rejected
 ---
 
 # Make floating a real mode, toggleable from the bar
+
+> **Rejected 2026-08-09.** See the decision at the bottom. The capability this ADR
+> was really asking for exists and is in daily use; the *mode* is not being built.
+> Everything below is kept as the reasoning that led there.
 
 Intent: a **Floating mode** that can be toggled on and off from Waybar. While on, the
 desktop behaves like macOS — windows keep their own size and position, can be
@@ -93,3 +97,53 @@ not the hard part; having them at all is.
   not a surprise.
 - Whether `SUPER+T` survives. If a whole mode exists, floating one window inside
   tiling mode may stop being useful — or become the more common action.
+
+## Decision: rejected, 2026-08-09
+
+The ADR above asked for this to be re-established before building, and predicted its own
+rejection. Both halves held up, so this records it explicitly rather than leaving a
+proposed ADR for something nobody intends to build.
+
+**The ask was about capability, not about a mode.** What was missing was any way to place
+or size a floating window at all. That is done and has been in daily use since ADR-0024
+and ADR-0025: halves, fill, centre, the Size ladder, draggable borders and Drag snap all
+work *inside tiling*, with no mode to enter or leave. The reported position after using
+it is that the desktop feels more mature without a mode, which is the outcome the ADR
+above expected if the diagnosis was right.
+
+That left the two things a mode would still have added, and quattro (ADR-0033) has since
+moved both:
+
+- **Floating as the default for new windows.** Still not wanted. It is also the half with
+  the unsolved problem the ADR flagged and never answered — round-tripping the layout,
+  since window rules only apply at window open, so the mode needs a one-shot pass over
+  existing windows *and* somewhere to keep geometry if float → tile → float does not
+  restore cleanly. That is a large step up in complexity for the least-wanted half.
+- **GNOME-style window buttons.** Unchanged and still the expensive item: Hyprland has no
+  server-side decorations, so the only route is `hyprbars` via `hyprpm`, rebuilt against
+  every Hyprland release. On a machine whose update story is one command, that is a
+  standing breakage. Quattro makes this *worse*, not better — it is package-backed now
+  (ADR-0033), so Hyprland moves when the package moves.
+
+Quattro also narrowed what a mode would be for. `SUPER+O` (`omarchy-hyprland-window-pop`)
+floats **and** pins a window at a set size natively, which covers the "get one window out
+of the layout and keep it there" case that was part of the original motivation.
+
+**Consequences of rejecting:**
+
+- `SUPER+T` survives unchanged as Hyprland's `togglefloating` — the question of whether it
+  stops being useful was contingent on the mode existing, so it lapses.
+- The **Floating mode** entry in `CONTEXT.md` stays, marked rejected. It is still worth a
+  glossary line precisely because the term is ambiguous — it needs to keep pointing at
+  the distinction from floating a single window with `SUPER+T`, which does exist.
+- The interaction this ADR worried about — a Floating mode silently disabling the
+  single-window zen aspect ratio (ADR-0013/0026), since `single_window_aspect_ratio` only
+  applies to a lone *tiled* window — does not arise. Two bar toggles where one quietly
+  disables the other was a real trap and it is now avoided by not building the toggle.
+- If floating-as-default is ever wanted again, it should be a **new** ADR against
+  quattro's Lua API, not a revival of this one. `hl.window_rule` and `hl.get_windows()`
+  make the one-shot pass over existing windows tractable in a way the `.conf` era did not,
+  so the cost analysis above would need redoing rather than inheriting.
+
+ADR-0024 and ADR-0025 are unaffected — they were always independent of this, and this ADR
+is not their parent despite having proposed them first.

@@ -145,3 +145,52 @@ point was that either reflex lands somewhere sensible.
   dropped `iwd` and actively disables it (ADR-0035), so this check has to invert
   or go.
 - `bridge patch` and `stale clone` checks are about the retired bridge (ADR-0035).
+
+## Handed to the bar, not done here
+
+Requested 2026-08-09 while the menus were being ported. Both are bar-owned
+(`shell.json` layout, `.config/omarchy/bar/modules/`, ADR-0013/0026), so they are
+written down rather than acted on. The measurements are here so whoever picks them
+up does not have to redo them.
+
+**1. The zen ratio toggle should always be visible.** Two separate asks, and the
+second is the easy one:
+
+- *Always visible.* `ratio.qml` line ~36 is
+  `readonly property bool revealed: active || (bar && bar.centerSectionRevealHeld === true)`.
+  Making that unconditionally `true` is the whole change. The module's own header
+  already documents the opposite knob ("to make it hover-only in both states, drop
+  `|| active`"), so this is the third point on a scale it was written to have.
+  Worth noting it then behaves exactly like a `type: "command"` entry, which the
+  header says was rejected *because* it would always be visible — so ADR-0013's
+  reasoning needs revisiting, not just the code.
+- *Inside the hover group rather than beside it.* This one is blocked. In
+  `shell.json` the centre section is `[clock, weather, system-update, indicators,
+  ratio]` — `ratio` is a **sibling of** `omarchy.indicators`, not a member of it,
+  which is exactly the "near it, not in it" being reported. It cannot be made a
+  member by configuration: `Indicators.qml` loads only from
+  `/usr/share/omarchy/shell/plugins/bar/indicators/` (`Dictation`, `Dnd`,
+  `NightLight`, `Reminder`, `ScreenRecording`, `StayAwake`), that tree is
+  package-owned and read-only, and the widget has no user-directory search path.
+  The sibling module is the workaround for that limit, not an oversight.
+
+  If group membership is wanted for *appearance* rather than mechanism, the lever
+  is `alwaysShow` on `omarchy.indicators` (documented at
+  `plugins/bar/README.md:76`) — but it applies to the whole cluster, so every
+  inactive indicator becomes permanently visible too. That is a bar-composition
+  decision, and ADR-0029 owns it.
+
+**2. "Same with the Claude usage."** Needs one clarification before anyone changes
+anything, because the premise did not reproduce. `omarchy.model-usage` sits in the
+**right** section of `shell.json`, and only the *centre* section has a hover-reveal
+group (`Bar.qml:47` `centerSectionRevealHeld`). Its widget has no hover gating, no
+`alwaysShow` setting, and renders an `EmptyUsageChip` when no provider has data, so
+by construction something is always drawn. So either something else is hiding it,
+or what reads as "hidden" is the empty/compact chip rather than an absent module.
+Ask what is actually on screen before treating this as the same fix.
+
+**Also flagged, not edited:** `docs/adr/0026` still points at
+`~/.config/omarchy/extensions/menu.sh` for the Toggle Menu override. That file is
+deleted; the override now lives in `.config/omarchy/extensions/omarchy-menu.jsonc`
+as a reuse of upstream's `trigger.toggle.one-window-ratio` id. ADR-0026 is
+bar-owned, so the one-line correction was left to its owner.
