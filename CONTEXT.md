@@ -360,7 +360,9 @@ _Avoid_: pane, tab, split (each names one kind of Surface, not the category)
 **Close ladder**:
 The rule that closing acts on the innermost Surface first and only reaches the
 window once nothing smaller is left: pane, then tab, then window. What makes a
-close key safe to hit reflexively.
+close key safe to hit reflexively. Since quattro, an open Omarchy shell popup
+(the Omarchy Menu, the Launcher, the emoji picker) is the innermost rung of all:
+the close keys dismiss it before touching any window (ADR-0020).
 _Avoid_: cascade, escalation
 
 **Compositor-level close**:

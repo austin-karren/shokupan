@@ -117,3 +117,49 @@ window first.
 - **Apps not yet on the list**, each one line when wanted: `signal`, `obsidian`
   (has tabs, so a real ladder rung), `typora`, `spotify`, `1password`. Until then
   they get `killactive`, which is what they got before.
+
+## Addendum: ported to quattro, 2026-08-09
+
+The script is gone. `close-surface` is now ~40 lines of Lua inside
+`~/.config/hypr/bindings.lua`, running in the compositor's own VM — the class comes
+from `hl.get_active_window().class` instead of a `hyprctl | jq` round trip, and no
+process is spawned per keypress. The whitelist, the fallback and the reasoning above
+are unchanged. `.local/bin/close-surface` should be deleted with its callers
+(quattrotools owns the sweep of `~/.local/bin`).
+
+Two things changed in substance rather than syntax:
+
+**The ladder grew a rung below "pane": an open Omarchy shell popup.** Quattro's
+menus, launcher and pickers are quickshell *layers*, not windows — `killactive`
+never touched them, so the close reflex died precisely on the surfaces Omarchy
+itself puts in front of you. All of `SUPER+W`, `CTRL+Q` and `SUPER+Q` now dismiss
+an open transient `omarchy-*` layer first (via `omarchy-shell shell hide`, the same
+call `omarchy-menu close` makes) and only then proceed to their window action.
+Permanent layers — bar, background, OSD, notifications, lock — are excluded by
+name, lock deliberately twice over.
+
+**The keystroke injection inherited upstream's stuck-key fix.** The `.conf` era
+used `sendshortcut`, which sometimes leaves the synthetic key stuck and repeating
+(hyprwm/Hyprland#14099). Quattro's own Universal copy/paste works around it with
+`send_key_state` down plus a 50ms timer up, and the port adopts that idiom — the
+old script had the bug and did not know it.
+
+The Q keys moved as spec'd: `CTRL+Q` → `hl.dsp.window.close()`, `SUPER+Q` retypes
+`CTRL+Q`, `SUPER+SHIFT+Q` → `hl.dsp.window.kill()`.
+
+### Verification, re-run under quattro
+
+Nothing on this machine can synthesise a key press — `wtype`'s virtual keyboard
+delivers nothing under this compositor (measured: a probe bind never fired and
+typed text never arrived) and `ydotool` is not installed. So the handlers are
+exposed as `shokupan.*` and driven from `hyprctl repl` — the *live closures the
+binds hold*, not copies — with `hyprctl binds` covering the chord→handler wiring:
+
+1. Throwaway `ghostty --title=closetest`, split created by retyping
+   `CTRL+SHIFT+O`: first close — **still 1 window** (the split died); second
+   close — 0. The step-2 result is the whole point; `killactive` would give 0.
+2. Omarchy Menu open: close dismissed the menu layer (1 → 0) with window count
+   untouched (5 → 5). Same for the Launcher.
+3. `retype("CTRL", "Q")` at a focused `gnome-calculator`: the app quit — which
+   also exercises the `org.gnome.*` whitelist arm end-to-end.
+4. `window.close()` and `window.kill()` each took a throwaway window.
