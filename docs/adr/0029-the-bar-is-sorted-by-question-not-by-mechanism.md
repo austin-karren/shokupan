@@ -200,41 +200,37 @@ derived from its own glyph, so reordering moves no gap. Verified after the move.
 
 ## Addendum: the layout on quattro, 2026-08-09
 
-The rule and its tiebreak both ported. The bar now reads:
+The rule and its tiebreak both ported. The bar now reads (⌁ marks the
+hover-revealed modules, invisible until the pointer is on their section):
 
-    left    menu · workspaces · bar-settings
-    centre  media · CLOCK · weather · system-update · indicators · ratio
-    right   tray · notifications · apexshot · tailscale · bluetooth · network
-            · audio · microphone · monitor · model-usage · power
+    left    menu · workspaces · ⌁bar-settings
+    centre  media · ⌁calendar · CLOCK · weather · system-update · indicators
+            · ⌁model-usage · ⌁ratio
+    right   tray · apexshot · tailscale · bluetooth · network · audio
+            · monitor · power
 
-`centerAnchor` is `omarchy.clock`, which pins the date to the true centre and
-flanks everything else around it. That is what makes it safe to put `media` — a
-scrolling now-playing label of unpredictable width — to the left of the clock:
-under Waybar this ADR spent real effort stopping the weather glyph's 15..27px
-swing from sliding the date, and anchoring solves the same class of problem
-outright.
+**The hover tier is new, and it is a third answer to this ADR's question.**
+Waybar offered two states: on the bar or not. Quattro's centre reveals quiet
+modules on hover, and that changed several placements. `calendar` sits revealed
+left of the clock — the same bracket this ADR built, now costing no resting
+width. `model-usage` and `ratio` are hover-revealed too (`ratio` stays visible
+while the constraint is *on*, which is the state worth seeing). `bar-settings`
+was quattro's own hover-revealed control beside the clock; it is suppressed
+there (`centerAnchor: ""` — the built-in only renders when the anchor is the
+clock) and rebuilt as a hover module after the workspaces, so it slides right as
+workspaces are added.
 
-**What the rule decided about the new modules.** The centre answers *now*
-questions, so `media` joins the clock and weather there, taking the slot the
-calendar module vacated. The right cluster stays actions-then-state:
-`apexshot` keeps its place as the action prefix, `tailscale` and `bluetooth` stay
-adjacent as the two things you *turn on and off*, and `network`, `audio`,
-`microphone`, `monitor`, `model-usage` and `power` are the readings, ending on
-power as before. `microphone` sits next to `audio` because they are one
-subsystem read in two directions. `notifications` is deliberately *not* in the
-status run — it answers "did anything happen", not "what is this machine doing" —
-so it pairs with the tray at the head of the cluster, both being surfaces other
-applications push into.
+`media` joins the centre because it answers a *now* question like the clock and
+weather. `notifications` and `microphone` are **not** added: the indicators
+cluster already answers "did anything happen" and dictation state, and a second
+bell and a second mic would be the provenance-sorting mistake this ADR opens
+with, applied to new modules.
 
-**Two departures worth naming:**
-
-- **The calendar module is gone**, so the "calendar, date, weather" bracket that
-  opens this ADR no longer exists. Quattro's clock popup ships a month grid
-  (ADR-0006), which is the thing the bracket was reaching for.
-- **The ratio toggle left the right cluster entirely** and is now a
-  hover-revealed module at the end of the centre (ADR-0013). That relaxes the
-  "actions prefix" exception this ADR carved out — there is now one action there
-  instead of two.
+**One departure worth naming:** giving up `centerAnchor` costs the pinned-clock
+guarantee — the centre now centres as a group, so a very wide media label can
+shift the date sideways. That trade was accepted to delete the built-in config
+button's slot; if it grates, the anchor comes back at the cost of a second gear
+appearing on clock hover.
 
 **Tailscale is upstream's now.** `omarchy.tailscale` is a first-party plugin with
 a connection switcher and machine browser, so `tailscale-icon` is retired rather

@@ -38,9 +38,20 @@ and the reason this needs no focus-tracking logic of its own.
 
 Companion pieces that must move together: the window rules in
 `~/.config/hypr/windows.conf`, the `SUPER+SHIFT+C` binding, and the `Calendar` row
-in `~/.config/omarchy/extensions/omarchy-menu.jsonc`. The Waybar `custom/calendar`
-module was the fourth until 2026-08-09; there is no bar entry point now, and
-whether to rebuild one is ADR-0013's kind of question, not this ADR's.
+in `~/.config/omarchy/extensions/omarchy-menu.jsonc`. The bar entry point is back
+as of later on 2026-08-09: `.config/omarchy/bar/modules/calendar.qml`, a
+hover-revealed module immediately left of the clock — the slot quattro's own
+bar-config button used to occupy (that button is suppressed via
+`centerAnchor: ""` and relocated to the left section). Same glyph and both click
+actions of the old Waybar module, verified end to end: show, hide, and the window
+kept warm on `special:calendar` between toggles.
+
+Two quattro facts this path depends on, both measured: `hyprctl dispatch` under
+`configProvider: lua` takes `hl.dsp.*` calls — the classic
+`movetoworkspacesilent` form fails with a Lua parse error — and until the
+Hyprland port restores the window rule, a cold launch lands on the current
+workspace and `calendar-toggle`'s recapture branch collects it on the next
+click.
 
 `hide_special_on_workspace_change` is still `true`, now at
 `/usr/share/omarchy/default/hypr/looknfeel.lua:120` rather than in the old

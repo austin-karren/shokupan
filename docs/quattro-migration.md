@@ -66,19 +66,25 @@ package churn, so it wants its own commit.
     .config/hypr/{bindings,autostart}.conf  →  the .lua equivalents
     the merged app+command palette (ADR-0012/0027)   ← withdrawn, see ADR-0027
 
-The **bar is done** as of 2026-08-09 — layout, both custom modules and the
-fixed-dark treatment, applied to the live session with no shell restart. Three
-new tracked files carry it:
+The **bar is done** as of 2026-08-09 — layout, the custom modules and the
+fixed-dark treatment, verified rendering on the live session. Six tracked files
+carry it:
 
-    .config/omarchy/shell.json                 layout, module settings, idle
-    .config/omarchy/bar/modules/ratio.qml      hover-revealed zen-ratio toggle
-    .config/omarchy/themed/shell.toml.tpl      pins the bar to Tailwind-950
+    .config/omarchy/shell.json                       layout, module settings, idle
+    .config/omarchy/bar/modules/ratio.qml            hover-revealed zen-ratio toggle
+    .config/omarchy/bar/modules/calendar.qml         hover-revealed, left of clock (ADR-0006)
+    .config/omarchy/bar/modules/model-usage.qml      hosts upstream's widget, hover-revealed
+    .config/omarchy/bar/modules/barcfg.qml           bar-settings gear, after workspaces
+    .config/omarchy/themed/shell.toml.tpl            pins the bar to Tailwind-950
 
 `tailscale-icon` is retired in favour of the native `omarchy.tailscale` plugin.
 `weather-icon` and `waybar-watchdog` are now unreferenced by the bar but still
-tracked; see ADR-0031 and ADR-0005 before removing either.
+tracked; see ADR-0031 and ADR-0005 before removing either. The built-in
+bar-config control is suppressed with `centerAnchor: ""` (it only renders when
+the anchor is the clock) — the calendar module occupies its old slot, and the
+gear lives after the workspaces (ADR-0029's addendum has the whole layout).
 
-Two traps found the hard way, both recorded in ADR-0013:
+Traps found the hard way (first ones recorded in ADR-0013):
 
 - Quickshell runs module commands through `bash -lc`, which has **no
   `~/.local/bin` on `PATH`**. A module whose `exec` is not found renders as an
@@ -96,11 +102,28 @@ Two traps found the hard way, both recorded in ADR-0013:
 - `loaf doctor` tests each tracked path with `[[ -L ]]`, so a **directory**
   symlink makes every file under it read as "replaced by a real file". Link
   files individually.
+- The shell registers **new** files in `bar/modules/` only at startup. Layout
+  edits hot-reload, and edits to an already-registered module hot-reload, but a
+  freshly added `.qml` file renders nothing until `omarchy-restart-shell` — with
+  no error, because quickshell's stdout and stderr both point at `/dev/null`.
+  Cost three "failed" implementations before it was identified.
+- **`hyprctl dispatch` changed languages.** With `configProvider: lua`, the
+  classic `hyprctl dispatch movetoworkspacesilent …` form is parsed as Lua and
+  fails; dispatchers are `hl.dsp.*` calls now, e.g.
+  `hyprctl dispatch 'hl.dsp.workspace.toggle_special("calendar")'` and
+  `hl.dsp.window.move({ workspace = …, window = "address:…", silent = true })`.
+  `calendar-toggle` is converted and verified end to end. **`float-snap`,
+  `close-surface`, `window-resize` and `window-toggle` still carry the old
+  syntax** and are broken until converted — their keybindings are dead anyway,
+  so they belong to the `bindings.conf` → `.lua` port, not the bar.
+- QML string literals do not understand `\U000FXXXX`; supplementary-plane Nerd
+  Font glyphs must be embedded as literal characters (or `\u{F00ED}`).
 
-Still open on the bar: `omarchy.model-usage` cannot be made to hover-reveal by
-configuration — it has no visibility setting, and the hover group only loads
-indicators from inside the package. Matching the ratio treatment means a second
-QML module that re-implements its chip and loses its popup.
+Resolved since first noted here: `omarchy.model-usage` *can* hover-reveal
+without cloning its chip. `Ui/BarWidget.qml` is a plain `Item`, so
+`bar/modules/model-usage.qml` hosts upstream's real `Widget.qml` by absolute
+path, injects `bar` / `moduleName` / `settings` the way the host would, and owns
+only visibility — popup, provider tabs and upstream fixes all retained.
 
 **Re-decide — quattro may already do it natively**
 

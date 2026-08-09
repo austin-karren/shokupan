@@ -4,9 +4,19 @@ status: accepted
 
 # The single-window zen aspect ratio: a reading column, not a square
 
-> **Bar surface deleted 2026-08-09.** The `6 5` value and `ratio-toggle` are
-> untouched; only the `custom/ratio` row of the table below is void, since
-> `config.jsonc` is gone (ADR-0013). Old file: tag `omarchy-v3.8.4-prequattro`.
+> **Bar surface reborn on quattro 2026-08-09.** The `6 5` value and `ratio-toggle`
+> are untouched; the `custom/ratio` row of the table below is now
+> `.config/omarchy/bar/modules/ratio.qml` (ADR-0013's addendum has the port).
+>
+> The menu-override section below is also void: `menu.sh` was deleted with the
+> menu port — quattro's `omarchy-menu` sources no such file, so the
+> `show_toggle_menu` redefinition it describes has no host. The Toggle Menu's
+> ratio row is currently upstream's, meaning it dispatches the square `1 1`
+> rather than `ratio-toggle`'s zen `6 5`; `ratio-toggle`'s own status poll
+> rewrites the file to the configured ratio within 3 seconds, which was already
+> this ADR's answer for the `SUPER+CTRL+BACKSPACE` path. Whether quattro's menu
+> has a new extension point for the label is the menus agent's question, not the
+> bar's.
 
 Omarchy's **single-window square aspect ratio**, kept as a feature and renamed to
 **single-window zen aspect ratio**, with the value widened from `1 1` to `6 5`. The point

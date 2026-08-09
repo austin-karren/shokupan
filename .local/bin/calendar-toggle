@@ -14,12 +14,21 @@
 # that SUPER+S toggles -- sharing it would mean SUPER+S also summoned the calendar
 # and that stashing a window with SUPER+ALT+S dumped it next to the calendar.
 #
-# Omarchy's looknfeel.conf sets hide_special_on_workspace_change = true, so
-# switching workspaces dismisses the popup on its own. That is the behaviour we
-# want and the reason no extra focus-tracking logic is needed here.
+# Omarchy's looknfeel (default/hypr/looknfeel.lua on quattro) sets
+# hide_special_on_workspace_change = true, so switching workspaces dismisses the
+# popup on its own. That is the behaviour we want and the reason no extra
+# focus-tracking logic is needed here.
 #
-# Companion pieces: window rules in ~/.config/hypr/windows.conf, waybar module
-# "custom/calendar" in ~/.config/waybar/config.jsonc.
+# Companion pieces: the calendar bar module (.config/omarchy/bar/modules/
+# calendar.qml) and, once the Hyprland port lands, the window rule that maps a
+# fresh gnome-calendar straight onto special:calendar. Until that rule exists a
+# cold launch lands on the current workspace and the recapture branch below
+# collects it on the next toggle.
+#
+# Dispatch syntax: with configProvider = lua (quattro), `hyprctl dispatch` takes
+# an hl.dsp.* Lua call, not the classic "name args" form. The old syntax fails
+# with a Lua parse error, not an "invalid dispatcher", so it looks like a script
+# bug rather than a config-provider change. Measured on Hyprland 0.56.2.
 
 set -u
 
@@ -42,13 +51,14 @@ if [[ -z $ADDR ]]; then
   exec uwsm-app -- gnome-calendar
 fi
 
-# Running, but parked on a normal workspace -- most likely dragged out by hand, or
-# launched from the app launcher before the rules were in place. Recapture it
-# instead of toggling an empty special workspace, which would look like a no-op.
+# Running, but parked on a normal workspace -- most likely dragged out by hand,
+# launched before the window rule existed, or (post-quattro, pre-Hyprland-port)
+# launched while no rule is installed at all. Recapture it instead of toggling
+# an empty special workspace, which would look like a no-op.
 if [[ "$(window_workspace)" != "special:$WS" ]]; then
-  hyprctl dispatch movetoworkspacesilent "special:$WS,address:$ADDR" >/dev/null
-  hyprctl dispatch togglespecialworkspace "$WS" >/dev/null
+  hyprctl dispatch "hl.dsp.window.move({ workspace = \"special:$WS\", window = \"address:$ADDR\", silent = true })" >/dev/null
+  hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
   exit 0
 fi
 
-hyprctl dispatch togglespecialworkspace "$WS" >/dev/null
+hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
