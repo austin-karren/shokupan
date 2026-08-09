@@ -4,6 +4,17 @@ status: accepted
 
 # Decide the Ghostty split keybinds, and bind close_surface
 
+> **Verified under quattro, 2026-08-09.** The decision needed nothing; the
+> *symlink* did. The upgrade replaced `~/.config/ghostty/config` with a real
+> file that was byte-identical to ours — the migration doc required a diff
+> before restoring, the diff was empty, and the link is back (upstream's copy
+> kept as `.displaced.<epoch>`). `ghostty +validate-config` passes and
+> `+list-keybinds` shows both bindings live: `super+d=new_split:right`,
+> `ctrl+shift+w=close_surface`. Ghostty is 1.3.1. One caveat inherited from the
+> port: the `SUPER+W` forwarding this ADR defers to (ADR-0020) rides on the
+> Hyprland bindings, which are still being relearned as Lua — until that lands,
+> `ctrl+shift+w` is the direct route it always was.
+
 Splits were unusable in practice: every process got its own window, and splits
 happened by accident with no obvious way out of one. The cause was concrete and
 worth recording, because it was a **missing** binding rather than a wrong one.
