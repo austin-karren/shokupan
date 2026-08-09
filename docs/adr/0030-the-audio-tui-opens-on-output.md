@@ -1,8 +1,20 @@
 ---
-status: accepted
+status: superseded
 ---
 
 # The audio TUI opens on Output Devices
+
+> **Superseded by quattro's native behaviour, 2026-08-09.** The addendum below
+> left one question open — whether `omarchy.audio` has an equivalent of "start
+> on Output" — and the answer, measured in the plugin rather than assumed, is
+> that it *is* the default. `plugins/panels/audio/Panel.qml` builds its section
+> list with `output` first and always visible (`input` and `streams` only appear
+> when they have content), and focus lands on the first section. The question
+> this ADR fought for — *which device is the sound coming out of* — is the
+> panel's opening screen by construction, with nothing to configure and no file
+> to own. The rice carries nothing for this any more; the sections below stay as
+> the record of why the preference mattered and what adopting the config file
+> cost.
 
 > **Implementation deleted 2026-08-09.** `wiremix` is uninstalled — the upgrade
 > itself does `rm -rf ~/.config/wiremix` — and `wiremix.toml` is deleted with it.

@@ -285,7 +285,7 @@ are the to-do list.
 | [0027](./docs/adr/0027-one-list-for-apps-and-commands.md) | One list for applications and system commands | merge withdrawn under quattro; reasoning still governs |
 | [0028](./docs/adr/0028-the-rice-re-asserts-itself-after-upstream-updates.md) | The rice re-asserts itself after upstream updates | accepted |
 | [0029](./docs/adr/0029-the-bar-is-sorted-by-question-not-by-mechanism.md) | The bar is sorted by the question each module answers | accepted |
-| [0030](./docs/adr/0030-the-audio-tui-opens-on-output.md) | The audio TUI opens on Output Devices | accepted |
+| [0030](./docs/adr/0030-the-audio-tui-opens-on-output.md) | The audio TUI opens on Output Devices | superseded — quattro's `omarchy.audio` opens on Output natively |
 | [0031](./docs/adr/0031-the-bar-remembers-the-weather.md) | The bar remembers the weather, so a failed fetch cannot blank it | accepted |
 | [0032](./docs/adr/0032-flathub-on-the-web-with-a-ref-handler.md) | Flathub on the web, with a ref handler | accepted |
 | [0033](./docs/adr/0033-quattro-is-a-hyprland-rewrite-not-a-bar-swap.md) | Quattro is a Hyprland rewrite, not a bar swap | proposed |
