@@ -65,6 +65,21 @@ commits with "please tell me who you are". If you see that, this file is why.
 Note: git reads `~/.gitconfig` only when `~/.config/git/config` does not exist.
 Since this repo installs the latter, a stray `~/.gitconfig` is ignored entirely.
 
+## Required: compose identity
+
+`.XCompose` ends with `include "%H/.XCompose.local"` — the identity expansions
+(name, email as compose sequences) live machine-side (ADR-0010). Create that
+file (gitignored, never committed):
+
+```
+<Multi_key> <space> <n> : "Your Name"
+<Multi_key> <space> <e> : "your.email@example.com"
+```
+
+Unlike the git include, a missing file here is **fatal to the whole compose
+table** — xkbcommon aborts the parse, so every sequence dies, emoji included.
+An empty file is enough to parse. Run `omarchy-restart-xcompose` after edits.
+
 ## Optional: shell identity
 
 `.bashrc` ends with the same pattern, for anything carrying an account name or a
@@ -111,7 +126,8 @@ it can also override anything the tracked `.bashrc` set.
 ### Deliberately not tracked
 
 - **`~/.config/nvim`** — unmodified LazyVim starter. Nothing of mine in it yet.
-- **`~/.XCompose`** — contains a literal email expansion; kept out of a public repo.
+- **`~/.XCompose.local`** — the identity expansions split out of the now-tracked
+  `.XCompose` (ADR-0010); see "Required: compose identity" above.
 - **`*.bak.<timestamp>`** — Omarchy migration artifacts, not config.
 
 ## The `loaf` command
@@ -249,7 +265,7 @@ are the to-do list.
 | [0007](./docs/adr/0007-wallpaper-pinned-independently-of-the-theme.md) | Wallpaper pinned independently of the theme | accepted |
 | [0008](./docs/adr/0008-aether-confined-to-generated-named-themes.md) | Aether may generate themes, not apply them | accepted |
 | [0009](./docs/adr/0009-waybar-stays-dark-in-every-theme.md) | The bar stays dark in every theme | accepted |
-| [0010](./docs/adr/0010-split-xcompose-to-track-it.md) | Split `~/.XCompose` so it can be tracked | proposed |
+| [0010](./docs/adr/0010-split-xcompose-to-track-it.md) | Split `~/.XCompose` so it can be tracked | accepted |
 | [0011](./docs/adr/0011-extend-second-click-dismissal-to-audio-and-cpu.md) | Second-click dismissal for audio and CPU | proposed |
 | [0012](./docs/adr/0012-unify-launcher-and-palette-on-elephant-menus.md) | Unify Launcher and System Palette | superseded by 0027 |
 | [0013](./docs/adr/0013-promote-the-ratio-toggle-to-the-bar.md) | Single-window aspect-ratio toggle onto the bar | accepted |

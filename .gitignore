@@ -4,6 +4,7 @@
 # Personal identity — see README. Never track these.
 .gitconfig.local
 .bashrc.local
+.XCompose.local
 
 # Secrets / local env
 .env
