@@ -299,8 +299,10 @@ _Avoid_: stash, shelf, drawer
 **Hover-reveal group**:
 The quiet modules at the centre of the bar, which collapse to zero width until
 the centre section is hovered. Upstream's indicators live there, and so do the
-zen-ratio toggle (ADR-0013) and the Claude-usage chip, in that order — both
-hover-only in every state. The calendar is deliberately *not* a member: it is
+zen-ratio toggle (ADR-0013) and the Claude-usage chip. Active members jump to
+the left of the cluster and show unprompted; inactive ones sit right and only
+hover-reveal — the ratio mimics that with a two-faced module pair, since the
+indicators' own blocks are closed to outside modules. The calendar is deliberately *not* a member: it is
 static, being half of ADR-0029's bracket around the date. A module joins the
 group by binding to the bar's `centerSectionRevealHeld`, which is why joining it
 requires a QML module rather than a Command module. The bar-settings gear after
@@ -318,7 +320,8 @@ _Avoid_: custom module (ambiguous with the QML kind), script module
 A bar entry backed by a `.qml` file in `.config/omarchy/bar/modules/`, which
 receives the bar root and can therefore do what a Command module cannot — hide
 itself, animate, read live bar state, or host an upstream widget. `omenu`,
-`barcfg`, `calendar`, `ratio` and `model-usage` are the five. New files here
+`barcfg`, `calendar`, `ratio`/`ratio-on` (one control, two faces) and
+`model-usage` are the six files. New files here
 register only at shell startup: `omarchy-restart-shell` after adding one, plain
 edits hot-reload.
 _Avoid_: plugin (a plugin is upstream's packaging unit, with a manifest)

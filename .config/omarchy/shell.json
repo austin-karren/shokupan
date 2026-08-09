@@ -43,6 +43,10 @@
           "id": "omarchy.system-update"
         },
         {
+          "id": "ratio-on",
+          "type": "qml"
+        },
+        {
           "id": "omarchy.indicators"
         },
         {
@@ -79,13 +83,26 @@
           "tooltip": "ApexShot\n\nLeft: capture area\nMiddle: record screen\nRight: capture full screen",
           "onClick": "apexshot capture area",
           "onMiddleClick": "apexshot record ui",
-          "onRightClick": "apexshot capture screen"
+          "onRightClick": "apexshot capture screen",
+          "horizontalMargin": 9.5
+        },
+        {
+          "id": "omarchy.spacer",
+          "size": 2
         },
         {
           "id": "omarchy.tailscale"
         },
         {
+          "id": "omarchy.spacer",
+          "size": 3
+        },
+        {
           "id": "omarchy.bluetooth"
+        },
+        {
+          "id": "omarchy.spacer",
+          "size": 2
         },
         {
           "id": "omarchy.network"
@@ -95,7 +112,7 @@
         },
         {
           "id": "omarchy.spacer",
-          "size": 8
+          "size": 9
         },
         {
           "id": "omarchy.monitor"

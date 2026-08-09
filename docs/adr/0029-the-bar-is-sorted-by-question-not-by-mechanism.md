@@ -204,10 +204,10 @@ The rule and its tiebreak both ported. The bar now reads (⌁ marks the
 hover-revealed modules, invisible until the pointer is on their section):
 
     left    menu(power glyph) · workspaces · ⌁bar-settings
-    centre  media · calendar · CLOCK · weather · system-update · indicators
-            · ⌁ratio · ⌁model-usage
-    right   tray · notifications · apexshot · tailscale · bluetooth · network
-            · audio · spacer(8) · monitor · power
+    centre  media · calendar · CLOCK · weather · system-update · ratio(on-face)
+            · indicators · ⌁ratio(off-face) · ⌁model-usage
+    right   tray · notifications · apexshot · sp2 · tailscale · sp3 · bluetooth
+            · sp2 · network · audio · sp9 · monitor · power
 
 **The hover tier is new, and it is a third answer to this ADR's question.**
 Waybar offered two states: on the bar or not. Quattro's centre reveals quiet
@@ -249,12 +249,15 @@ from screenshots, not eyeballed (physical px at scale 1.6):
   **23 / 23**.
 - *Right cluster*: audio's speaker glyph draws its sound waves into the right
   half of a fixed 27-unit box, leaving ethernet→speaker at 33 while
-  speaker→monitor collapsed to 18. Upstream widgets expose no margin settings,
-  so the quattro-native lever is `omarchy.spacer`: `{"id":"omarchy.spacer",
-  "size":8}` between audio and monitor. Measured after: 33 / **31**, with the
-  whole cluster in a 27–33 band. This is Waybar's pulseaudio compromise
-  reincarnated — the unclassable volume ramp still costs a couple of pixels
-  somewhere, and the spacer pins where.
+  speaker→monitor collapsed to 18, and the rest of the cluster ran 27–30.
+  Upstream widgets expose no margin settings, so the levers are
+  `omarchy.spacer` entries and — for `apexshot`, the one command module —
+  its own `horizontalMargin` setting. Worked **right to left**, widening
+  each gap to match the immovable 33 (ethernet→speaker, fixed by the audio
+  box): margin 9.5 on apexshot, spacers 2/3/2/9. Measured after:
+  **34, 33, 33, 33, 33, 33** — uniform within one physical pixel, which is
+  the Waybar-era discipline restated: near-uniform ink gaps, a pixel or two
+  conceded only where a glyph's own advance forces it.
 
 **The menu button wears the rice's power glyph** (`omenu` QML module, U+F011 —
 the same glyph `custom/omarchy` carried on Waybar). Upstream's widget hardcodes
