@@ -8,17 +8,18 @@
 #
 #   1. A theme applied from a palette-only source (an imported base16 scheme, a
 #      blueprint, the GUI without a wallpaper picked) has an EMPTY backgrounds/
-#      directory. omarchy-theme-bg-next then takes its TOTAL==0 branch and paints
-#      a flat `swaybg --color '#000000'` - the wallpaper just goes black. This is
-#      what happened on 2026-08-05.
+#      directory. Under quattro that no longer paints the screen black (the old
+#      `swaybg --color '#000000'` fallback died with swaybg; bg-next's TOTAL==0
+#      branch now just notifies) - but it still means the theme ships no
+#      wallpaper at all, so switching to it visibly does nothing to the screen.
+#      Seeding backgrounds/ keeps the generated theme a complete theme.
 #
-#   2. Aether never writes the `light.mode` marker file that Omarchy uses to flag
-#      a light theme. Without it, theme-set.d/20-waybar-theme-override cannot
-#      tell a light theme from a dark one, so it leaves the foreground alone and
-#      light-theme text ends up dark-on-dark against our Tailwind-950 bar.
+#   2. (Retired.) Aether never wrote Omarchy's `light.mode` marker, so this
+#      wrapper did. Quattro removed the marker: mode is the `mode = "light"`
+#      line in colors.toml, which Aether writes itself. See below.
 #
-# So: generate with --no-apply, guarantee a background, write light.mode when the
-# palette says light, and stage it as an ordinary named theme under
+# So: generate with --no-apply, guarantee a background, and stage it as an
+# ordinary named theme under
 # ~/.config/omarchy/themes/. From there it is just another Omarchy theme -
 # `omarchy theme set` it, switch away, `omarchy theme remove` it. Nothing about
 # the live theme is touched until you ask for it.
@@ -63,7 +64,11 @@ case "$1" in
   [[ -d $USER_THEMES/$slug ]] || die "no such theme: $slug"
   [[ -f $USER_THEMES/$slug/$MARKER ]] ||
     die "$slug was not created by aether-theme - remove it with: omarchy theme remove $slug"
-  if [[ $(cat "$HOME/.config/omarchy/current/theme.name" 2>/dev/null) == "$slug" ]]; then
+  # Quattro moved this pointer from ~/.config/omarchy/current/ to
+  # ~/.local/state/omarchy/current/. Under the old path the guard read an
+  # absent file, compared empty to the slug, and never fired - which made
+  # `aether-theme --remove <current theme>` an rm -rf of the LIVE theme.
+  if [[ $(cat "$HOME/.local/state/omarchy/current/theme.name" 2>/dev/null) == "$slug" ]]; then
     die "$slug is the current theme - switch away first (omarchy theme set ...)"
   fi
   # :? on both halves — this is the only rm -rf in the rice, and an empty
@@ -122,12 +127,10 @@ if [[ -z $(find "$STAGE/backgrounds" -maxdepth 1 -type f -print -quit) ]]; then
   echo "  seeded backgrounds/ with $(basename "$WALLPAPER")"
 fi
 
-# Gotcha 2: Omarchy detects light themes by this marker file, Aether never
-# writes one. Trust the palette's own declaration.
-if [[ $(sed -n 's/^mode[[:space:]]*=[[:space:]]*"\([a-z]*\)".*/\1/p' "$STAGE/colors.toml" | head -1) == "light" ]]; then
-  touch "$STAGE/light.mode"
-  echo "  marked as a light theme (light.mode)"
-fi
+# Gotcha 2 RETIRED under quattro: the light.mode marker file is gone from the
+# theme format. A theme's mode is now the `mode = "light"` line in colors.toml -
+# which Aether already writes, so there is nothing left to fill in. (The old
+# marker was consumed by the Waybar override hook; both died in the upgrade.)
 
 basename "$WALLPAPER" >"$STAGE/$MARKER"
 

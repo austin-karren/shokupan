@@ -4,6 +4,23 @@ status: accepted
 
 # Aether may generate themes, but not apply them
 
+> **Verified under quattro, 2026-08-09.** The decision holds and was re-proven by
+> use: a theme generated from the pinned wallpaper registered without applying,
+> applied cleanly when asked (`omarchy theme set`), rendered live (screenshot),
+> and removed cleanly after switching away. `includeGtk` is still `false`.
+> Two staleness fixes in the wrapper, one of them real: the `--remove` guard read
+> the pre-quattro `theme.name` path, so it compared empty-to-slug and never fired
+> — removing the *live* theme was one typo away from an `rm -rf` out from under
+> the session. It now reads `~/.local/state/omarchy/current/theme.name` and was
+> measured refusing. And the `light.mode` half of "two gaps" below is retired:
+> quattro dropped the marker file, the mode is the `mode =` line in `colors.toml`,
+> which Aether writes itself. The empty-`backgrounds/` gap also softened — the
+> swaybg black-screen fallback died with swaybg — but seeding stays, since a theme
+> with no background still visibly does nothing when switched to. Note Aether
+> 4.28 emits pre-quattro extras (`waybar.css`, `walker.css`, `hyprland.conf`);
+> quattro ignores them and re-renders its own surfaces from `colors.toml`
+> templates, so they are clutter, not breakage.
+
 Aether (pacman `aether`) extracts a Palette from an image
 and renders a Theme from it. Its own apply path takes over
 `~/.config/omarchy/current` directly. We keep the generator and reject the apply
