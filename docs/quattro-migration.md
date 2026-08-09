@@ -83,7 +83,16 @@ Two traps found the hard way, both recorded in ADR-0013:
 - Quickshell runs module commands through `bash -lc`, which has **no
   `~/.local/bin` on `PATH`**. A module whose `exec` is not found renders as an
   empty box with no error anywhere. Use absolute paths until `.config/uwsm/env`
-  is re-decided.
+  is re-decided. **The same trap holds for Omarchy Menu actions**
+  (`Quickshell.execDetached`, and the floating-terminal presentation): every
+  rice-owned command in `extensions/omarchy-menu.jsonc` carries an absolute path,
+  measured by `update.system` failing with "command not found" inside an
+  otherwise-working terminal.
+- The shell's `FileView` watch on `extensions/omarchy-menu.jsonc` goes **stale
+  when the file's inode is replaced** (rm + ln, stow re-stow): the old content
+  stays live with no error. The symlink itself is fine — verified by summoning a
+  rice-only submenu through it. After swapping the file, run `omarchy-menu
+  refresh` (or any shell restart) and re-check.
 - `loaf doctor` tests each tracked path with `[[ -L ]]`, so a **directory**
   symlink makes every file under it read as "replaced by a real file". Link
   files individually.
@@ -138,11 +147,10 @@ reflexes can no longer land in the same place.
 
 Decided: **adopt upstream's chords, and add bare `ALT+SPACE` → launcher** so both
 old app reflexes still reach applications. One added binding, no unbinds. Recorded
-in ADR-0027; **not yet applied**, because `~/.config/hypr/bindings.lua` is still
-untracked stock — it belongs with the `bindings.conf` → `.lua` port above, which
-must carry this line:
-
-    o.bind("ALT + SPACE", "Launch apps", "omarchy-shell shell toggle omarchy.launcher \"{}\"")
+in ADR-0027 and **applied 2026-08-09**: the `o.bind` line is live at the top of
+`~/.config/hypr/bindings.lua` and verified in `hyprctl binds` (modmask 8 → "Launch
+apps"). The file itself is being ported by the windows agent; only the SPACE lines
+in it are the menus'.
 
 ## Tooling that is now wrong — ✅ done 2026-08-09
 

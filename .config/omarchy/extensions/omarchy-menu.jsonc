@@ -36,7 +36,7 @@
   // from upstream's menu or from the pre-quattro palette, extracted rather than
   // retyped. test/loaf-test.sh asserts none of them has gone empty.
   //
-  // THREE NON-OBVIOUS MECHANISMS, all established by reading MenuModel.js:
+  // FOUR NON-OBVIOUS MECHANISMS, all established by reading MenuModel.js:
   //
   // 1. AN OVERRIDE MUST RESTATE EVERY FIELD IT WANTS TO KEEP. normalizeItem()
   //    defaults each absent field to "", and mergeMenuSources() copies every key
@@ -50,6 +50,15 @@
   //    logging, so the symptom is every entry here silently vanishing while
   //    upstream's menu still works. Trailing commas are fine; those are stripped.
   //
+  // 4. OUR ACTIONS CARRY ABSOLUTE PATHS. The shell executes actions via
+  //    Quickshell.execDetached, and the floating-terminal presentation runs its
+  //    argument through bash without a login environment - neither has
+  //    ~/.local/bin on PATH. Upstream's rows never notice because everything they
+  //    call lives in /usr/share/omarchy/bin. Ours failed with "command not found"
+  //    inside an otherwise-working terminal, which is the same trap the bar
+  //    modules hit (see docs/quattro-migration.md). Keep absolute paths until
+  //    .config/uwsm/env is re-decided.
+  //
   // 3. ORDER FOLLOWS FIRST APPEARANCE. An overridden id keeps the position it has
   //    in upstream's file, so the ratio row stays put in the Toggle submenu. New
   //    ids land after every upstream row of the same parent. There is no
@@ -62,7 +71,7 @@
   // Same two edits the old menu.sh made - a label word and the dispatch - and the
   // same reason they cannot be made by shadowing PATH: Omarchy's bin directory
   // precedes ~/.local/bin. Icon f2d0 is upstream's own, kept deliberately.
-  "trigger.toggle.one-window-ratio": {"icon":"","label":"1-Window Zen Ratio","keywords":"square zen aspect ratio single window","action":"ratio-toggle"},
+  "trigger.toggle.one-window-ratio": {"icon":"","label":"1-Window Zen Ratio","keywords":"square zen aspect ratio single window","action":"/home/austinkarren/.local/bin/ratio-toggle"},
 
   // Monitor scaling. Upstream has no menu row for this at all - it is reachable
   // only by SUPER+SLASH and SUPER+ALT+SLASH - and the old palette's single
@@ -85,8 +94,8 @@
   // colors.toml. The old light.mode marker file is gone. Keep this in step with
   // ~/.local/bin/toggle-appearance, which decides the same thing the same way.
   // Icons: f0594 moon, f05a8 sun - both the old palette's.
-  "style.appearance-dark": {"icon":"󰖔","label":"Switch to Dark","keywords":"dark appearance mode theme","when":"grep -q '^[[:space:]]*mode[[:space:]]*=[[:space:]]*\"light\"' ~/.local/state/omarchy/current/theme/colors.toml","action":"toggle-appearance"},
-  "style.appearance-light": {"icon":"󰖨","label":"Switch to Light","keywords":"light appearance mode theme","when":"! grep -q '^[[:space:]]*mode[[:space:]]*=[[:space:]]*\"light\"' ~/.local/state/omarchy/current/theme/colors.toml","action":"toggle-appearance"},
+  "style.appearance-dark": {"icon":"󰖔","label":"Switch to Dark","keywords":"dark appearance mode theme","when":"grep -q '^[[:space:]]*mode[[:space:]]*=[[:space:]]*\"light\"' ~/.local/state/omarchy/current/theme/colors.toml","action":"/home/austinkarren/.local/bin/toggle-appearance"},
+  "style.appearance-light": {"icon":"󰖨","label":"Switch to Light","keywords":"light appearance mode theme","when":"! grep -q '^[[:space:]]*mode[[:space:]]*=[[:space:]]*\"light\"' ~/.local/state/omarchy/current/theme/colors.toml","action":"/home/austinkarren/.local/bin/toggle-appearance"},
 
   // Emoji and clipboard. Both are first-party quattro overlays with keybindings
   // (SUPER+CTRL+E, SUPER+CTRL+V) but no menu row, so they are in the same
@@ -103,12 +112,12 @@
   // is attributable to one layer rather than two (ADR-0034). Upstream's row is
   // already named "Omarchy", so no rename is needed to tell them apart here.
   // Icon f021 refresh, the old palette's for this entry.
-  "update.system": {"icon":"","label":"System","keywords":"upgrade cachyos arch pacman aur flatpak base packages","action":"omarchy-launch-floating-terminal-with-presentation system-update"},
+  "update.system": {"icon":"","label":"System","keywords":"upgrade cachyos arch pacman aur flatpak base packages","action":"omarchy-launch-floating-terminal-with-presentation /home/austinkarren/.local/bin/system-update"},
 
   // Calendar. ADR-0006 keeps GNOME Calendar for online meetings; quattro's clock
   // is a bar label with no popup and no month grid, so nothing native replaces
   // it. Its other entry point is SUPER+SHIFT+C in bindings.conf, which is not
   // live until the Hyprland bindings are ported to Lua - until then this row is
   // the only way to reach it. Icon f00ed is the glyph the deleted bar module used.
-  "trigger.calendar": {"icon":"󰃭","label":"Calendar","keywords":"calendar meetings schedule agenda gnome","action":"calendar-toggle"},
+  "trigger.calendar": {"icon":"󰃭","label":"Calendar","keywords":"calendar meetings schedule agenda gnome","action":"/home/austinkarren/.local/bin/calendar-toggle"},
 }

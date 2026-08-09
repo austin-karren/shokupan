@@ -169,6 +169,17 @@ What is genuinely lost is typing one query and seeing an application and a comma
 ranked together. What is kept is that either surface is one keystroke away and both
 are searchable.
 
+### Regression: web search is gone, and "Search Google" with it
+
+Quattro's launcher has no web-search fallback of any kind — `grep -r` over
+`/usr/share/omarchy` finds no websearch mechanism and no search-engine URL — so the
+`websearch.toml` entry this rice carried has nothing to attach to. The entry itself
+was one rename: the default engine was retitled from "Google" to **"Search Google"**,
+because in a list that mixes applications and commands the bare word "Google" reads
+as an app, and several Google web apps are installed. That reasoning survives the
+regression: if upstream ever grows a search fallback, re-apply the rename. Nothing
+is being rebuilt for this.
+
 ### The list shrank from 27 entries to 10
 
 Quattro's own menu absorbed the whole Toggle Menu, plus Install, Remove, Update and
