@@ -76,24 +76,18 @@
         },
         {
           "id": "apexshot",
-          "type": "command",
-          "text": "",
-          "tooltip": "ApexShot\n\nLeft: capture area\nMiddle: record screen\nRight: capture full screen",
-          "onClick": "apexshot capture area",
-          "onMiddleClick": "apexshot record ui",
-          "onRightClick": "apexshot capture screen",
-          "horizontalMargin": 9.5
+          "type": "qml"
         },
         {
           "id": "omarchy.spacer",
-          "size": 2
+          "size": 3
         },
         {
           "id": "omarchy.tailscale"
         },
         {
           "id": "omarchy.spacer",
-          "size": 3
+          "size": 2
         },
         {
           "id": "omarchy.bluetooth"

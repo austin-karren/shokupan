@@ -281,6 +281,31 @@ around the ratio's off-face: `[Dnd] · ratio · [Reminder, NightLight, StayAwake
 ScreenRecording, Dictation]` — silence-notifications first, the zen toggle
 second, upstream's default order for the rest.
 
+**Is the mismatch because upstream places icons programmatically and we
+placed ours by hand? Measured: no — and the measurement settles this ADR's
+old doctrine too.** Upstream's mechanism, cited: the module row has
+`spacing: 0` (Bar.qml:1238), so all spacing comes from each widget;
+`WidgetButton` derives width from the glyph plus a margin
+(WidgetButton.qml:65, default 8.5); and every right-cluster panel pins the
+same `fixedWidth: Style.space(27)` box (audio Panel.qml:531, network:715,
+bluetooth:477, monitor:346, power:257). That box convention is uniform
+*pitch* — and running this bar on pure convention (our apexshot given the
+native 27 box, every hand number deleted) measured **32 · 28 · 28 · 31 · 33 ·
+18**: nearly the exact imbalance that prompted the complaint. Uniform pitch
+was the wrong invariant on Waybar (this ADR, above) and it is still the wrong
+invariant on quattro, because glyph ink varies inside equal boxes. Upstream
+knows: it hand-compensates its own glyphs (`rightExtraMargin: 4` on monitor,
+`5.5` on network) exactly as this ADR's Waybar table did.
+
+So the doctrine survives the rewrite, restated: **adopt upstream's box
+convention as the base, then correct the few glyphs whose ink measurably
+misleads the eye.** The rice's full set of hand numbers is now three glyph
+compensations — spacers 3/2 around tailscale (sparse dot-grid ink), spacer 4
+after audio (trailing waves), `rightExtraMargin: 4` on the hosted network
+button (mirroring upstream's own monitor value) — on an otherwise
+convention-pure cluster. Measured result: **31 · 31 · 32 · 31 · 32 ·
+24(+waves)**, a one-pixel spread.
+
 **The audio gaps are tuned to the eye, not the ruler — both sides.** The eye
 reads the speaker's solid cone as the icon and discounts the wave arcs (even
 though their ink is dense — measured at full column weight, so this is

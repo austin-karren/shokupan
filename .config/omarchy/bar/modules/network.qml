@@ -46,13 +46,12 @@ Item {
       var c = w.children[i]
       if (c && "tooltipText" in c && "fixedWidth" in c && "text" in c) {
         c.text = Qt.binding(function() { return root.mapped(w.icon) })
-        // Upstream gives this button rightExtraMargin: 5.5, which lands as the
-        // left margin of the audio module beside it. Measured on the live bar,
-        // that put 34 physical px between the globe and the speaker cone while
-        // the eye-corrected gap on the speaker's other side reads ~24; the eye
-        // discounts the wave arcs even though their ink is dense. 2 instead of
-        // 5.5 closes the left gap to ~28. Tuned by looking, not computed.
-        c.rightExtraMargin = 2
+        // Glyph-specific compensation, the same kind upstream applies to its
+        // own widgets (monitor Panel.qml:348 uses rightExtraMargin: 4 too).
+        // Upstream ships 5.5 here; measured on this bar that splits the globe's
+        // neighbours 29/34 — 4 evens the pair. Not a rewrite of upstream's
+        // convention, a one-glyph nudge inside it.
+        c.rightExtraMargin = 4
         break
       }
     }
