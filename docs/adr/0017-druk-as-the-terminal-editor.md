@@ -4,6 +4,10 @@ status: proposed
 
 # Bake off druk, Helix and Neovim as the terminal editor
 
+> Still proposed after the quattro migration (2026-08-09): editors run inside the
+> terminal and nothing here touches the bar, launcher or Hyprland config layers
+> quattro rewrote — unaffected, awaiting its bakeoff.
+
 Decided: a three-way comparison. Keep **Neovim** installed, add **druk**, and add
 **Helix** as a third option, then use them and see which wins. This is explicitly an
 addition for comparison, not a replacement — no decision is being made about removing

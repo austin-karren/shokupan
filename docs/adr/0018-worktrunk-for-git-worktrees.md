@@ -4,6 +4,10 @@ status: proposed
 
 # Manage git worktrees with worktrunk instead of by hand
 
+> Still proposed after the quattro migration (2026-08-09): a git-side tooling
+> choice with no contact with the desktop layers quattro rewrote — unaffected,
+> awaiting its grilling.
+
 Intent: stop driving `git worktree` directly and use **worktrunk** to manage
 worktrees.
 
