@@ -2,28 +2,49 @@
 
 # Toggle system appearance between light and dark, macOS style.
 #
-# In Omarchy "appearance" is a property of the active theme: themes that ship a
-# light.mode marker file are light, and omarchy-theme-set-gnome reads that marker
-# to set the GTK color-scheme and icon theme. So toggling appearance means
-# switching to a theme of the opposite mode.
+# In Omarchy "appearance" is a property of the active theme, so toggling appearance
+# means switching to a theme of the opposite mode.
+#
+# HOW A THEME DECLARES ITS MODE CHANGED IN QUATTRO. It used to be the presence of a
+# `light.mode` marker file in the theme directory. Quattro dropped that file
+# entirely and put `mode = "light"` / `mode = "dark"` on the first line of the
+# theme's colors.toml instead. Testing for the old marker did not merely misread a
+# light theme as dark - it made every theme look dark, so the toggle only ever
+# switched one way and could never come back.
 #
 # The last-used theme of each mode is remembered, so if you pick a different dark
 # theme by hand the toggle follows you instead of snapping back to a default.
 
 set -e
 
-CURRENT_THEME_DIR="$HOME/.config/omarchy/current/theme"
-THEME_NAME_FILE="$HOME/.config/omarchy/current/theme.name"
+# Quattro moved the current-theme pointers from ~/.config/omarchy/current/ to
+# ~/.local/state/omarchy/current/ (omarchy-theme-set:12,168). Under the old paths
+# `current=$(<"$THEME_NAME_FILE")` failed outright, so the toggle did nothing at
+# all rather than picking the wrong theme. Read it from omarchy-theme-set's own
+# constant if it moves again.
+CURRENT_THEME_DIR="$HOME/.local/state/omarchy/current/theme"
+THEME_NAME_FILE="$HOME/.local/state/omarchy/current/theme.name"
 STATE_DIR="$HOME/.local/state/omarchy/appearance"
 
 DEFAULT_DARK="tokyo-night"
 DEFAULT_LIGHT="catppuccin-latte"
 
+theme_mode() {
+  # First `mode = "..."` in colors.toml. Anything unreadable or unrecognised is
+  # treated as dark, which is the safe default: dark is what this machine sits in,
+  # so a bad read costs one unwanted switch to light rather than stranding the
+  # toggle in a mode it cannot leave.
+  local value
+  value=$(sed -n 's/^[[:space:]]*mode[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' \
+    "$CURRENT_THEME_DIR/colors.toml" 2>/dev/null | head -1)
+  [[ $value == "light" ]] && echo light || echo dark
+}
+
 mkdir -p "$STATE_DIR"
 
 current=$(<"$THEME_NAME_FILE")
 
-if [[ -f "$CURRENT_THEME_DIR/light.mode" ]]; then
+if [[ $(theme_mode) == "light" ]]; then
   # Currently light -> remember it, switch to dark.
   echo "$current" >"$STATE_DIR/last-light"
   target=$(cat "$STATE_DIR/last-dark" 2>/dev/null || echo "$DEFAULT_DARK")

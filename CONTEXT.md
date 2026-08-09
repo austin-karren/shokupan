@@ -124,7 +124,10 @@ _Avoid_: colorscheme, palette (a palette is an input to a theme, not a theme)
 
 **Appearance**:
 Whether the desktop is light or dark. Not independent state: it is a property of
-the active Theme, flagged by a `light.mode` marker file inside it.
+the active Theme, declared by `mode = "light"` / `mode = "dark"` in that theme's
+`colors.toml`. Quattro replaced the previous marker — an empty `light.mode` file in
+the theme directory — and moved the current-theme pointers to
+`~/.local/state/omarchy/current/`.
 _Avoid_: mode, dark mode setting
 
 **Pinned wallpaper**:
