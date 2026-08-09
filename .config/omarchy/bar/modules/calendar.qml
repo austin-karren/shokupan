@@ -28,7 +28,11 @@ Item {
   property string moduleName
   property var settings
 
-  implicitWidth: label.implicitWidth + 13
+  // +8, not +13: measured on the live bar, +13 put 28 physical px between the
+  // calendar's ink and the date against 23 between the date and the weather.
+  // Symmetric padding means each -1 logical px here closes the right gap by
+  // ~0.8 physical px at scale 1.6; +8 lands the bracket at 24 vs 23.
+  implicitWidth: label.implicitWidth + 8
   implicitHeight: bar ? bar.barSize : 26
 
 

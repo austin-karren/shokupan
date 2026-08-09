@@ -292,6 +292,8 @@ are the to-do list.
 | [0034](./docs/adr/0034-omarchy-is-clay-cachyos-is-the-base.md) | Omarchy is clay; CachyOS is the base | accepted |
 | [0035](./docs/adr/0035-shokupan-owns-the-install-path.md) | Shokupan owns the install path; the bridge is retired | proposed |
 | [0036](./docs/adr/0036-middle-click-autoscroll-via-the-flags-file.md) | Middle-click autoscroll, set where the browser reads it | accepted |
+| [0037](./docs/adr/0037-the-about-window-is-sized-to-fastfetch.md) | The About window is sized to fastfetch, by measuring the cell | accepted |
+| [0038](./docs/adr/0038-helium-plays-drm-through-a-donated-widevine.md) | Helium plays DRM through a donated Widevine; Chrome is gone | accepted |
 
 ## To do
 
