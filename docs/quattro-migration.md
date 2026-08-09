@@ -54,8 +54,10 @@ for the merged list's entries:
 
 Still dead but *not* deleted, because they are code rather than config and belong
 with their own ADRs: `.local/bin/waybar-watchdog` (ADR-0005, retire), the three
-toggle wrappers (ADR-0004/0011, native now), and the `omarchy-toggle-waybar` line
-in `.config/omarchy/extensions/menu.sh`. `packages.txt` also still lists `waybar`,
+toggle wrappers (ADR-0004/0011, native now). The `omarchy-toggle-waybar` line went
+with the whole of `.config/omarchy/extensions/menu.sh`, deleted when the menus were
+ported — quattro sources no such file, so it was dead in full rather than in one
+line. `packages.txt` also still lists `waybar`,
 `omarchy-walker` and `wiremix`; regenerating it sweeps in the whole upgrade's
 package churn, so it wants its own commit.
 

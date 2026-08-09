@@ -98,13 +98,14 @@ it can also override anything the tracked `.bashrc` set.
 | `.config/omarchy/shell.json` | The quickshell bar: layout, module settings, idle timings. Hot-reloaded — the shell watches this file, so edits apply without a restart |
 | `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express (`ratio.qml` hides until the centre of the bar is hovered) |
 | `.config/omarchy/themed/shell.toml.tpl` | Theme template override that pins the bar dark in every theme (ADR-0009). User templates outrank Omarchy's, so this replaces the built-in wholesale — re-diff it after an upgrade |
-| `.config/omarchy/extensions/menu.sh` | Omarchy menu overrides — the sanctioned extension point, not a patched Omarchy file |
+| `.config/omarchy/extensions/omarchy-menu.jsonc` | Our rows in the Omarchy Menu, and the System Palette's only home since quattro (ADR-0027) — the sanctioned extension point, not a patched Omarchy file. Hot-reloaded. Replaced `menu.sh`, whose bash extension point quattro removed |
 | `.config/starship.toml`, `.config/tmux/` | Prompt and multiplexer |
 | `.bashrc` | Thin — sources Omarchy's `default/bash/rc` |
 | `.local/bin/` | The `loaf` CLI, plus every script a keybinding or bar module depends on. The npx shims (`codex`, `gemini`, …) stay untracked — they are generated, not config |
 | `.config/omarchy/hooks/post-update.d/` | Runs `loaf heal` after each `omarchy update` — the sanctioned hook directory, not a patched Omarchy file |
 | `.local/share/applications/` | The web apps (`omarchy-launch-webapp` entries) and their icons, plus the Flatpak ref handler. Tracked because a rebuild would otherwise come up with no web apps at all |
-| `.config/mimeapps.list` | Which application handles what. Load-bearing, not incidental: it is the half of ADR-0032 that actually activates the Flatpak ref handler |
+| `.config/mimeapps.list` | Which application handles what. Load-bearing, not incidental: it is the half of ADR-0032 that actually activates the Flatpak ref handler, and the half of ADR-0036 that decides which browser every web app and browser bind opens |
+| `.config/chromium-flags.conf`, `.config/helium-browser-flags.conf` | Browser flags. Read by each browser's launcher wrapper, which is the only place a flag reaches web-app windows — `.desktop` `Exec=` lines are truncated to their first token (ADR-0036) |
 | `packages/`, `migrations/` | Repo-only: the package manifests (pacman and Flatpak), and one-shot fixes for state that lives outside the repo |
 
 ### Deliberately not tracked
@@ -248,7 +249,7 @@ are the to-do list.
 | [0024](./docs/adr/0024-floating-placement-keys.md) | Floating windows get placement keys | accepted |
 | [0025](./docs/adr/0025-resize-windows-by-dragging-borders.md) | Resize windows by dragging their borders | accepted |
 | [0026](./docs/adr/0026-zen-ratio-instead-of-a-square.md) | Single-window **zen** aspect ratio, 6:5 not square | accepted |
-| [0027](./docs/adr/0027-one-list-for-apps-and-commands.md) | One list for applications and system commands | accepted |
+| [0027](./docs/adr/0027-one-list-for-apps-and-commands.md) | One list for applications and system commands | merge withdrawn under quattro; reasoning still governs |
 | [0028](./docs/adr/0028-the-rice-re-asserts-itself-after-upstream-updates.md) | The rice re-asserts itself after upstream updates | accepted |
 | [0029](./docs/adr/0029-the-bar-is-sorted-by-question-not-by-mechanism.md) | The bar is sorted by the question each module answers | accepted |
 | [0030](./docs/adr/0030-the-audio-tui-opens-on-output.md) | The audio TUI opens on Output Devices | accepted |
@@ -257,6 +258,7 @@ are the to-do list.
 | [0033](./docs/adr/0033-quattro-is-a-hyprland-rewrite-not-a-bar-swap.md) | Quattro is a Hyprland rewrite, not a bar swap | proposed |
 | [0034](./docs/adr/0034-omarchy-is-clay-cachyos-is-the-base.md) | Omarchy is clay; CachyOS is the base | accepted |
 | [0035](./docs/adr/0035-shokupan-owns-the-install-path.md) | Shokupan owns the install path; the bridge is retired | proposed |
+| [0036](./docs/adr/0036-middle-click-autoscroll-via-the-flags-file.md) | Middle-click autoscroll, set where the browser reads it | accepted |
 
 ## To do
 
