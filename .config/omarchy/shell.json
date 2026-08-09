@@ -99,10 +99,6 @@
           "id": "omarchy.bluetooth"
         },
         {
-          "id": "omarchy.spacer",
-          "size": 2
-        },
-        {
           "id": "network",
           "type": "qml"
         },
@@ -122,5 +118,9 @@
       ]
     }
   },
-  "plugins": []
+  "plugins": [
+    {
+      "id": "shokupan.launcher"
+    }
+  ]
 }

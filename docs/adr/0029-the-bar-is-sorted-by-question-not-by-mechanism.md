@@ -281,13 +281,24 @@ around the ratio's off-face: `[Dnd] · ratio · [Reminder, NightLight, StayAwake
 ScreenRecording, Dictation]` — silence-notifications first, the zen toggle
 second, upstream's default order for the rest.
 
-**The audio gap is tuned to the eye, not the ruler.** The speaker's sound
-waves are visually light — the eye reads the solid cone as the icon's edge and
-discounts the waves — so a raw-ink-uniform gap after audio *looks* oversized by
-about the waves' width. The spacer after audio dropped from 8 to 4: raw ink gap
-24 where the cluster runs 33–34, visual gap (cone edge to monitor) back in
-line. This refines the uniform-ink rule: ink that trails off (wave arcs, ramp
-glyphs) counts fractionally.
+**The audio gaps are tuned to the eye, not the ruler — both sides.** The eye
+reads the speaker's solid cone as the icon and discounts the wave arcs (even
+though their ink is dense — measured at full column weight, so this is
+perception, not rendering). Two consequences, fixed right to left with guide
+overlays drawn on screenshots at each step:
+
+- *Right of the speaker*: the spacer after audio went 8 → 4, leaving a raw ink
+  gap of 24 that reads as ~33 once the discounted waves are added back.
+- *Left of the speaker*: upstream's network button carries
+  `rightExtraMargin: 5.5`, which lands as the speaker's left margin. The hosted
+  wrapper sets it to 2, and the spacer between bluetooth and network was
+  removed to keep the bluetooth side even.
+
+Final measured run: **34 · 33 · 33 · 32 · 31 · 24(+waves)** — a smooth drift,
+no spike on either side of the speaker. The refinement to the uniform-ink
+rule: ink that trails off (wave arcs, ramp glyphs) counts fractionally, and a
+glyph with trailing ink needs *both* of its gaps re-judged, not just the
+trailing side.
 
 **The menu button wears the rice's power glyph** (`omenu` QML module, U+F011 —
 the same glyph `custom/omarchy` carried on Waybar). Upstream's widget hardcodes
