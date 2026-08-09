@@ -10,13 +10,18 @@ status: accepted
 >
 > The menu-override section below is also void: `menu.sh` was deleted with the
 > menu port — quattro's `omarchy-menu` sources no such file, so the
-> `show_toggle_menu` redefinition it describes has no host. The Toggle Menu's
-> ratio row is currently upstream's, meaning it dispatches the square `1 1`
-> rather than `ratio-toggle`'s zen `6 5`; `ratio-toggle`'s own status poll
-> rewrites the file to the configured ratio within 3 seconds, which was already
-> this ADR's answer for the `SUPER+CTRL+BACKSPACE` path. Whether quattro's menu
-> has a new extension point for the label is the menus agent's question, not the
-> bar's.
+> `show_toggle_menu` redefinition it describes has no host. Whether quattro's
+> menu has a new extension point for the label is the menus agent's question,
+> not the bar's.
+>
+> **And the value war this ADR spent its correction sections on is over.** The
+> Hyprland port put the zen value in `~/.config/hypr/hyprland.lua` itself —
+> `hl.config({ layout = { single_window_aspect_ratio = { 6, 5 } } })` whenever
+> the flag file *exists* — so the flag's contents stopped mattering. Every
+> entry point (Toggle Menu, `SUPER+CTRL+BACKSPACE`, the bar) now delegates to
+> `omarchy-hyprland-toggle`, and `ratio-toggle`'s repair-on-poll mechanism is
+> deleted along with the problem it repaired. Verified by clicking: a lone
+> 2284px window narrows to exactly 1788px (6:5 of its 1490px height) and back.
 
 Omarchy's **single-window square aspect ratio**, kept as a feature and renamed to
 **single-window zen aspect ratio**, with the value widened from `1 1` to `6 5`. The point

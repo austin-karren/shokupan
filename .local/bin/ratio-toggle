@@ -4,92 +4,62 @@
 # instead of letting it span the display. Omarchy's own feature, renamed from "square"
 # to "zen" because the value is no longer 1:1. See ADR-0013 and ADR-0026.
 #
-#   ratio-toggle --status    print Waybar JSON for the current state
-#   ratio-toggle             flip it, reload Hyprland, refresh the bar
+#   ratio-toggle --status    print Waybar-style JSON for the current state
+#   ratio-toggle             flip it (delegates to omarchy-hyprland-toggle)
 #
-# THREE ENTRY POINTS, ONE FLAG FILE
+# ONE FLAG FILE, AND ITS CONTENTS NO LONGER MATTER
 #
-# This is reachable from the bar (here), from the Toggle Menu's "1-Window Ratio" entry,
-# and from SUPER+CTRL+BACKSPACE. The last two call Omarchy's
-# `omarchy-hyprland-window-single-square-aspect-toggle`, which cannot be replaced:
-# `~/.local/share/omarchy/bin` comes BEFORE `~/.local/bin` on PATH, so a same-named
-# script here would never win.
+# Under quattro the flag is ~/.local/state/omarchy/toggles/hypr/
+# single-window-aspect-ratio.lua, and ~/.config/hypr/hyprland.lua applies the zen
+# value itself whenever that file EXISTS:
 #
-# So this deliberately writes OMARCHY'S OWN FILENAME rather than a private one. That is
-# what keeps the other two entry points working: Omarchy's script tests for exactly this
-# path, so it can still switch the feature off. Only the file's CONTENTS differ - it sets
-# the zen ratio where Omarchy's copy hardcodes `1 1`.
+#     hl.config({ layout = { single_window_aspect_ratio = { 6, 5 } } })
 #
-# Using a private filename was tried first and is subtly broken: Omarchy's toggle would
-# no longer find a file to remove, so the menu entry could only ever turn the feature ON,
-# never off.
+# That kills the whole repair mechanism this script used to carry. In the .conf
+# era, Omarchy's toggle copied a file hardcoding `1 1`, so --status had to detect
+# the wrong contents and rewrite them on every bar poll. Now the value is fixed at
+# config time, in the same reload the toggle itself issues — the Toggle Menu,
+# SUPER+CTRL+BACKSPACE and this script all converge on 6:5 with nothing polling.
 #
-# `--status` therefore also repairs the value. Waybar polls it every 3 seconds, so if the
-# menu or the keybinding writes Omarchy's 1:1 copy, it is rewritten to the zen ratio
-# within one poll. That is the whole mechanism by which those entry points appear to
-# apply the right value.
+# So the toggle path is a straight delegation to
+# `omarchy-hyprland-toggle single-window-aspect-ratio`, which copies or removes
+# the flag and reloads Hyprland. This script remains only as the bar's adapter:
+# --status is the JSON contract .config/omarchy/bar/modules/ratio.qml reads every
+# 3 seconds, and the click path adds the notification the raw toggle lacks.
 #
 # WHY THE RATIO IS 6:5 AND NOT WIDER
 #
-# Hyprland SILENTLY IGNORES this setting unless the constraint would shrink the window to
-# 80% or less of the available width. Measured, available area 2284x1484:
+# Hyprland SILENTLY IGNORES this setting unless the constraint would shrink the
+# window to 80% or less of the available width. Measured, available area 2284x1484:
 #
 #   1:1   1484px   65% of full width   applied
-#   11:10 1632px   71%                 applied
-#   6:5   1782px   78%                 applied  <- chosen
-#   1.23  1826px   79.9%               applied
+#   6:5   1782px   78%                 applied  <- chosen (set in hyprland.lua)
 #   1.24  ignored  80.5%
-#   5:4   ignored                      (misses by 0.019)
-#   4:3   ignored
 #   3:2   ignored  - and this display IS 3:2, so it would be a no-op anyway
 #
-# The boundary is 0.8 x the available area's own aspect. Raising ASPECT past 6:5 on this
-# display makes the toggle appear to do nothing at all.
+# The boundary is 0.8 x the available area's own aspect. The value itself now
+# lives in ~/.config/hypr/hyprland.lua; change it there, not here.
 #
 # THE GLYPH IS AN ESCAPE, NOT A LITERAL
 #
 # U+F2D0 is written as $'\uF2D0' via bash ANSI-C quoting, not pasted in. An earlier
-# revision embedded the character directly, it was lost in an edit, and Waybar rendered an
-# empty module - the icon vanished from the bar with no error anywhere, because a module
-# whose text is an empty string looks exactly like one that is deliberately blank. An
-# escape survives editing; a private-use codepoint that renders as nothing does not.
+# revision embedded the character directly, it was lost in an edit, and the bar
+# rendered an empty module - the icon vanished with no error anywhere, because a
+# module whose text is an empty string looks exactly like one that is deliberately
+# blank. An escape survives editing; a private-use codepoint that renders as
+# nothing does not.
 
 set -euo pipefail
 
-# Width:height. Must stay below 0.8 x the usable area's aspect - see above.
-ASPECT="6 5"
-ASPECT_LABEL="${ASPECT// /:}"
+ASPECT_LABEL="6:5"
 
 # U+F2D0 window-maximize, the glyph Omarchy uses in this feature's own notifications.
 GLYPH=$'\uF2D0'
 
-# Omarchy's filename, on purpose - see the header.
-FLAG="$HOME/.local/state/omarchy/toggles/hypr/single-window-aspect-ratio.conf"
-# Signals 7-10 are taken by Omarchy's own indicators.
-SIGNAL=11
-
-write_flag() {
-  mkdir -p "$(dirname "$FLAG")"
-  cat >"$FLAG" <<EOF
-# Written by ratio-toggle. Omarchy's own toggle copies a version of this file that
-# hardcodes \`1 1\`; this sets the zen ratio instead. See ADR-0026.
-layout {
-    single_window_aspect_ratio = $ASPECT
-}
-EOF
-}
-
-# True when the file is present but carries a different ratio - i.e. Omarchy's 1:1 copy
-# landed via the Toggle Menu or SUPER+CTRL+BACKSPACE.
-needs_repair() {
-  [[ -f $FLAG ]] && ! grep -qF "single_window_aspect_ratio = $ASPECT" "$FLAG"
-}
+# The quattro flag: existence is the whole signal (see header).
+FLAG="$HOME/.local/state/omarchy/toggles/hypr/single-window-aspect-ratio.lua"
 
 if [[ ${1-} == --status ]]; then
-  if needs_repair; then
-    write_flag
-    hyprctl reload >/dev/null 2>&1 || true
-  fi
   if [[ -f $FLAG ]]; then
     # GLYPH passed as an argument, not spliced into the format string: a stray
     # % in the icon would otherwise be read as a format spec and corrupt the JSON.
@@ -105,17 +75,15 @@ fi
   exit 1
 }
 
-if [[ -f $FLAG ]]; then
-  rm -f "$FLAG"
-  action=Disable
-else
-  write_flag
-  action=Enable
-fi
+# Copies or removes the flag and reloads Hyprland; prints "on" or "off".
+state=$(omarchy-hyprland-toggle single-window-aspect-ratio)
 
-hyprctl reload >/dev/null
-# Omarchy's phrasing, with "square" swapped for "zen" - so the bar, the Toggle Menu and
-# the keybinding all announce the same feature by the same name.
+case $state in
+  on) action=Enable ;;
+  *) action=Disable ;;
+esac
+
+# Omarchy's phrasing, with "square" swapped for "zen" - so the bar, the Toggle Menu
+# and the keybinding all announce the same feature by the same name.
 command -v notify-send >/dev/null &&
   notify-send -u low "$GLYPH      $action single-window zen aspect ratio"
-pkill -RTMIN+$SIGNAL waybar 2>/dev/null || true

@@ -67,8 +67,16 @@ Omarchy's script can still remove it and the Toggle Menu keeps working. The
 feature is also renamed — see **single-window zen aspect ratio** in the glossary.
 
 The property claimed further down — reachable from both the Toggle Menu and the bar — does
-still hold, and there is a third route, `SUPER+CTRL+BACKSPACE`. The menu writes 1:1; the
-module's own status poll rewrites it to the configured ratio within 3 seconds.
+still hold, and there is a third route, `SUPER+CTRL+BACKSPACE`.
+
+> **The 1:1-repair mechanism died with the Hyprland port (2026-08-09).**
+> `hyprland.lua` now applies the zen value itself whenever the flag file exists,
+> so its contents stopped mattering and all three entry points converge on 6:5
+> at config time. `ratio-toggle` is reduced to the bar's adapter: `--status`
+> keeps the JSON contract `ratio.qml` polls, and a click delegates to
+> `omarchy-hyprland-toggle single-window-aspect-ratio` — the delegation the
+> paragraph above once ruled out, made safe because the copied file's contents
+> no longer carry the value.
 
 ## One glyph, dimmed — after trying two
 
