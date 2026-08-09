@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Re-apply the pinned wallpaper after a theme change.
+#
+# omarchy-theme-set switches to a background belonging to the new theme. If the
+# user has pinned one (see `pin-wallpaper`), put it back.
+#
+# Under quattro the current-background symlink lives at
+# ~/.local/state/omarchy/current/background, and the shell's background plugin
+# renders whatever it points at (polling plus IPC from omarchy-theme-bg-set).
+#
+# This used to also interrogate swaybg, because omarchy-theme-bg-next's
+# no-backgrounds branch painted a flat black `swaybg --color` WITHOUT rewriting
+# the symlink — so the link claimed one thing while the screen showed another.
+# Quattro removed both halves of that: swaybg is gone, and the no-backgrounds
+# branch now just sends a notification and leaves the link alone. The link can
+# be trusted again, so the check is the link and nothing else.
+
+MARKER="$HOME/.local/state/omarchy/wallpaper-pin"
+CURRENT_LINK="$HOME/.local/state/omarchy/current/background"
+
+[[ -f $MARKER ]] || exit 0
+
+pinned=$(<"$MARKER")
+
+# Pinned file was deleted - fall back to whatever the theme chose rather than
+# pointing the shell at nothing.
+[[ -f $pinned ]] || exit 0
+
+# Already correct (e.g. a theme change that skipped the background) - no work.
+if [[ $(readlink -f "$CURRENT_LINK" 2>/dev/null) == "$(readlink -f "$pinned")" ]]; then
+  exit 0
+fi
+
+omarchy-theme-bg-set "$pinned"
+
+exit 0

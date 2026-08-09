@@ -3,9 +3,11 @@
 # Pin a wallpaper so it survives theme changes.
 #
 # Omarchy treats backgrounds as a property of the theme: they live in
-# ~/.config/omarchy/current/theme/backgrounds/, and omarchy-theme-set does
-# `rm -rf` on that directory and repopulates it from the new theme. Any wallpaper
-# selected from a theme therefore cannot outlive that theme.
+# ~/.local/state/omarchy/current/theme/backgrounds/, and omarchy-theme-set
+# repopulates that directory from the new theme. Any wallpaper selected from a
+# theme therefore cannot outlive that theme. Quattro adds per-theme user
+# backgrounds (~/.config/omarchy/backgrounds/<theme>/), which is still not this:
+# a pin outranks every theme, not one.
 #
 # So copy the image somewhere stable, record it, and let
 # theme-set.d/30-restore-wallpaper re-apply it after every theme change.
@@ -14,12 +16,15 @@
 #   pin-wallpaper <image>      pin a specific image
 #   pin-wallpaper --off        unpin; wallpapers follow the theme again
 #   pin-wallpaper --status     show what is pinned
+#
+# CURRENT_LINK moved in quattro: it was ~/.config/omarchy/current/background,
+# and the whole current/ directory now lives under ~/.local/state.
 
 set -e
 
 PIN_DIR="$HOME/.local/share/wallpapers"
 MARKER="$HOME/.local/state/omarchy/wallpaper-pin"
-CURRENT_LINK="$HOME/.config/omarchy/current/background"
+CURRENT_LINK="$HOME/.local/state/omarchy/current/background"
 
 mkdir -p "$PIN_DIR" "$(dirname "$MARKER")"
 
