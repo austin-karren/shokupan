@@ -299,11 +299,12 @@ _Avoid_: stash, shelf, drawer
 **Hover-reveal group**:
 The quiet modules at the centre of the bar, which collapse to zero width until
 the centre section is hovered. Upstream's indicators live there, and so do the
-calendar (ADR-0006), the Claude-usage chip and the zen-ratio toggle (ADR-0013 —
-the one member that stays visible while its state is on). A module joins it by
-binding to the bar's `centerSectionRevealHeld`, which is why joining it requires
-a QML module rather than a Command module. The bar-settings gear after the
-workspaces has the same behaviour but its own hover target, since only the
+zen-ratio toggle (ADR-0013) and the Claude-usage chip, in that order — both
+hover-only in every state. The calendar is deliberately *not* a member: it is
+static, being half of ADR-0029's bracket around the date. A module joins the
+group by binding to the bar's `centerSectionRevealHeld`, which is why joining it
+requires a QML module rather than a Command module. The bar-settings gear after
+the workspaces has the same behaviour but its own hover target, since only the
 centre section publishes a reveal signal.
 _Avoid_: tray, overflow, drawer (the tray drawer is a different thing on the right)
 

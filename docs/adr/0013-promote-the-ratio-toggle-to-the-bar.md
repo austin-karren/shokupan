@@ -171,17 +171,19 @@ levels deep in a menu is the wrong home. That still holds. What changed is that
 quattro's bar has a state the Waybar bar did not: the centre section reveals its
 quiet modules on hover, and a module can opt into that.
 
-So the toggle is no longer the right cluster's action prefix. It sits at the end
-of the **centre**, next to the indicators, and mirrors their behaviour exactly:
+So the toggle is no longer the right cluster's action prefix. It sits in the
+**centre's hover tier**, immediately before the Claude-usage chip, and is
+**hover-only in both states**: on or off, it occupies no resting width and
+appears only while the centre is hovered. State still reads at a glance *while
+revealed* — the glyph takes the theme's `[bar] active` colour when the
+constraint is on.
 
-- zen ratio **on** → the glyph is visible, tinted with the theme's `[bar] active`
-  colour;
-- zen ratio **off** → the module collapses to zero width until the centre of the
-  bar is hovered.
-
-That is a better fit for this ADR's own argument than the old always-on glyph
-was. The point of promoting it was reach, not permanent presence, and the state
-worth seeing at a glance is the *constrained* one.
+An intermediate revision kept the glyph visible whenever the ratio was on,
+mirroring the indicators, on the argument that the constrained state was worth
+seeing unprompted. The settled behaviour is uniformity with the hover group
+instead: the point of promoting the toggle was reach, not presence, and hover
+is one flick away. This supersedes the "Settled: always visible" section above
+in full.
 
 **It is a `type: "qml"` module, not `type: "command"`.** A command module was the
 obvious port — `ratio-toggle --status` still emits Waybar-style JSON and quattro

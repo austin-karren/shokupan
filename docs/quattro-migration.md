@@ -71,8 +71,8 @@ fixed-dark treatment, verified rendering on the live session. Six tracked files
 carry it:
 
     .config/omarchy/shell.json                       layout, module settings, idle
-    .config/omarchy/bar/modules/ratio.qml            hover-revealed zen-ratio toggle
-    .config/omarchy/bar/modules/calendar.qml         hover-revealed, left of clock (ADR-0006)
+    .config/omarchy/bar/modules/ratio.qml            zen-ratio toggle, hover-only (ADR-0013)
+    .config/omarchy/bar/modules/calendar.qml         static, left of clock (ADR-0006)
     .config/omarchy/bar/modules/model-usage.qml      hosts upstream's widget, hover-revealed
     .config/omarchy/bar/modules/barcfg.qml           bar-settings gear, after workspaces
     .config/omarchy/themed/shell.toml.tpl            pins the bar to Tailwind-950

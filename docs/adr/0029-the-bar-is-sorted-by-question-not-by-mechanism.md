@@ -204,21 +204,23 @@ The rule and its tiebreak both ported. The bar now reads (⌁ marks the
 hover-revealed modules, invisible until the pointer is on their section):
 
     left    menu · workspaces · ⌁bar-settings
-    centre  media · ⌁calendar · CLOCK · weather · system-update · indicators
-            · ⌁model-usage · ⌁ratio
+    centre  media · calendar · CLOCK · weather · system-update · indicators
+            · ⌁ratio · ⌁model-usage
     right   tray · apexshot · tailscale · bluetooth · network · audio
             · monitor · power
 
 **The hover tier is new, and it is a third answer to this ADR's question.**
 Waybar offered two states: on the bar or not. Quattro's centre reveals quiet
-modules on hover, and that changed several placements. `calendar` sits revealed
-left of the clock — the same bracket this ADR built, now costing no resting
-width. `model-usage` and `ratio` are hover-revealed too (`ratio` stays visible
-while the constraint is *on*, which is the state worth seeing). `bar-settings`
-was quattro's own hover-revealed control beside the clock; it is suppressed
-there (`centerAnchor: ""` — the built-in only renders when the anchor is the
-clock) and rebuilt as a hover module after the workspaces, so it slides right as
-workspaces are added.
+modules on hover, and that changed several placements. `ratio` and
+`model-usage` live there, hover-only in every state — `ratio` shows *which*
+state by colour while revealed, but earns no resting width either way.
+`calendar` is deliberately **not** in the hover tier: it is the left half of
+this ADR's bracket around the date, and a bracket that is usually missing is
+not a bracket. It is static in the slot quattro's own bar-config control used
+to reveal into; that control is suppressed (`centerAnchor: ""` — the built-in
+only renders when the anchor is the clock, and restoring it would put a gear
+back into the calendar's slot on hover) and rebuilt as a hover module after
+the workspaces, so it slides right as workspaces are added.
 
 `media` joins the centre because it answers a *now* question like the clock and
 weather. `notifications` and `microphone` are **not** added: the indicators

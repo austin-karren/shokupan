@@ -40,11 +40,14 @@ Companion pieces that must move together: the window rules in
 `~/.config/hypr/windows.conf`, the `SUPER+SHIFT+C` binding, and the `Calendar` row
 in `~/.config/omarchy/extensions/omarchy-menu.jsonc`. The bar entry point is back
 as of later on 2026-08-09: `.config/omarchy/bar/modules/calendar.qml`, a
-hover-revealed module immediately left of the clock — the slot quattro's own
-bar-config button used to occupy (that button is suppressed via
-`centerAnchor: ""` and relocated to the left section). Same glyph and both click
-actions of the old Waybar module, verified end to end: show, hide, and the window
-kept warm on `special:calendar` between toggles.
+**static** module immediately left of the clock — the slot quattro's own
+bar-config button used to reveal into (that button is suppressed via
+`centerAnchor: ""` and relocated to the left section). Static deliberately,
+unlike the rice's other custom centre modules: the calendar is the left half of
+ADR-0029's bracket around the date, and a bracket that is usually missing is not
+a bracket. Same glyph and both click actions as the old Waybar module, verified
+end to end: show, hide, and the window kept warm on `special:calendar` between
+toggles.
 
 Two quattro facts this path depends on, both measured: `hyprctl dispatch` under
 `configProvider: lua` takes `hl.dsp.*` calls — the classic
