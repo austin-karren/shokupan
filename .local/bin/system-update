@@ -1,16 +1,23 @@
 #!/bin/bash
 
-# Update the base — CachyOS and Arch packages, the AUR, and Flatpaks — without
-# touching Omarchy. `omarchy update` is the other half: it pulls Omarchy's own
-# checkout and then runs the system packages too. This one deliberately does not,
-# so the base can be updated on its own and a problem afterwards is attributable to
-# one layer rather than two. That separation is the whole point (ADR-0033 sequences
-# a CachyOS update before the quattro migration for exactly this reason).
+# Update everything — CachyOS and Arch packages, the AUR, and Flatpaks — while
+# watching it happen.
 #
-# Runs interactively rather than --noconfirm: pacman's own prompts are where you
-# see replacements and .pacnew warnings, and those are worth reading on a machine
-# with a bridged install (ADR-0001). Omarchy's updater passes --noconfirm; this one
-# does not, on purpose.
+# This used to be "the base, without touching Omarchy", the other half of a base /
+# desktop split (ADR-0034). Under quattro that split is gone: Omarchy is distro
+# packages now (ADR-0035), so `pacman -Syu` upgrades omarchy-dev like anything
+# else, and `omarchy update` no longer pulls a checkout — it IS a full system
+# upgrade with migrations and hooks attached.
+#
+# What still separates the two is attendance, and that is why this one survives.
+# Omarchy's updater runs `pacman -Syu --noconfirm` with 25 `--overwrite` paths
+# through /etc, including sddm.conf.d, sudoers.d and mkinitcpio.conf.d. This runs
+# interactively, so replacements and .pacnew warnings are on screen where someone
+# can read them — which is the whole point on a machine whose base was installed
+# by somebody other than Omarchy.
+#
+# It skips omarchy-migrate and the post-update hooks; `loaf heal` at the end is
+# this side's equivalent.
 #
 # Launch it from the System Palette ("Update System"), which wraps it in Omarchy's
 # floating terminal presentation.
@@ -29,7 +36,8 @@ if command -v gum &>/dev/null; then
     "Ready to update the system?" \
     "" \
     "• CachyOS and Arch packages, the AUR, and Flatpaks" \
-    "• Omarchy itself is NOT touched — that is 'Update Omarchy Desktop'" \
+    "• Omarchy is packages now, so it updates too — this is the attended path" \
+    "• Skips Omarchy's migrations and hooks — 'Update Omarchy Desktop' runs those" \
     "• You cannot stop the update once it starts" \
     "" \
     "Pacman will prompt before replacing anything. Read those." \
@@ -47,10 +55,10 @@ fi
 failed=()
 
 step "Update system packages"
-# Quattro installs a pacman hook that refuses a direct `pacman -Syu` unless
-# OMARCHY_ALLOW_DIRECT_PACMAN is set — measured in the lab (ADR-0035). This
-# machine is still on 3.8.4 where no such hook exists, and setting the variable
-# is harmless there, so set it unconditionally rather than version-sniffing.
+# Quattro installs 00-omarchy-update-guard.hook, a PreTransaction pacman hook with
+# AbortOnFail that refuses a direct `pacman -Syu` unless OMARCHY_ALLOW_DIRECT_PACMAN=1
+# (ADR-0035). That hook is installed on this machine now, so this is load-bearing
+# rather than a precaution — without it, every step below is unreachable.
 if sudo env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -Syu; then :; else failed+=("pacman"); fi
 
 if command -v yay &>/dev/null; then

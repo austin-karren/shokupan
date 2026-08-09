@@ -144,15 +144,44 @@ must carry this line:
 
     o.bind("ALT + SPACE", "Launch apps", "omarchy-shell shell toggle omarchy.launcher \"{}\"")
 
-## Tooling that is now wrong
+## Tooling that is now wrong — ✅ done 2026-08-09
 
-- `loaf doctor`'s `checkout` check fails with *"/usr/share/omarchy is not a git
-  checkout"*. Correct — quattro is package-backed. The check needs rewriting to
-  assert the **package** version instead, and the version-pin logic with it.
-- The `wifi backend` check warns when `wifi.backend=iwd` is *missing*. Quattro
-  dropped `iwd` and actively disables it (ADR-0035), so this check has to invert
-  or go.
-- `bridge patch` and `stale clone` checks are about the retired bridge (ADR-0035).
+- `checkout` → `package`, asserting `pacman -Q omarchy` (which resolves through
+  `omarchy-dev`'s `Provides: omarchy`). The porcelain-edits check and `cachyos
+  patch` were deleted with it: no worktree to be dirty, and quattro ships the
+  package list *inside* the omarchy package, so asserting a local edit to it
+  survives is a check that must eventually fail on a healthy machine.
+- The version pin moved out of the tag namespace into `packages/omarchy.pin`.
+  `tag -l 'omarchy-v*' | sort -V | tail -1` was picking the **rollback** tag
+  `omarchy-v3.8.4-prequattro` over the real pin, and `4.0.0.r1046.gd570d99-1`
+  cannot be ordered against `v3.8.4` regardless. See the README.
+- `bridge patch`, `stale clone` and `walker hold` deleted — their subject is an
+  installer that will never run again, and a Walker quattro does not ship.
+- `wifi backend` **was measurably wrong, not merely stale.** `iwd` is not just
+  disabled, it was *removed* by the upgrade's `pacman -Rns`; the
+  `wifi.backend=iwd` stanza stayed behind, so NetworkManager has no backend at
+  all — `wlp192s0` reports `unavailable` and `nmcli d wifi list` returns nothing
+  on unblocked hardware. Doctor reported ✓ the whole time, because ethernet hid
+  it. It now asserts that the configured backend is *installed*, which is the
+  invariant that holds however this is resolved. **The machine's wifi is still
+  broken** — see below.
+- New `mirrorlist` check, taking the freed slot: fails if
+  `/etc/pacman.d/mirrorlist` points at an Omarchy mirror. That frozen-Arch mirror
+  was ADR-0035's root cause and nothing was watching for it.
+- ADR-0034's two-command split has collapsed and both ADRs now say so.
+  `omarchy-update-git` no longer exists; Omarchy is upgraded *by* `pacman -Syu`.
+  The surviving distinction is attended vs unattended, not base vs desktop.
+
+## Still open, from that work
+
+- **This machine has no wifi backend.** `wifi.backend=iwd` in
+  `/etc/NetworkManager/NetworkManager.conf` names a package the upgrade removed.
+  Decide between dropping the `[device]` stanza — NetworkManager falls back to
+  `wpa_supplicant`, which is installed, and is what quattro leaves it on — and
+  reinstalling `iwd`. `loaf doctor` fails until one of them happens. Not fixed
+  blind, because ADR-0016's remote access rides on this machine's networking.
+- `impala` (ADR-0016's wifi TUI) was removed by the same sweep. Its replacement
+  is unexamined.
 
 ## Handed to the bar, not done here
 

@@ -178,36 +178,53 @@ The rice is written against a specific Omarchy. Bar modules, menu overrides and 
 rules all reach into upstream's files, so "does this work" is only answerable together
 with a version.
 
-Every state known to work is therefore tagged `omarchy-vX.Y.Z`:
+The answer lives in the commit, as `packages/omarchy.pin` — one line, holding exactly
+what `pacman -Q omarchy` reports:
 
 ```bash
-git tag -l 'omarchy-*'                       # every pinned state
-git show omarchy-v3.8.4 --stat               # what the rice looked like for that release
-git diff omarchy-v3.8.4..HEAD                # what has changed since
+cat packages/omarchy.pin                     # 4.0.0.r1046.gd570d99-1
+git show omarchy-v3.8.4:packages/omarchy.pin # what a past release was verified against
 ```
 
-The tag is a claim about *compatibility*, not just chronology: it says this tree ran
-against that Omarchy with the inventory in `~/snapshots/` passing. When upstream moves,
-the workflow is to rebuild forward from the tag rather than to guess what broke — check
-out the tag, read the ADRs that touch what upstream changed, and re-apply them against
-the new version.
+The pin is a claim about *compatibility*, not chronology: it says this tree ran against
+that Omarchy with the inventory in `~/snapshots/` passing. When upstream moves, the
+workflow is to rebuild forward rather than guess what broke — check out the older tree,
+read the ADRs that touch what upstream changed, and re-apply them against the new
+version.
 
-`loaf doctor` reports the pin against what is installed, so drift is visible without
-having to remember to look:
+`loaf doctor` compares the pin to what is installed, so drift is visible without having
+to remember to look:
 
 ```
-✓ version pin    verified against v3.8.4
-! version pin    verified against v3.8.4, Omarchy is v3.9.0 — re-verify, then re-tag
+✓ version pin    verified against 4.0.0.r1046.gd570d99-1
+! version pin    verified against 4.0.0.r1046.gd570d99-1, Omarchy is 4.1.0-1 — re-verify, then re-pin
 ```
 
 A mismatch is a warning, not a failure: upstream moving ahead is normal and only means
 the rice has not been re-verified there yet.
 
-Tag a state once it is verified working, not when the update completes:
+Re-pin once a state is verified working, not when the update completes:
 
 ```bash
-git tag -a "omarchy-v$(omarchy-version)" -m "verified against Omarchy vX.Y.Z"
-git push --tags
+pacman -Q omarchy | awk '{print $2}' >>packages/omarchy.pin  # then trim the old line
+```
+
+**Why a file rather than a tag.** It used to be a tag, `omarchy-vX.Y.Z`, which `loaf
+doctor` found with `git tag -l 'omarchy-v*' | sort -V | tail -1`. That was wrong twice.
+One namespace was holding two different kinds of claim — `omarchy-v3.8.4-prequattro` is
+a *rollback point*, not a pin, and it sorted above the actual pin `omarchy-v3.8.4` and
+won. And quattro's version string is `4.0.0.r1046.gd570d99-1`: no leading `v`, and an
+`.r<n>.g<sha>-<pkgrel>` suffix that `sort -V` cannot meaningfully order against `v3.8.4`.
+Ordering was never going to survive package-backing, so the pin compares by equality
+instead — and a file answers this section's own question for *every* commit, not only for
+tagged ones.
+
+Tags stay, for marking releases and for rolling back:
+
+```bash
+git tag -l                                   # releases and rollback points
+git tag -a "omarchy-v4.0.0" -m "verified against Omarchy 4.0.0"
+git diff omarchy-v3.8.4..HEAD                # what has changed since
 ```
 
 ## Why things are the way they are
