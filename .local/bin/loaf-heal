@@ -31,7 +31,7 @@ export LOAF_HOME LOAF_ROOT
 APPLIED="$STATE_DIR/applied"
 
 # Must match loaf-doctor's list and .stow-local-ignore — see the note there.
-REPO_ONLY='^(docs/|packages/|migrations/|test/|README|CONTEXT|packages\.txt|\.gitignore|\.stow-local-ignore)'
+REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|CONTEXT|packages\.txt|\.gitignore|\.stow-local-ignore)'
 dry_run=false
 [[ ${1:-} == --dry-run ]] && dry_run=true
 

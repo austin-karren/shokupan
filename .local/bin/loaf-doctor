@@ -24,7 +24,7 @@ LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
 # — they answer the same question from opposite ends, and when they disagree
 # doctor reports a file as missing that stow was never going to install. The
 # test suite asserts they stay in step.
-REPO_ONLY='^(docs/|packages/|migrations/|test/|README|CONTEXT|packages\.txt|\.gitignore|\.stow-local-ignore)'
+REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|CONTEXT|packages\.txt|\.gitignore|\.stow-local-ignore)'
 BRIDGE_ROOT="${BRIDGE_ROOT:-$LOAF_HOME/omarchy-on-cachyos}"
 OMARCHY_ROOT="${OMARCHY_PATH:-$LOAF_HOME/.local/share/omarchy}"
 STATE_DIR="${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/loaf"
@@ -258,7 +258,7 @@ done < <(git -C "$LOAF_ROOT" ls-files |
 # Repo-only files must not be stowed into $LOAF_HOME. Anything matched here escaped
 # .stow-local-ignore.
 leaks=()
-for f in CONTEXT.md README.md packages.txt docs packages migrations; do
+for f in CONTEXT.md README.md packages.txt docs packages migrations lab; do
   # shellcheck disable=SC2088  # leaks is only ever printed, never used as a path
   [[ -e $LOAF_HOME/$f ]] && leaks+=("~/$f")
 done
