@@ -4,11 +4,11 @@ status: accepted
 
 # The bar remembers the weather
 
-> **Bar surface deleted 2026-08-09.** The `custom/weather` module went with
-> `config.jsonc`, so there is no weather on the bar today. `weather-icon` itself
-> is untouched and still keeps its cached Reading on disk, which is the part this
-> ADR is actually about. ADR-0033 calls this the one real regression of the
-> quattro move. Old file: tag `omarchy-v3.8.4-prequattro`.
+> **Largely native on quattro 2026-08-09, and ADR-0033 overstated the loss.**
+> `omarchy.weather` is a first-party plugin and it is back on the bar in this
+> ADR's position, right of the clock. It keeps a stale reading rather than
+> blanking, which is this ADR's whole point. The residual gap is narrower than
+> "rebuild as a plugin clone" implied — see the addendum.
 
 The weather module reads a cached reading from disk and refreshes it in the background,
 rather than fetching wttr.in on every poll. Implemented as
@@ -162,3 +162,39 @@ The second row is the whole ADR. Everything else is what it cost to get there.
   on, and the dimmed glyph already says so.
 - **Location is wttr.in's guess from the IP.** Unchanged from upstream, and wrong in the
   usual ways behind a VPN. Worth a pinned location if that starts to matter.
+
+## Addendum: what quattro already does, 2026-08-09
+
+ADR-0033 called this "the one real regression" of the quattro move and proposed
+rebuilding `weather-icon` as a plugin clone. Reading the plugin rather than
+assuming, that is too strong.
+
+`plugins/panels/weather/Panel.qml` fetches wttr.in itself and comments its own
+`report` property: *"Parsed wttr.in j1 response. Kept on failure so stale data
+stays visible."* The bar glyph is `panelLoader.item.label`, derived from that
+same property. So a failed refresh does **not** blank the bar — the module holds
+the last reading, which is exactly the behaviour this ADR exists to guarantee.
+
+What is genuinely missing is narrower: the reading is held **in memory, not on
+disk**. The widget is `visible: label !== ""`, so between a shell restart and the
+first successful fetch there is no weather at all. Under the old design the
+Reading survived on disk, so a cold start showed the last known weather
+immediately.
+
+Two further notes, both measured:
+
+- `plugins/panels/weather/status.sh` *does* have the blanking failure mode —
+  it prints `{"text":"","class":"unavailable"}` when `omarchy-weather-icon`
+  fails, and `omarchy-weather-icon` is a bare `curl --max-time 3 … || exit 1`
+  with no cache. But nothing in the widget references `status.sh`; it looks
+  vestigial. If a future version wires it back up, the regression returns in
+  full.
+- `loaf doctor` still warns that our `weather-icon` glyph table has drifted from
+  `omarchy-weather-icon`. That check now guards a script the bar no longer calls.
+  It is not wrong, just no longer load-bearing.
+
+**Not done, deliberately.** Adding on-disk persistence means either patching a
+package-owned QML file or cloning the plugin to own its popup and forecast too.
+Neither is worth it for a gap that shows up only in the seconds after a shell
+restart. `weather-icon` stays in `.local/bin` — it costs nothing and is the
+thing to reach for if the gap ever matters.

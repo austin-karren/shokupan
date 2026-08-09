@@ -9,6 +9,17 @@ status: proposed
 > `.config/elephant/` — the per-provider `*.toml` overrides and `menus/palette.lua`
 > — is deleted. Read this ADR for the *why*; the *how* is void. Old files: tag
 > `omarchy-v3.8.4-prequattro`.
+>
+> **Outcome, 2026-08-09.** The two-surface fallback this ADR named — "keep two
+> separate menus" — is what quattro enforces, so that is where this ended up, by
+> upstream's constraint rather than by choice. But the thing that made the fallback
+> a *fallback* is fixed: this ADR kept the System Palette separate because a merged
+> 200-entry list is bad at discovery, "you cannot skim it to learn that
+> Screensaver exists". Quattro's menu is skimmable **and** searches its whole tree
+> from the root, so the browse-versus-search tradeoff this ADR was navigating no
+> longer forces a choice. The unresolved question below — whether the empty-query
+> list can be ordered at all — is moot: ordering is upstream's now. See the
+> addendum to ADR-0027.
 
 Today the System Palette's entries live in a bash `case` statement inside
 `~/.local/bin/quick-menu`, invisible to the Launcher. The goal is Raycast's model:

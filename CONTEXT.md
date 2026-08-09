@@ -2,7 +2,7 @@
 
 The configuration of one desktop: CachyOS running Omarchy on Hyprland. This
 glossary exists because the vocabulary here is genuinely ambiguous — Omarchy,
-Hyprland, Omarchy and this repo all use words like "theme", "menu" and "toggle"
+Hyprland, Quickshell and this repo all use words like "theme", "menu" and "toggle"
 to mean different things, and three of the menus are one keystroke apart.
 
 ## Layers
@@ -142,23 +142,37 @@ _Avoid_: theme, colorscheme
 
 ## The four menus
 
-These are the terms most worth being strict about. All four are reachable within
-one modifier of each other, and two of them are named "toggle".
+These are the terms most worth being strict about. They are reachable within one
+modifier of each other, and two of them are named "toggle".
+
+> **Three surfaces, four terms, since 2026-08-09.** The System Palette stopped
+> being a menu of its own in the quattro port: quattro's launcher cannot hold
+> commands and its own menu absorbed them, so the Palette's entries now live
+> inside the Omarchy Menu (ADR-0027). The term is kept below because it is still
+> the only name for *that set of entries*, and because the distinction it draws —
+> browse-for-discovery against search-when-you-know — is still the thing the two
+> remaining surfaces divide on. Say **System Palette** about the entries, never
+> about a window.
 
 **Launcher**:
-Walker in its default provider mode, `ALT+SPACE`. Searches applications. The
-thing you type into when you know what you want.
-_Avoid_: walker, app menu, spotlight
+Quattro's quickshell overlay, `SUPER+SPACE` and `ALT+SPACE`. Searches
+applications, and only applications — it reads `DesktopEntries` and has no way to
+be given anything else. The thing you type into when you know what you want.
+_Avoid_: walker (uninstalled), app menu, spotlight
 
 **System Palette**:
-Our own browse-first list of system commands, `SUPER+SPACE`, backed by
-`~/.local/bin/quick-menu`. Exists for discovery — skimming to find out that a
-command exists at all.
-_Avoid_: quick menu, command palette, raycast
+Our own system commands — the entries, not a window. Ten rows contributed to the
+Omarchy Menu from `.config/omarchy/extensions/omarchy-menu.jsonc`, being the
+remainder after quattro's menu absorbed the other twenty-one. Exists for
+discovery: skimming to find out that a command exists at all.
+_Avoid_: quick menu (the dead script), command palette, raycast, and any use that
+implies a separate window
 
 **Omarchy Menu**:
-Omarchy's own root menu, `SUPER+CTRL+SPACE`. The full nested tree of everything
-Omarchy can do.
+Omarchy's own root menu, `SUPER+ALT+SPACE`. The full nested tree of everything
+Omarchy can do, and since quattro the home of the System Palette too. Browse-first
+when idle, but a query searches the **whole tree** from wherever you are, so it is
+no longer only a tree to walk.
 _Avoid_: the menu, main menu
 
 **Toggle Menu**:
@@ -183,7 +197,10 @@ and the notifications name.
 
 Reachable three ways — the bar module, the Toggle Menu's "1-Window Zen Ratio" entry, and
 `SUPER+CTRL+BACKSPACE` — all calling `ratio-toggle` and driving one flag file. The menu
-entry is a `show_toggle_menu` override in `~/.config/omarchy/extensions/menu.sh`.
+entry is an override of upstream's `trigger.toggle.one-window-ratio` row in
+`~/.config/omarchy/extensions/omarchy-menu.jsonc`, which replaced the old
+`show_toggle_menu` bash override when quattro dropped that extension point. It is still
+an override for the same reason as before: upstream's row hardcodes 1:1.
 _Avoid_: Ratio, Zen ratio, single window mode, square mode, 1 window ratio
 
 **Pitch** (bar sense):
@@ -270,10 +287,30 @@ _Avoid_: stash, shelf, drawer
 
 ## Bar behaviour
 
-> **Waybar removed 2026-08-09.** The bar is quattro's Quickshell surface now and
-> `config.jsonc` is deleted (ADR-0033). Second-click dismissal is native there, so
-> the Toggle wrapper term below is on its way out; the dismissal *behaviour* is
-> what the vocabulary is protecting.
+> **Waybar removed 2026-08-09.** The bar is quattro's Quickshell surface now,
+> configured by `.config/omarchy/shell.json` (ADR-0029, ADR-0033). Second-click
+> dismissal is native there, so the Toggle wrapper term below is on its way out;
+> the dismissal *behaviour* is what the vocabulary is protecting.
+
+**Hover-reveal group**:
+The quiet modules at the centre of the bar, which collapse to zero width until
+the centre section is hovered. Upstream's indicators live there, and so does the
+zen-ratio toggle (ADR-0013). A module joins it by binding to the bar's
+`centerSectionRevealHeld`, which is why joining it requires a QML module rather
+than a Command module.
+_Avoid_: tray, overflow, drawer (the tray drawer is a different thing on the right)
+
+**Command module**:
+A bar entry that shells out on an interval and reads plain text or Waybar-style
+JSON back — `{"id":…, "type":"command", "exec":…}`. Always visible; it has no
+way to hide. `apexshot` is one.
+_Avoid_: custom module (ambiguous with the QML kind), script module
+
+**QML module**:
+A bar entry backed by a `.qml` file in `.config/omarchy/bar/modules/`, which
+receives the bar root and can therefore do what a Command module cannot — hide
+itself, animate, read live bar state. `ratio` is the only one.
+_Avoid_: plugin (a plugin is upstream's packaging unit, with a manifest)
 
 **Second-click dismissal**:
 Clicking a bar module opens its window; clicking the same module again dismisses
@@ -342,11 +379,18 @@ _Avoid_: exit, close (Close belongs to the ladder)
 
 ## Launcher internals
 
-> **Stack removed 2026-08-09.** Walker and Elephant are uninstalled and their
-> configs deleted (ADR-0033). These terms are kept because they name the *shape*
-> the merged list has to keep — a front-end, a set of entry sources, a ranking —
-> and ADR-0027 has not been ported yet. Expect them to be replaced by quattro's
-> own vocabulary once it is, not simply dropped.
+> **Stack removed 2026-08-09, and these terms are now history.** Walker and
+> Elephant are uninstalled and their configs deleted (ADR-0033). ADR-0027 has since
+> been ported, and the merged list it described was **withdrawn** rather than
+> rebuilt — quattro's launcher takes applications and nothing else. So the shape
+> these words named no longer exists to be kept: there is no front-end/backend
+> split to speak about, and no set of entry sources to compose.
+>
+> Kept only for reading the pre-quattro ADRs and git history. Do not reach for them
+> to describe how the desktop works now; the Launcher and the Omarchy Menu above
+> are the live vocabulary. **Frecency** is the one term here still worth having —
+> quattro's launcher ranks purely on match quality with no usage history at all,
+> which is a real difference worth being able to name.
 
 **Walker**:
 The launcher front-end. Owns the window, the theme and the list widget.

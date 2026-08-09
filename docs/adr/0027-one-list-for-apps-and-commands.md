@@ -4,13 +4,12 @@ status: accepted
 
 # One list for applications and system commands
 
-> **Mechanism deleted 2026-08-09.** Walker and Elephant are uninstalled, and both
-> halves of the merged list — `.config/walker/config.toml` and
-> `.config/elephant/menus/palette.lua` — are deleted. The list is therefore *not*
-> merged right now. `palette.lua` is the entry inventory the rewrite has to
-> translate, so read it before rebuilding: tag `omarchy-v3.8.4-prequattro`.
-> Note the unresolved chord collision — quattro already binds `SUPER+SPACE` and
-> `SUPER+ALT+SPACE` to its own menu (ADR-0033).
+> **Superseded in mechanism 2026-08-09, and the merge itself is withdrawn.** See
+> the addendum at the foot of this ADR. In short: quattro's launcher reads only
+> `DesktopEntries` and has no provider system, so applications and commands can no
+> longer share one list at all. The decision below is kept because its *reasoning*
+> about naming, precedence and discovery still governs — those parts ported. The
+> merge did not.
 
 The Launcher (`ALT+SPACE`, applications) and the System Palette (`SUPER+SPACE`, a
 hand-written list of Omarchy commands) are now the same list. Both keys open Walker with
@@ -135,3 +134,100 @@ service does not replace the instance actually answering queries.
   once the merged list has been lived with.
 - The stopword case (`the`) still ranks commands above applications. Low priority — it is
   not a query anyone types deliberately.
+
+## Addendum, 2026-08-09: quattro withdraws the merge
+
+Ported to quattro. The mechanism is entirely new, most of the list turned out to
+be redundant, and the central decision — one list — could not be kept.
+
+### Why the merge is gone rather than rebuilt
+
+Quattro's launcher (`shell/plugins/launcher/Launcher.qml:214`) builds its rows from
+`DesktopEntries.applications.values` and nothing else. There is no provider system,
+no merge point, and no plugin hook for injecting non-desktop rows; Elephant's
+provider model has no successor. So the two surfaces are now fixed:
+
+- **Launcher** — applications, `SUPER+SPACE`, quickshell overlay.
+- **Omarchy Menu** — commands, `SUPER+ALT+SPACE`, a JSONC tree.
+
+The one option for merging would be to write a `.desktop` file per command so the
+launcher picks them up. Rejected: it pollutes every other application picker on the
+machine — file-manager "Open With", XDG defaults, GNOME's own search — to fix one
+list, and it is exactly the "enumerate things by hand" approach this ADR rejected
+the first time.
+
+### What the Omarchy Menu became, and why that is most of the ask back
+
+The menu is no longer a nested tree you have to walk. `Menu.qml:461` searches **the
+entire tree from the root** on any query, scored over label, id, aliases and
+keywords, with a divider separating current-level hits from deeper ones. So it is
+browse-first when idle and search-first when typed into — which is what ADR-0012
+wanted the System Palette to be, and it is upstream's now rather than ours to
+maintain.
+
+What is genuinely lost is typing one query and seeing an application and a command
+ranked together. What is kept is that either surface is one keystroke away and both
+are searchable.
+
+### The list shrank from 27 entries to 10
+
+Quattro's own menu absorbed the whole Toggle Menu, plus Install, Remove, Update and
+all seven system/power commands. **21 of the 27 palette entries are now upstream
+rows with the same names and the same actions** — including Install, Remove and
+Update Omarchy Desktop, which this rice had surfaced by hand precisely because they
+were buried. That deletion is the real result of the port.
+
+What remains in `~/.config/omarchy/extensions/omarchy-menu.jsonc`:
+
+| Entry | Why it survives |
+|---|---|
+| 1-Window Zen Ratio | **Override.** Upstream's row hardcodes 1:1; this machine runs 6:5 (ADR-0026) |
+| Monitor Scaling ↑/↓ | No upstream row at all — keybinding only. `-cycle` was deleted, so one row became two |
+| Switch to Light / Dark | No upstream row. Two rows gated on `when:` reproduce the old dynamic label |
+| Emoji & Symbols, Clipboard History | Native overlays with keybindings but no menu row |
+| Update System | Deliberately distinct from upstream's "Update > Omarchy" (ADR-0034) |
+| Calendar | ADR-0006 — and its bar entry point died with Waybar |
+
+### The naming rule survived; the ordering machinery did not
+
+"Omarchy wins" ported unchanged and is now enforced by the merge itself: reusing an
+id overrides upstream's row rather than appearing beside it, so a name collision is
+structurally impossible. The **Screensaver / Start Screensaver** collision this ADR
+resolved by hand is upstream's problem now — it ships both `trigger.toggle.screensaver`
+and `system.screensaver`, and resolved them the same way.
+
+Deleted as no-longer-applicable, and this is the pleasant part: `FixedOrder`, the
+`min_score = 60` tuning, the `ItemImageFont` / `.item-image-text` row-alignment CSS,
+and the two-service restart dance. All of them existed to make commands and
+applications share one list and one grid. No shared list, no problem to solve. The
+row-alignment measurements in this ADR are now historical only.
+
+### Two of this ADR's open questions are closed by deletion
+
+- **Favourites** — no longer answerable here, and no longer this ADR's concern.
+  Quattro's launcher has no pinning surface either; if it returns it will be
+  upstream's feature.
+- **`quick-menu` is now unused** — still true, still present, still bound to
+  nothing. Now doubly dead: its replacement's replacement is upstream's menu.
+
+### Corrections to what was written on 2026-08-09
+
+Two claims made when the upgrade landed did not survive being checked:
+
+- ADR-0033 said the palette was "a mechanical rewrite into the plugin's config
+  language". It was not mechanical — 21 entries were redundant and one had lost its
+  underlying command.
+- The chord collision was resolved in favour of upstream; see below.
+
+### The chord collision, resolved
+
+Quattro binds `SUPER+SPACE` to the launcher and `SUPER+ALT+SPACE` to the menu. This
+rice had `SUPER+SPACE` and `ALT+SPACE` both on the merged list, so that either
+reflex landed somewhere sensible. With the list split, both reflexes cannot land in
+the same place any more.
+
+Decided: **adopt upstream's chords and add bare `ALT+SPACE` → launcher.** Both old
+app reflexes reach applications; the command surface moves to `SUPER+ALT+SPACE` and
+is relearned. One added binding, no unbinds, nothing to re-check against upstream on
+the next update — and the underlying goal, that a reflexive press lands somewhere
+sensible rather than nowhere, is what actually needed preserving.

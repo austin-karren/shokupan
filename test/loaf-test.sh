@@ -346,6 +346,38 @@ else
 fi
 
 # ---------------------------------------------------------
+# menu extension
+# ---------------------------------------------------------
+#
+# The Omarchy menu rows we add are icon-plus-label, and the icons are Nerd Font
+# codepoints in the U+E000-F8FF private use area. Those do not survive every
+# editing path — a round trip through the wrong tool silently empties some of
+# them while leaving others intact. Nothing reports it: the shell renders a row
+# with a blank icon column and no error, so the first notice is visual.
+#
+# Deliberately a presence check, not a codepoint check. Which glyph an entry
+# should carry is a design decision that belongs in the file's own comments;
+# what a test can usefully hold is that none of them silently became nothing.
+menu_jsonc=$ROOT/.config/omarchy/extensions/omarchy-menu.jsonc
+
+if [[ -f $menu_jsonc ]]; then
+  # Entry lines only — the header comments discuss "icon" in prose.
+  rows=$(grep -c '^  "[a-z][a-z.-]*": {"icon":' "$menu_jsonc")
+  blank=$(grep -c '^  "[a-z][a-z.-]*": {"icon":"",' "$menu_jsonc")
+
+  assert_equals "menu: every entry carries a glyph" "$blank" "0"
+  # A floor, not an equality: adding a row should not have to touch this test,
+  # but the file emptying out or losing its shape should still be caught.
+  if ((rows >= 10)); then
+    pass "menu: extension file still defines its entries"
+  else
+    fail "menu: extension file still defines its entries" "expected: >= 10 rows" "actual:   $rows"
+  fi
+else
+  fail "menu: extension file exists" "missing: $menu_jsonc"
+fi
+
+# ---------------------------------------------------------
 # lint
 # ---------------------------------------------------------
 #

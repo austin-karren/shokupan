@@ -62,8 +62,34 @@ package churn, so it wants its own commit.
 **Port — the behaviour is still wanted, the mechanism changed**
 
     .config/hypr/{bindings,autostart}.conf  →  the .lua equivalents
-    the bar modules (ADR-0013/0026 ratio, ADR-0029 tailscale, ADR-0031 weather)
-    the merged app+command palette (ADR-0012/0027)
+    the merged app+command palette (ADR-0012/0027)   ← withdrawn, see ADR-0027
+
+The **bar is done** as of 2026-08-09 — layout, both custom modules and the
+fixed-dark treatment, applied to the live session with no shell restart. Three
+new tracked files carry it:
+
+    .config/omarchy/shell.json                 layout, module settings, idle
+    .config/omarchy/bar/modules/ratio.qml      hover-revealed zen-ratio toggle
+    .config/omarchy/themed/shell.toml.tpl      pins the bar to Tailwind-950
+
+`tailscale-icon` is retired in favour of the native `omarchy.tailscale` plugin.
+`weather-icon` and `waybar-watchdog` are now unreferenced by the bar but still
+tracked; see ADR-0031 and ADR-0005 before removing either.
+
+Two traps found the hard way, both recorded in ADR-0013:
+
+- Quickshell runs module commands through `bash -lc`, which has **no
+  `~/.local/bin` on `PATH`**. A module whose `exec` is not found renders as an
+  empty box with no error anywhere. Use absolute paths until `.config/uwsm/env`
+  is re-decided.
+- `loaf doctor` tests each tracked path with `[[ -L ]]`, so a **directory**
+  symlink makes every file under it read as "replaced by a real file". Link
+  files individually.
+
+Still open on the bar: `omarchy.model-usage` cannot be made to hover-reveal by
+configuration — it has no visibility setting, and the hover group only loads
+indicators from inside the package. Matching the ratio treatment means a second
+QML module that re-implements its chip and loses its popup.
 
 **Re-decide — quattro may already do it natively**
 

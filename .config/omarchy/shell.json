@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "idle": {
+    "screensaver": 150,
+    "lock": 300
+  },
+  "bar": {
+    "position": "top",
+    "transparent": false,
+    "centerAnchor": "omarchy.clock",
+    "layout": {
+      "left": [
+        {
+          "id": "omarchy.menu"
+        },
+        {
+          "id": "omarchy.workspaces"
+        },
+        {
+          "id": "barsettings",
+          "type": "command",
+          "text": "",
+          "tooltip": "Bar settings",
+          "onClick": "omarchy-launch-bar-settings"
+        }
+      ],
+      "center": [
+        {
+          "id": "omarchy.media"
+        },
+        {
+          "id": "omarchy.clock",
+          "format": "dddd HH:mm",
+          "formatAlt": "d MMMM 'W'ww yyyy",
+          "verticalFormat": "HH\n—\nmm"
+        },
+        {
+          "id": "omarchy.weather"
+        },
+        {
+          "id": "omarchy.system-update"
+        },
+        {
+          "id": "omarchy.indicators"
+        },
+        {
+          "id": "ratio",
+          "type": "qml"
+        }
+      ],
+      "right": [
+        {
+          "id": "omarchy.tray"
+        },
+        {
+          "id": "omarchy.notifications"
+        },
+        {
+          "id": "apexshot",
+          "type": "command",
+          "text": "",
+          "tooltip": "ApexShot\n\nLeft: capture area\nMiddle: record screen\nRight: capture full screen",
+          "onClick": "apexshot capture area",
+          "onMiddleClick": "apexshot record ui",
+          "onRightClick": "apexshot capture screen"
+        },
+        {
+          "id": "omarchy.tailscale"
+        },
+        {
+          "id": "omarchy.bluetooth"
+        },
+        {
+          "id": "omarchy.network"
+        },
+        {
+          "id": "omarchy.audio"
+        },
+        {
+          "id": "omarchy.microphone"
+        },
+        {
+          "id": "omarchy.monitor"
+        },
+        {
+          "id": "omarchy.model-usage",
+          "providers": {
+            "claude": {
+              "enabled": true,
+              "statsPath": "~/.claude/stats-cache.json",
+              "credentialsPath": "~/.claude/.credentials.json",
+              "projectsPath": "~/.claude/projects"
+            },
+            "codex": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "id": "omarchy.power"
+        }
+      ]
+    }
+  },
+  "plugins": []
+}

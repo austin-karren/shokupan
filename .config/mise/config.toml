@@ -1,5 +1,6 @@
 [tools]
 claude = "latest"
+codex = "latest"
 node = "latest"
 pnpm = "latest"
 

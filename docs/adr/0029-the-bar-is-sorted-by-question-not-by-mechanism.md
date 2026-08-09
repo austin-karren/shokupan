@@ -4,12 +4,11 @@ status: accepted
 
 # The bar is sorted by the question each module answers
 
-> **Implementation deleted 2026-08-09.** `config.jsonc` held the ordering and
-> `style.css` the measured ink widths; both are gone with Waybar. Per ADR-0033 the
-> measured-width CSS does not come back — quattro lays the bar out natively — but
-> the *ordering by question* is a decision, not a mechanism, and still has to be
-> re-expressed in the new bar's config. The old module order is the specification
-> for that: tag `omarchy-v3.8.4-prequattro`.
+> **Reimplemented on quattro 2026-08-09.** `config.jsonc` and `style.css` are
+> deleted. The rule below survives and now lives in
+> `.config/omarchy/shell.json`; the whole *Spacing* section is void, because
+> quattro lays the bar out natively and there is nothing to measure. See the
+> addendum at the foot.
 
 Three changes made together, because they are one decision applied three times:
 
@@ -198,3 +197,50 @@ by whether you act on them or only read them.**
 
 No measurement changed — every box in the cluster carries a uniform margin and a width
 derived from its own glyph, so reordering moves no gap. Verified after the move.
+
+## Addendum: the layout on quattro, 2026-08-09
+
+The rule and its tiebreak both ported. The bar now reads:
+
+    left    menu · workspaces · bar-settings
+    centre  media · CLOCK · weather · system-update · indicators · ratio
+    right   tray · notifications · apexshot · tailscale · bluetooth · network
+            · audio · microphone · monitor · model-usage · power
+
+`centerAnchor` is `omarchy.clock`, which pins the date to the true centre and
+flanks everything else around it. That is what makes it safe to put `media` — a
+scrolling now-playing label of unpredictable width — to the left of the clock:
+under Waybar this ADR spent real effort stopping the weather glyph's 15..27px
+swing from sliding the date, and anchoring solves the same class of problem
+outright.
+
+**What the rule decided about the new modules.** The centre answers *now*
+questions, so `media` joins the clock and weather there, taking the slot the
+calendar module vacated. The right cluster stays actions-then-state:
+`apexshot` keeps its place as the action prefix, `tailscale` and `bluetooth` stay
+adjacent as the two things you *turn on and off*, and `network`, `audio`,
+`microphone`, `monitor`, `model-usage` and `power` are the readings, ending on
+power as before. `microphone` sits next to `audio` because they are one
+subsystem read in two directions. `notifications` is deliberately *not* in the
+status run — it answers "did anything happen", not "what is this machine doing" —
+so it pairs with the tray at the head of the cluster, both being surfaces other
+applications push into.
+
+**Two departures worth naming:**
+
+- **The calendar module is gone**, so the "calendar, date, weather" bracket that
+  opens this ADR no longer exists. Quattro's clock popup ships a month grid
+  (ADR-0006), which is the thing the bracket was reaching for.
+- **The ratio toggle left the right cluster entirely** and is now a
+  hover-revealed module at the end of the centre (ADR-0013). That relaxes the
+  "actions prefix" exception this ADR carved out — there is now one action there
+  instead of two.
+
+**Tailscale is upstream's now.** `omarchy.tailscale` is a first-party plugin with
+a connection switcher and machine browser, so `tailscale-icon` is retired rather
+than ported. The addendum above argued about *where* it goes; that answer is
+unchanged, only the implementation is upstream's.
+
+**Nothing measures the bar any more, and that is fine.** The Spacing section
+above exists because Waybar made the author own pixel geometry. Quattro does not
+expose it, so there is nothing to assert and nothing to drift.

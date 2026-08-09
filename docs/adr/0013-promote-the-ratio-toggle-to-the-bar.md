@@ -4,11 +4,10 @@ status: accepted
 
 # Promote the single-window aspect-ratio toggle out of a menu and onto the bar
 
-> **Mechanism deleted 2026-08-09.** `custom/ratio` went with `config.jsonc`, so
-> the toggle is back to living in a menu — the state this ADR was written to end.
-> `ratio-toggle --status` survives untouched and already emits Waybar-style JSON,
-> which is exactly what quattro's command-module tier consumes (ADR-0033), so the
-> port is re-declaring the module. Old file: tag `omarchy-v3.8.4-prequattro`.
+> **Ported 2026-08-09, and it moved.** The toggle is back on the bar, but no
+> longer in the right cluster: it is a hover-revealed module at the end of the
+> *centre*, next to the indicators. `ratio-toggle` itself is unchanged. See the
+> addendum at the foot.
 
 The single-window aspect-ratio toggle — constraining a lone window via Hyprland's
 `single_window_aspect_ratio` — is used often enough that living three levels deep
@@ -156,3 +155,50 @@ flag file every few seconds is free and keeps the icon honest whichever route is
 there is no competing source for the setting. Left as documentation, and the comment now
 records the live value and the ceiling from ADR-0026 — setting it there uncommented would
 make the constraint permanent and unswitchable.
+
+## Addendum: on quattro it is a hover-revealed centre module, 2026-08-09
+
+This ADR's thesis was that the toggle is used often enough that living three
+levels deep in a menu is the wrong home. That still holds. What changed is that
+quattro's bar has a state the Waybar bar did not: the centre section reveals its
+quiet modules on hover, and a module can opt into that.
+
+So the toggle is no longer the right cluster's action prefix. It sits at the end
+of the **centre**, next to the indicators, and mirrors their behaviour exactly:
+
+- zen ratio **on** → the glyph is visible, tinted with the theme's `[bar] active`
+  colour;
+- zen ratio **off** → the module collapses to zero width until the centre of the
+  bar is hovered.
+
+That is a better fit for this ADR's own argument than the old always-on glyph
+was. The point of promoting it was reach, not permanent presence, and the state
+worth seeing at a glance is the *constrained* one.
+
+**It is a `type: "qml"` module, not `type: "command"`.** A command module was the
+obvious port — `ratio-toggle --status` still emits Waybar-style JSON and quattro
+consumes exactly that shape — but command modules are always visible, with no
+setting to bind visibility to the hover state. Custom QML modules receive the bar
+root as `bar`, so `.config/omarchy/bar/modules/ratio.qml` binds to
+`bar.centerSectionRevealHeld`, the same property
+`plugins/bar/widgets/Indicators.qml` uses. About sixty lines, and it is the
+documented extension point rather than a patch.
+
+Two things it inherits by being written by hand rather than declared:
+
+- The status poll keeps its **last good reading** if a poll fails to parse,
+  instead of blanking — the ADR-0031 principle, applied to a second module.
+- The state colour comes from the theme's `[bar] active`, not from opacity as the
+  Waybar version did. Quattro has no per-module opacity knob; the accent colour
+  is its equivalent, and it is more legible.
+
+**One trap worth recording.** Quickshell runs module commands through
+`bash -lc`, whose `PATH` does **not** include `~/.local/bin` — a minimal login
+shell here resolves to `/usr/local/sbin:/usr/local/bin:/usr/bin:…` and nothing
+more. The first attempt used a bare `ratio-toggle --status` and the module
+rendered as an empty box with no error anywhere. `$HOME/.local/bin/ratio-toggle`
+is therefore deliberate, not incidental. The underlying cause is that
+`.config/uwsm/env`, which puts `~/.local/bin` on the session `PATH`, is not
+currently installed; it also still points `OMARCHY_PATH` at
+`~/.local/share/omarchy`, which no longer exists, so it needs rework before it
+can be restored.

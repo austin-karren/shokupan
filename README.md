@@ -95,6 +95,9 @@ it can also override anything the tracked `.bashrc` set.
 | `.config/zed/` | Editor + agent settings |
 | `.config/git/config` | Aliases, delta pager, zdiff3, rerere |
 | `.config/uwsm/` | Session env (incl. making snap apps visible to the launcher) |
+| `.config/omarchy/shell.json` | The quickshell bar: layout, module settings, idle timings. Hot-reloaded — the shell watches this file, so edits apply without a restart |
+| `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express (`ratio.qml` hides until the centre of the bar is hovered) |
+| `.config/omarchy/themed/shell.toml.tpl` | Theme template override that pins the bar dark in every theme (ADR-0009). User templates outrank Omarchy's, so this replaces the built-in wholesale — re-diff it after an upgrade |
 | `.config/omarchy/extensions/menu.sh` | Omarchy menu overrides — the sanctioned extension point, not a patched Omarchy file |
 | `.config/starship.toml`, `.config/tmux/` | Prompt and multiplexer |
 | `.bashrc` | Thin — sources Omarchy's `default/bash/rc` |

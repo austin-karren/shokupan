@@ -1,0 +1,114 @@
+{
+  // Shokupan's additions to the Omarchy Menu. See ADR-0027 and ADR-0012.
+  //
+  // This file replaces the old .config/omarchy/extensions/menu.sh AND the old
+  // .config/elephant/menus/palette.lua. Quattro dropped the bash extension point
+  // (nothing in /usr/share/omarchy sources menu.sh any more) and Walker/Elephant
+  // are uninstalled, so both mechanisms died in the same upgrade. What replaced
+  // them is one JSONC tree that the shell parses at startup with watchChanges,
+  // so edits here take effect without restarting anything.
+  //
+  // WHY THIS FILE IS SHORT. The old palette carried 27 entries; 21 of them are
+  // now upstream rows with the same names and the same actions, because quattro's
+  // menu absorbed the whole Toggle Menu plus Install, Remove, Update and the
+  // seven system/power commands. Only the entries below have no native row, plus
+  // one override. Do not re-add an entry here without first checking that
+  // default/omarchy/omarchy-menu.jsonc lacks it - a duplicate id silently
+  // overrides upstream's row instead of appearing beside it.
+  //
+  // DO NOT HAND-EDIT THE GLYPHS - the same warning palette.lua carried, and for
+  // the same reason. Every icon is a Nerd Font codepoint, and the U+E000-F8FF
+  // private use area does not survive every editor and tooling path. Not
+  // hypothetical: the first draft of this file lost exactly three of them (the
+  // ratio, update and calendar rows) while the higher-plane glyphs came through
+  // intact, so the damage was silent and partial. A dropped glyph leaves a row
+  // that renders with no icon and reports no error anywhere.
+  //
+  // \uXXXX escapes are NOT the way out, despite parseMenuJsonc() ending in
+  // JSON.parse(). JSON's \u takes exactly four hex digits, and most of these
+  // codepoints are five (U+F0379 and friends); writing them as escapes truncates
+  // to a wrong glyph plus a stray digit, which is worse than an empty icon
+  // because it looks deliberate. Surrogate pairs would work and are unreadable.
+  //
+  // So the glyphs below are literal, and the codepoint is written in the comment
+  // beside each one. To change an icon, edit the comment and re-derive the
+  // character from it rather than pasting a glyph in. Every codepoint here came
+  // from upstream's menu or from the pre-quattro palette, extracted rather than
+  // retyped. test/loaf-test.sh asserts none of them has gone empty.
+  //
+  // THREE NON-OBVIOUS MECHANISMS, all established by reading MenuModel.js:
+  //
+  // 1. AN OVERRIDE MUST RESTATE EVERY FIELD IT WANTS TO KEEP. normalizeItem()
+  //    defaults each absent field to "", and mergeMenuSources() copies every key
+  //    of this file's entry over upstream's. So omitting `icon` from an override
+  //    does not inherit upstream's icon - it blanks it. The ratio override below
+  //    repeats icon and keywords for exactly this reason.
+  //
+  // 2. COMMENTS MUST OWN THEIR LINE. stripJsonc() only matches /^\s*\/\//, so a
+  //    comment after a value on the same line is left in place and the whole file
+  //    fails JSON.parse(). parseMenuJsonc() returns [] on a parse error without
+  //    logging, so the symptom is every entry here silently vanishing while
+  //    upstream's menu still works. Trailing commas are fine; those are stripped.
+  //
+  // 3. ORDER FOLLOWS FIRST APPEARANCE. An overridden id keeps the position it has
+  //    in upstream's file, so the ratio row stays put in the Toggle submenu. New
+  //    ids land after every upstream row of the same parent. There is no
+  //    FixedOrder problem to solve here - the merged app+command list that needed
+  //    it no longer exists (see ADR-0027).
+
+  // OVERRIDE. Upstream's row is labelled "1-Window Ratio" and calls
+  // omarchy-hyprland-window-single-square-aspect-toggle, which hardcodes 1:1.
+  // This machine runs 6:5 (ADR-0026), so upstream's row applies the wrong value.
+  // Same two edits the old menu.sh made - a label word and the dispatch - and the
+  // same reason they cannot be made by shadowing PATH: Omarchy's bin directory
+  // precedes ~/.local/bin. Icon f2d0 is upstream's own, kept deliberately.
+  "trigger.toggle.one-window-ratio": {"icon":"","label":"1-Window Zen Ratio","keywords":"square zen aspect ratio single window","action":"ratio-toggle"},
+
+  // Monitor scaling. Upstream has no menu row for this at all - it is reachable
+  // only by SUPER+SLASH and SUPER+ALT+SLASH - and the old palette's single
+  // "Monitor Scaling" entry called omarchy-hyprland-monitor-scaling-cycle, which
+  // quattro deleted. The replacement takes up|down|<value>, so one cycling row
+  // cannot be rebuilt; two rows are the honest shape. Kept because the palette
+  // exists for discovery: a keybinding you have not memorised is not discoverable.
+  // Icons: f0379 monitor (the old palette's), f0415 plus, f0374 minus.
+  "trigger.hardware.monitor-scaling": {"icon":"󰍹","label":"Monitor Scaling","keywords":"scale hidpi resolution dpi"},
+  "trigger.hardware.monitor-scaling.up": {"icon":"󰐕","label":"Scale Up","keywords":"bigger larger zoom","action":"omarchy-hyprland-monitor-scaling up"},
+  "trigger.hardware.monitor-scaling.down": {"icon":"󰍴","label":"Scale Down","keywords":"smaller zoom","action":"omarchy-hyprland-monitor-scaling down"},
+
+  // Appearance, as two mutually exclusive rows rather than one. The old palette
+  // built a dynamic label in Lua; JSONC has no expression for that, but `when` is
+  // a shell condition evaluated per open, which reproduces it exactly. The label
+  // says where the row will take you, not where you are - that was the original
+  // point and it survives.
+  //
+  // The mode test is quattro's: `mode = "light"` in the active theme's
+  // colors.toml. The old light.mode marker file is gone. Keep this in step with
+  // ~/.local/bin/toggle-appearance, which decides the same thing the same way.
+  // Icons: f0594 moon, f05a8 sun - both the old palette's.
+  "style.appearance-dark": {"icon":"󰖔","label":"Switch to Dark","keywords":"dark appearance mode theme","when":"grep -q '^[[:space:]]*mode[[:space:]]*=[[:space:]]*\"light\"' ~/.local/state/omarchy/current/theme/colors.toml","action":"toggle-appearance"},
+  "style.appearance-light": {"icon":"󰖨","label":"Switch to Light","keywords":"light appearance mode theme","when":"! grep -q '^[[:space:]]*mode[[:space:]]*=[[:space:]]*\"light\"' ~/.local/state/omarchy/current/theme/colors.toml","action":"toggle-appearance"},
+
+  // Emoji and clipboard. Both are first-party quattro overlays with keybindings
+  // (SUPER+CTRL+E, SUPER+CTRL+V) but no menu row, so they are in the same
+  // position monitor scaling is: present, working, undiscoverable. These summon
+  // the plugins over the shell's own IPC rather than launching anything.
+  // Icons: f01f2 emoticon, f014d clipboard - both the old palette's.
+  "trigger.emoji": {"icon":"󰇲","label":"Emoji & Symbols","keywords":"emoji symbol unicode character glyph","action":"omarchy-shell shell toggle omarchy.emojis"},
+  "trigger.clipboard": {"icon":"󰅍","label":"Clipboard History","keywords":"clipboard paste history copy","action":"omarchy-shell shell toggle omarchy.clipboard"},
+
+  // Update System sits beside upstream's "Update > Omarchy" rather than replacing
+  // it, and the pair is the whole point: omarchy-update pulls the desktop and
+  // then updates system packages too, while system-update deliberately touches
+  // only the base - CachyOS, Arch, the AUR and Flatpaks - so a problem afterwards
+  // is attributable to one layer rather than two (ADR-0034). Upstream's row is
+  // already named "Omarchy", so no rename is needed to tell them apart here.
+  // Icon f021 refresh, the old palette's for this entry.
+  "update.system": {"icon":"","label":"System","keywords":"upgrade cachyos arch pacman aur flatpak base packages","action":"omarchy-launch-floating-terminal-with-presentation system-update"},
+
+  // Calendar. ADR-0006 keeps GNOME Calendar for online meetings; quattro's clock
+  // is a bar label with no popup and no month grid, so nothing native replaces
+  // it. Its other entry point is SUPER+SHIFT+C in bindings.conf, which is not
+  // live until the Hyprland bindings are ported to Lua - until then this row is
+  // the only way to reach it. Icon f00ed is the glyph the deleted bar module used.
+  "trigger.calendar": {"icon":"󰃭","label":"Calendar","keywords":"calendar meetings schedule agenda gnome","action":"calendar-toggle"},
+}
