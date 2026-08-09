@@ -52,6 +52,42 @@ reports `connection refused` from the disabled sshd regardless of whether
 Tailscale SSH works. Expect the default tailnet policy to run same-user SSH in
 `check` mode (a browser re-auth on first connect).
 
+## Addendum: measured as far as one chair allows, 2026-08-09
+
+The paragraph above claimed a same-node test cannot stand in for the MacBook.
+That claim is now measured rather than asserted, from two directions:
+
+- `ip route get 100.124.236.50` resolves through the **local table via `lo`** —
+  self-addressed traffic is delivered on loopback and never enters the tun, so
+  both `ssh austinkarren@100.124.236.50` and same-node `tailscale ssh` hit the
+  deliberately-inactive sshd: `connection refused`, as designed.
+- Bypassing that would not help either: Tailscale's own routing table (52)
+  carries routes for every **peer** but none for the node's own IP, so there is
+  no path into the inbound intercept from this host at all. Loopback
+  verification of Tailscale SSH is architecturally impossible in kernel mode,
+  not merely inconvenient.
+
+What *is* verifiable server-side all checks out, each item measured:
+
+- `RunSSH: true` in the daemon prefs, and present at every tailscaled start in
+  the journal back to **Aug 7 19:09** — meaning Tailscale SSH was already on
+  through the quattro upgrade window, and the felt lockout of Aug 8 was a
+  client-side gap (no MacBook configured to connect), not a server-side one.
+- Control grants this node `https://tailscale.com/cap/ssh` in its CapMap — the
+  tailnet policy actually allows SSH to it, which the pref alone cannot prove.
+- SSH host keys exist under `/var/lib/tailscale/ssh/` (generated Aug 6).
+- The WireGuard data path is live: `tailscale ping` to the phone answers
+  direct (LAN endpoint, ~193ms), so packets from a peer do reach the intercept
+  layer the SSH server sits behind.
+
+Two dead ends worth recording so nobody re-walks them: `tailscale status
+--json`'s `Self` object has **no** `sshHostKeys` field (it exists only on peer
+views — reading it as "not advertising" is a bug in the reader, not the node),
+and `tailscale debug hostinfo` prints only static fields, so SSH advertisement
+cannot be confirmed from either. The one artifact still missing is the SSH
+handshake itself, and it can only be produced from a peer: the MacBook check
+below stands.
+
 ## Where this is recorded
 
 `tailscaled`'s enablement and the `--ssh` flag are systemd/daemon state, not

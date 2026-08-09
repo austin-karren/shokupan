@@ -271,7 +271,7 @@ are the to-do list.
 | [0013](./docs/adr/0013-promote-the-ratio-toggle-to-the-bar.md) | Single-window aspect-ratio toggle onto the bar | accepted |
 | [0014](./docs/adr/0014-ghostty-split-keybinds.md) | Ghostty split keybinds, and bind `close_surface` | accepted |
 | [0015](./docs/adr/0015-replace-tmux-with-herdr.md) | Replace tmux with herdr | accepted |
-| [0016](./docs/adr/0016-remote-access-from-the-macbook.md) | Reach this machine from the MacBook over Tailscale | proposed |
+| [0016](./docs/adr/0016-remote-access-from-the-macbook.md) | Reach this machine from the MacBook over Tailscale | accepted |
 | [0017](./docs/adr/0017-druk-as-the-terminal-editor.md) | Bake off druk, Helix and Neovim as the terminal editor | proposed |
 | [0018](./docs/adr/0018-worktrunk-for-git-worktrees.md) | Manage worktrees with worktrunk | proposed |
 | [0019](./docs/adr/0019-idle-timings-for-a-remote-first-machine.md) | Retune the idle chain, keep the machine reachable | proposed |
