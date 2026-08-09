@@ -21,6 +21,11 @@ git-lfs
 # this repo
 stow
 
+# multiplexer for everything that is not an agent session — herdr owns those,
+# and stays out of this manifest because it self-updates outside pacman
+# (ADR-0015). Reinstated 2026-08-09 after a same-day removal.
+tmux
+
 # Shelly ships Flatpak support as a separate backend, and its own Enable Flatpak
 # toggle can only install it from the AUR — which fails here. Installed from the
 # cachyos repo instead; without it the Flatpak tab does not exist.
