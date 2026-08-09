@@ -71,7 +71,9 @@ fixed-dark treatment, verified rendering on the live session. Six tracked files
 carry it:
 
     .config/omarchy/shell.json                       layout, module settings, idle
-    .config/omarchy/bar/modules/ratio.qml            zen-ratio toggle, hover-only (ADR-0013)
+    .config/omarchy/bar/modules/ratio.qml            zen-ratio toggle, inactive face
+    .config/omarchy/bar/modules/ratio-on.qml         zen-ratio toggle, active face
+    .config/omarchy/bar/modules/omenu.qml            menu button wearing the power glyph
     .config/omarchy/bar/modules/calendar.qml         static, left of clock (ADR-0006)
     .config/omarchy/bar/modules/model-usage.qml      hosts upstream's widget, hover-revealed
     .config/omarchy/bar/modules/barcfg.qml           bar-settings gear, after workspaces
@@ -159,9 +161,12 @@ The absolute paths written into `extensions/omarchy-menu.jsonc` during the menu
 port **stay as belt-and-braces**: the env fix makes bare names work, but this
 exact upgrade demonstrated how a session-env line can be silently dropped by a
 migration, and the absolute paths cost nothing while surviving that class of
-failure. `omarchy-restart-shell` bakes the *caller's* PATH into the relaunched
-quickshell, so the fix applies to the live shell without a session restart; the
-`env.d` drop-in covers every future session.
+failure. The live-session fix is NOT omarchy-restart-shell (menu actions and keybinds
+execute via Hyprland's env through hl.exec_cmd, not quickshell's - measured by
+a bare-name menu row failing while quickshell's own env resolved it); it is one
+runtime dispatch, `hl.env("PATH", ...)`, which patched the running Hyprland and
+was verified by a bare-name menu row executing end-to-end. It dies with the
+session exactly when the `env.d` drop-in takes over.
 
 Three tracked files were overwritten with real files by the upgrade and need
 diffing against ours before anything is restored:

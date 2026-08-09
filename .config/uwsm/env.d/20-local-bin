@@ -12,8 +12,12 @@
 # (the rice's scripts all have unique names, and pan/ADR-style collisions are
 # guarded by naming, not by PATH order).
 #
-# Changes require a session restart to take effect - except for quickshell,
-# which omarchy-restart-shell relaunches with the CALLER's PATH baked in, so a
-# restart from any terminal (which has ~/.local/bin via .bashrc) applies this
-# to the shell immediately.
+# Changes require a session restart to take effect. Note the layer that
+# matters: menu actions and keybindings execute via Hyprland (hl.exec_cmd),
+# with HYPRLAND'S environment - quickshell's own PATH is irrelevant to them,
+# so omarchy-restart-shell does NOT apply this. Measured: a bare-name menu row
+# failed while quickshell's env resolved the same name. The live-session patch
+# is one dispatch, no files touched:
+#   hyprctl dispatch 'function() hl.env("PATH", os.getenv("PATH") .. ":" .. os.getenv("HOME") .. "/.local/bin") end'
+# It dies with the session, exactly when this file takes over.
 export PATH="$PATH:$HOME/.local/bin"
