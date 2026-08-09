@@ -4,12 +4,12 @@ status: accepted
 
 # One list for applications and system commands
 
-> **Superseded in mechanism 2026-08-09, and the merge itself is withdrawn.** See
-> the addendum at the foot of this ADR. In short: quattro's launcher reads only
-> `DesktopEntries` and has no provider system, so applications and commands can no
-> longer share one list at all. The decision below is kept because its *reasoning*
-> about naming, precedence and discovery still governs — those parts ported. The
-> merge did not.
+> **Rebuilt under quattro 2026-08-09 — accepted, with a changed mechanism.** The
+> first quattro addendum below declared the merge withdrawn; the user rejected
+> that outcome ("my custom combined option/app menu is still not present"), and
+> the second addendum records the rebuild: generated `.desktop` entries carry the
+> commands, and a forked launcher plugin (`shokupan.launcher`) restores the
+> ordering contract. Read the withdrawal addendum as history, not as the state.
 
 The Launcher (`ALT+SPACE`, applications) and the System Palette (`SUPER+SPACE`, a
 hand-written list of Omarchy commands) are now the same list. Both keys open Walker with
@@ -242,3 +242,81 @@ app reflexes reach applications; the command surface moves to `SUPER+ALT+SPACE` 
 is relearned. One added binding, no unbinds, nothing to re-check against upstream on
 the next update — and the underlying goal, that a reflexive press lands somewhere
 sensible rather than nowhere, is what actually needed preserving.
+
+## Addendum: the merge is rebuilt, 2026-08-09
+
+The withdrawal above lasted a few hours. The user's correction stated the actual
+contract, which the withdrawal had misfiled as a nice-to-have:
+
+> we had all the options in the top in generally the same order as the omarchy
+> options menu plus my extras then the apps in alphabetical order below. They
+> were not mixed.
+
+That is the specification: **commands as a contiguous block on top, in roughly
+the Omarchy options-menu order plus this rice's extras; applications alphabetical
+below; never interleaved.** Walker delivered it with `FixedOrder = true`. It is
+delivered again, by two pieces.
+
+### Commands become desktop entries
+
+The withdrawal's claim — the launcher "has no plugin hook for injecting
+non-desktop rows" — was true and irrelevant: the launcher lists whatever
+`.desktop` entries exist, so commands ride in as generated entries. A tracked
+generator, `.local/bin/shokupan-launcher-cmds`, renders the full pre-quattro
+palette (28 entries at tag `omarchy-v3.8.4-prequattro`, quattro-adjusted:
+`omarchy-toggle-waybar` → `omarchy-toggle-bar`, the deleted scaling `-cycle`
+becomes up/down rows, walker modes become shell-IPC toggles, `omarchy-menu`
+routes become quattro ids — an action id like `style.theme` runs directly) into
+`.local/share/applications/shokupan-cmd-<slug>.desktop`. The output is tracked,
+not heal-generated: tracked files are what `loaf heal` defends, and the
+conditional entries (Sleep, Hibernate) get their conditions evaluated on the
+machine they describe. Glyphs live in the generator as hex codepoints — the
+editor-loss trap both palette.lua and the menu extension document — and are
+rendered to PNGs at generation time, because the launcher's icon slot takes a
+file path; the render fails loudly on a missing glyph. Exec paths are absolute
+(quickshell has no `~/.local/bin` on PATH — the same trap as the bar modules).
+
+This ADR originally rejected desktop entries as pollution of other application
+pickers. That rejection is overruled by the owner of the list: the merged list
+is the requirement, and the pollution is bounded — 28 real commands under
+`Categories=System;Utility` in pickers this machine barely has. `NoDisplay=true`
+would hide them from the launcher too, so the cost is accepted, not worked around.
+
+### The ordering needs a fork, and the fork is sanctioned
+
+Plain `DesktopEntries` cannot deliver the block: measured, the stock launcher's
+resting order is pure lowercased-Name alphabetical (`LauncherSearch.js`
+`entrySortKey`), there is no frecency, no pinning, and no launcher key in
+`shell.json`. And the stock plugin cannot be shadowed: `PluginRegistry.qml`
+rejects any third-party plugin whose id collides with first-party or starts with
+`omarchy.` — also measured, it is an explicit branch with a console warning.
+
+So the merged list is its own third-party overlay plugin,
+`.config/omarchy/plugins/shokupan-launcher/` (`shokupan.launcher`), the
+sanctioned extension path. `Launcher.qml` is upstream's byte-for-byte plus a
+provenance header; the one functional change is in its `LauncherSearch.js`: with
+an empty query, entries whose desktop-file id is in the command table sort by
+that table's position (the generator's order — Toggle Menu first, rice extras
+after), everything else alphabetically below. With a query, upstream's relevance
+scoring ranks all entries — the block is the resting order, search is search.
+`FixedOrder = true` became eleven lines of comparator.
+
+Verified three ways: a screenshot of the running plugin showing the block on top
+(Screensaver → Nightlight → Idle Lock → Notifications → Top Bar → Workspace
+Layout, glyphs rendering in the icon slot); the fork's `sortedEntries` run under
+node against a shuffled mix, asserting contiguous-block, defined order,
+alphabetical apps and no interleave; and activation through the launcher's own
+`gtk-launch` path flipping the zen-ratio flag (ADR-0026) off and on.
+
+### What is still open
+
+- **`SUPER+SPACE` still summons `omarchy.launcher`.** The binding lives in the
+  Hyprland layer (`o.bind` on `omarchy-shell shell toggle omarchy.launcher`),
+  which is another work stream's file. The merged list is one word away:
+  retarget the toggle at `shokupan.launcher`. Until then it opens by IPC and the
+  stock launcher shows the commands mixed alphabetically — present but unordered.
+- **The fork must be re-diffed against upstream after omarchy updates.** It is
+  655 lines of upstream QML plus our comparator; upstream fixes do not arrive
+  for free. The provenance header says exactly this.
+- The stock launcher and every other picker also list the command entries. In
+  the fork they are the block; elsewhere they are alphabetized among the apps.

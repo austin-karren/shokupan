@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "shokupan.launcher",
+  "name": "Shokupan Launcher",
+  "version": "1.0.0",
+  "author": "shokupan",
+  "description": "The ADR-0027 merged list: command block on top, applications alphabetical below",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Launcher.qml"
+  }
+}
