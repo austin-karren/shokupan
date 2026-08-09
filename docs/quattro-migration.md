@@ -183,56 +183,52 @@ must carry this line:
 - `impala` (ADR-0016's wifi TUI) was removed by the same sweep. Its replacement
   is unexamined.
 
-## Handed to the bar, not done here
+## Notes for the bar, from the menu port
 
-Requested 2026-08-09 while the menus were being ported. Both are bar-owned
-(`shell.json` layout, `.config/omarchy/bar/modules/`, ADR-0013/0026), so they are
-written down rather than acted on. The measurements are here so whoever picks them
-up does not have to redo them.
+Measurements taken while porting the menus that the bar work needs. Recorded here
+rather than acted on: `shell.json`, `.config/omarchy/bar/modules/` and ADR-0013 /
+0026 / 0029 are the bar's, not the menus'.
 
-**1. The zen ratio toggle should always be visible.** Two separate asks, and the
-second is the easy one:
+**A custom module cannot join the `omarchy.indicators` cluster.** `Indicators.qml`
+loads only from `/usr/share/omarchy/shell/plugins/bar/indicators/` (`Dictation`,
+`Dnd`, `NightLight`, `Reminder`, `ScreenRecording`, `StayAwake`); that tree is
+package-owned and read-only, and the widget exposes no user-directory search path.
+So a rice module can sit *beside* the cluster but never *inside* it.
 
-- *Always visible.* `ratio.qml` line ~36 is
-  `readonly property bool revealed: active || (bar && bar.centerSectionRevealHeld === true)`.
-  Making that unconditionally `true` is the whole change. The module's own header
-  already documents the opposite knob ("to make it hover-only in both states, drop
-  `|| active`"), so this is the third point on a scale it was written to have.
-  Worth noting it then behaves exactly like a `type: "command"` entry, which the
-  header says was rejected *because* it would always be visible — so ADR-0013's
-  reasoning needs revisiting, not just the code.
-- *Inside the hover group rather than beside it.* This one is blocked. In
-  `shell.json` the centre section is `[clock, weather, system-update, indicators,
-  ratio]` — `ratio` is a **sibling of** `omarchy.indicators`, not a member of it,
-  which is exactly the "near it, not in it" being reported. It cannot be made a
-  member by configuration: `Indicators.qml` loads only from
-  `/usr/share/omarchy/shell/plugins/bar/indicators/` (`Dictation`, `Dnd`,
-  `NightLight`, `Reminder`, `ScreenRecording`, `StayAwake`), that tree is
-  package-owned and read-only, and the widget has no user-directory search path.
-  The sibling module is the workaround for that limit, not an oversight.
+What it can do instead is bind to the same property the cluster binds to —
+`bar.centerSectionRevealHeld` (`Bar.qml:47`) — which gives identical hover
+behaviour without membership. `ratio.qml` already does exactly this. Two
+consequences worth knowing before designing anything:
 
-  If group membership is wanted for *appearance* rather than mechanism, the lever
-  is `alwaysShow` on `omarchy.indicators` (documented at
-  `plugins/bar/README.md:76`) — but it applies to the whole cluster, so every
-  inactive indicator becomes permanently visible too. That is a bar-composition
-  decision, and ADR-0029 owns it.
+- The hover group exists **only in the centre section**. A module in `left` or
+  `right` has nothing to bind to, so hover-hiding it means moving it to centre.
+- First-party plugin widgets (`omarchy.model-usage`, `omarchy.weather`, …) do not
+  bind to it and have no visibility setting. Hover-gating one means re-implementing
+  it as a custom QML module and losing whatever popup it owned.
 
-**2. "Same with the Claude usage."** This one *closes* an open item rather than
-opening one. The bar section above records `omarchy.model-usage` as still-open
-because it "cannot be made to hover-reveal by configuration", with the proposed fix
-being a second QML module that re-implements its chip and loses its popup.
+`alwaysShow` on `omarchy.indicators` (`plugins/bar/README.md:76`) is the one
+supported visibility lever, and it applies to the whole cluster at once.
 
-That work should be dropped, not done. The request is for model-usage to be
-**always visible**, which is what it already does: it sits in the **right** section
-of `shell.json`, only the *centre* section has a hover-reveal group (`Bar.qml:47`
-`centerSectionRevealHeld`), its widget has no hover gating and no `alwaysShow`
-setting, and it draws an `EmptyUsageChip` when no provider has data. So the
-inability to hover-reveal it stopped being a problem the moment hover-reveal
-stopped being the goal — and the expensive workaround buys a behaviour no longer
-wanted, at the cost of the popup.
+### The calendar icon (ADR-0006)
 
-Both asks point the same direction: the two modules that were being tuned toward
-hiding should both simply stay on screen.
+Restoring it is bar work, and it is the **only** entry point still missing. The
+other two are back: a `Calendar` row in `extensions/omarchy-menu.jsonc`, and
+`SUPER+SHIFT+C` in `bindings.conf` once the Hyprland bindings reach Lua.
+
+ADR-0006 does **not** retire — quattro ships no month grid and no clock popup, and
+the reason for GNOME Calendar is online accounts, which a clock-derived grid cannot
+show. See the correction on that ADR.
+
+The old Waybar module was `custom/calendar`, glyph **U+F00ED** (`󰃭`), click
+running `calendar-toggle`. Nothing about `calendar-toggle` changed, so the module
+is the whole job. As a plain always-visible entry it is a `type: "command"` row:
+
+    {"id":"calendar","type":"command","text":"\udb80\udced","tooltip":"Calendar","onClick":"/home/austinkarren/.local/bin/calendar-toggle"}
+
+Note the absolute path — quickshell runs module commands through `bash -lc`, which
+has no `~/.local/bin` on `PATH`, and a not-found command renders as an empty box
+with no error. If it should hover-hide instead, it needs the `ratio.qml` treatment
+and a place in the centre section, per the constraint above.
 
 **Also flagged, not edited:** `docs/adr/0026` still points at
 `~/.config/omarchy/extensions/menu.sh` for the Toggle Menu override. That file is
