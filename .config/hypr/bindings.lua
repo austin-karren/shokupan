@@ -2,11 +2,14 @@
 -- Ported from bindings.conf at the quattro migration (ADR-0033). Unbind a
 -- default before replacing it; hl.unbind of a key that is not bound is an error.
 
--- ADR-0027: the merged app+command list is withdrawn under quattro, and the SPACE
--- chords adopt upstream's (SUPER+SPACE launcher, SUPER+ALT+SPACE Omarchy Menu).
--- This one addition keeps the older Launcher reflex alive: bare ALT+SPACE was the
--- app search since before the merge, and it should land on apps, not on nothing.
-o.bind("ALT + SPACE", "Launch apps", "omarchy-shell shell toggle omarchy.launcher \"{}\"")
+-- ADR-0027: the merged app+command list is BACK - shokupan.launcher wraps the
+-- stock launcher and feeds it the rice's commands as entries. Both old reflexes
+-- land on it: SUPER+SPACE (upstream's chord, retargeted from omarchy.launcher,
+-- so unbind first) and bare ALT+SPACE (ours since before the merge).
+-- SUPER+ALT+SPACE stays upstream's Omarchy Menu, untouched.
+hl.unbind("SUPER + SPACE")
+o.bind("SUPER + SPACE", "Launch apps and commands", "omarchy-shell shell toggle shokupan.launcher \"{}\"")
+o.bind("ALT + SPACE", "Launch apps and commands", "omarchy-shell shell toggle shokupan.launcher \"{}\"")
 
 -- Herdr replaced tmux (ADR-0015), but quattro's default still binds this chord
 -- to omarchy-launch-terminal-tmux, which now opens nothing: tmux is uninstalled.
