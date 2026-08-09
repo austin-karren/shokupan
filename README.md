@@ -114,7 +114,7 @@ it can also override anything the tracked `.bashrc` set.
 | `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express (`ratio.qml` hides until the centre of the bar is hovered) |
 | `.config/omarchy/themed/shell.toml.tpl` | Theme template override that pins the bar dark in every theme (ADR-0009). User templates outrank Omarchy's, so this replaces the built-in wholesale — re-diff it after an upgrade |
 | `.config/omarchy/extensions/omarchy-menu.jsonc` | Our rows in the Omarchy Menu, and the System Palette's only home since quattro (ADR-0027) — the sanctioned extension point, not a patched Omarchy file. Hot-reloaded. Replaced `menu.sh`, whose bash extension point quattro removed |
-| `.config/starship.toml`, `.config/tmux/` | Prompt and multiplexer |
+| `.config/starship.toml` | Prompt. The multiplexer is herdr, a self-updating binary in `~/.local/bin` — tmux and its config left with ADR-0015 |
 | `.bashrc` | Thin — sources Omarchy's `default/bash/rc` |
 | `.local/bin/` | The `loaf` CLI, plus every script a keybinding or bar module depends on. The npx shims (`codex`, `gemini`, …) stay untracked — they are generated, not config |
 | `.config/omarchy/hooks/post-update.d/` | Runs `loaf heal` after each `omarchy update` — the sanctioned hook directory, not a patched Omarchy file |
@@ -270,7 +270,7 @@ are the to-do list.
 | [0012](./docs/adr/0012-unify-launcher-and-palette-on-elephant-menus.md) | Unify Launcher and System Palette | superseded by 0027 |
 | [0013](./docs/adr/0013-promote-the-ratio-toggle-to-the-bar.md) | Single-window aspect-ratio toggle onto the bar | accepted |
 | [0014](./docs/adr/0014-ghostty-split-keybinds.md) | Ghostty split keybinds, and bind `close_surface` | accepted |
-| [0015](./docs/adr/0015-replace-tmux-with-herdr.md) | Replace tmux with herdr | proposed |
+| [0015](./docs/adr/0015-replace-tmux-with-herdr.md) | Replace tmux with herdr | accepted |
 | [0016](./docs/adr/0016-remote-access-from-the-macbook.md) | Reach this machine from the MacBook over Tailscale | proposed |
 | [0017](./docs/adr/0017-druk-as-the-terminal-editor.md) | Bake off druk, Helix and Neovim as the terminal editor | proposed |
 | [0018](./docs/adr/0018-worktrunk-for-git-worktrees.md) | Manage worktrees with worktrunk | proposed |
