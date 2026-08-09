@@ -32,9 +32,9 @@
         },
         {
           "id": "omarchy.clock",
-          "format": "dddd HH:mm",
+          "format": "dddd h:mm AP",
           "formatAlt": "d MMMM 'W'ww yyyy",
-          "verticalFormat": "HH\n—\nmm"
+          "verticalFormat": "h\n—\nmm"
         },
         {
           "id": "omarchy.weather"
@@ -47,11 +47,24 @@
           "type": "qml"
         },
         {
-          "id": "omarchy.indicators"
+          "id": "omarchy.indicators",
+          "items": [
+            "Dnd"
+          ]
         },
         {
           "id": "ratio",
           "type": "qml"
+        },
+        {
+          "id": "omarchy.indicators",
+          "items": [
+            "Reminder",
+            "NightLight",
+            "StayAwake",
+            "ScreenRecording",
+            "Dictation"
+          ]
         }
       ],
       "right": [
@@ -90,14 +103,15 @@
           "size": 2
         },
         {
-          "id": "omarchy.network"
+          "id": "network",
+          "type": "qml"
         },
         {
           "id": "omarchy.audio"
         },
         {
           "id": "omarchy.spacer",
-          "size": 9
+          "size": 4
         },
         {
           "id": "omarchy.monitor"

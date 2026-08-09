@@ -263,6 +263,32 @@ from screenshots, not eyeballed (physical px at scale 1.6):
   the Waybar-era discipline restated: near-uniform ink gaps, a pixel or two
   conceded only where a glyph's own advance forces it.
 
+**The clock is 12-hour** — `"dddd h:mm AP"` ("Sunday 3:42 PM"). Nothing had
+recorded a time-format decision before; this line is it. The alt format (click)
+stays the ISO-ish date.
+
+**Wired shows the globe again.** Quattro's network widget hardcodes 󰈀 in its
+package `Model.js` with no setting, so the "Wired shows a globe, not a port"
+section above is re-implemented as a Hosted widget
+(`bar/modules/network.qml`): upstream's whole panel, with only the bar button's
+text binding re-pointed through a one-glyph map (U+F0200 → U+F059F). Wi-Fi
+glyphs pass through untouched. If an upgrade restructures the panel, the map
+silently stops applying and the socket comes back — visible, not broken.
+
+**The hidden list is ordered, and the ratio sits second.** The indicators
+widget allows multiple instances with `items` subsets, so the cluster is split
+around the ratio's off-face: `[Dnd] · ratio · [Reminder, NightLight, StayAwake,
+ScreenRecording, Dictation]` — silence-notifications first, the zen toggle
+second, upstream's default order for the rest.
+
+**The audio gap is tuned to the eye, not the ruler.** The speaker's sound
+waves are visually light — the eye reads the solid cone as the icon's edge and
+discounts the waves — so a raw-ink-uniform gap after audio *looks* oversized by
+about the waves' width. The spacer after audio dropped from 8 to 4: raw ink gap
+24 where the cluster runs 33–34, visual gap (cone edge to monitor) back in
+line. This refines the uniform-ink rule: ink that trails off (wave arcs, ramp
+glyphs) counts fractionally.
+
 **The menu button wears the rice's power glyph** (`omenu` QML module, U+F011 —
 the same glyph `custom/omarchy` carried on Waybar). Upstream's widget hardcodes
 its logo in a private icon font with no setting, so the swap is a module that
