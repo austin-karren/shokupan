@@ -25,6 +25,7 @@
 // only its own strip. Widen `hiddenWidth` if it turns out to be fiddly to hit.
 
 import QtQuick
+import qs.Ui
 
 Item {
   id: root
@@ -36,26 +37,25 @@ Item {
   readonly property int hiddenWidth: 14
   readonly property bool revealed: hover.hovered
 
-  implicitWidth: revealed ? label.implicitWidth + 13 : hiddenWidth
+  implicitWidth: revealed ? btn.implicitWidth : hiddenWidth
   implicitHeight: bar ? bar.barSize : 26
 
   Behavior on implicitWidth { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
   HoverHandler { id: hover }
 
-  Text {
-    id: label
-    anchors.centerIn: parent
+  // WidgetButton so the revealed gear carries the same hover highlight,
+  // pressed state and tooltip chrome as every clickable built-in.
+  WidgetButton {
+    id: btn
+    anchors.verticalCenter: parent.verticalCenter
+    bar: root.bar
     text: ""
-    color: root.bar ? root.bar.foreground : "white"
-    font.family: root.bar ? root.bar.fontFamily : "monospace"
-    font.pixelSize: 12
-    opacity: root.revealed ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: 120 } }
-  }
-
-  MouseArea {
-    anchors.fill: parent
-    onClicked: if (root.bar) root.bar.run("omarchy-launch-bar-settings")
+    tooltipText: "Bar settings"
+    concealed: !root.revealed
+    interactive: root.revealed
+    onPressed: function(b) {
+      if (root.bar) root.bar.run("omarchy-launch-bar-settings")
+    }
   }
 }

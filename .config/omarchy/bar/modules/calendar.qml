@@ -1,5 +1,5 @@
-// The calendar affordance, in the slot quattro's bar-config button vacated:
-// immediately left of the clock, hidden until the centre of the bar is hovered.
+// The calendar affordance, static and immediately left of the clock (ADR-0006,
+// ADR-0029's bracket around the date).
 //
 // ADR-0006 stands — quattro's clock is a 66-line label with no popup and no
 // month grid (verified by the menus agent, commit ef2cdab), and GNOME Calendar
@@ -16,10 +16,14 @@
 // does not hover-reveal. The calendar is the left half of the ADR-0029 bracket
 // around the date, and a bracket that is usually missing is not a bracket.
 //
+// WidgetButton, not a raw Text+MouseArea, so it carries the same hover
+// highlight, pressed state and shared tooltip every clickable built-in has.
+//
 // NOTE: the shell registers new files in bar/modules/ only at startup. Editing
 // this file hot-reloads; *adding* a module file needs omarchy-restart-shell.
 
 import QtQuick
+import qs.Ui
 
 Item {
   id: root
@@ -28,32 +32,22 @@ Item {
   property string moduleName
   property var settings
 
-  // +8, not +13: measured on the live bar, +13 put 28 physical px between the
-  // calendar's ink and the date against 23 between the date and the weather.
-  // Symmetric padding means each -1 logical px here closes the right gap by
-  // ~0.8 physical px at scale 1.6; +8 lands the bracket at 24 vs 23.
-  implicitWidth: label.implicitWidth + 8
+  implicitWidth: btn.implicitWidth
   implicitHeight: bar ? bar.barSize : 26
 
-
-  Text {
-    id: label
-    anchors.centerIn: parent
+  WidgetButton {
+    id: btn
+    anchors.verticalCenter: parent.verticalCenter
+    bar: root.bar
     text: "󰃭"
-    color: root.bar ? root.bar.foreground : "white"
-    font.family: root.bar ? root.bar.fontFamily : "monospace"
-    font.pixelSize: 12
-  }
-
-  MouseArea {
-    anchors.fill: parent
-    acceptedButtons: Qt.LeftButton | Qt.RightButton
-    hoverEnabled: true
-    onEntered: if (root.bar) root.bar.showTooltip(root, "Calendar\n\nClick to show or hide")
-    onExited: if (root.bar) root.bar.hideTooltip(root)
-    onClicked: function(mouse) {
+    tooltipText: "Calendar\n\nClick to show or hide"
+    // 4, not the default 8.5: the raw-Text revision measured the bracket even
+    // at 23/23 with 4 logical px of padding a side, and this keeps that ink
+    // geometry (glyph + 8 total) while gaining the button chrome.
+    horizontalMargin: 4
+    onPressed: function(b) {
       if (!root.bar) return
-      if (mouse.button === Qt.RightButton)
+      if (b === Qt.RightButton)
         root.bar.run("env XDG_CURRENT_DESKTOP=Hyprland:GNOME gnome-control-center online-accounts")
       else
         root.bar.run("$HOME/.local/bin/calendar-toggle")
