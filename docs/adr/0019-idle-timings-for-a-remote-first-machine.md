@@ -8,74 +8,70 @@ Two goals: the screensaver arrives too soon, and the gap before locking should b
 much longer. Separately, this machine needs to stay reachable and keep long-running
 processes (Claude, Vite dev servers) alive for the remote workflow in ADR-0016.
 
+## Re-based onto quattro, 2026-08-09
+
+Everything below the standing requirement was written against hypridle, which the
+upgrade uninstalled (hyprlock too — `~/.config/hypr/hypridle.conf` is still on
+disk and now inert). The idle chain is quattro's quickshell service plugin, and
+the knobs are two keys in `.config/omarchy/shell.json`:
+
+```json
+"idle": { "screensaver": 150, "lock": 300 }
+```
+
+Measured in `plugins/services/idle/Service.qml`:
+
+- **The timers are independent and absolute** — both are seconds since idle
+  began, not a chain. `lock: 300` means lock at 300s, full stop. The hypridle
+  trap this ADR documented (launching the screensaver reset the idle timer, so
+  the second number silently meant "after the screensaver") is gone, and with it
+  the "re-measure after any change" caveat.
+- **Current values reproduce the old behaviour.** 150/300 are also the plugin's
+  own defaults, and land within seconds of the old effective 150s/≈302s. So the
+  retune this ADR wants has *not* happened yet — the numbers just moved house.
+- **No idle suspend exists**, same as before: the service knows screensaver and
+  lock, and nothing else. `grep suspend` over the idle plugin comes back empty.
+- **Display-off now exists**, answering an open question below: 5 seconds after
+  the lock engages, the lock plugin runs `omarchy-brightness-display off` (and
+  keyboard backlight off), waking on interaction. The screensaver itself still
+  keeps the display lit.
+- **A stay-awake toggle is native** (`~/.local/state/omarchy/indicators/stay-awake`
+  disables the whole chain), which is what `omarchy update` flips on while it
+  runs.
+
 ## Sanity check: nothing is killing your background processes
 
-The belief that idle behaviour kills background processes does not hold up. What
-the machine actually does:
-
-- **Nothing auto-suspends it.** `~/.config/hypr/hypridle.conf` has no suspend
-  listener at all — only screensaver and lock. `logind`'s `IdleAction` is left at
-  its default of `ignore`, and there are no suspend timers. Suspend is *available*
-  (and hibernation is too), but only ever fires when asked for by hand.
-- **The one suspend on record was manual**: `PM: suspend entry (s2idle)` at
-  Aug 3 23:45, resumed 09:48 the next morning. Bedtime, not idle.
-- **Locking cannot kill a process.** `omarchy-system-lock` runs hyprlock, a
-  fullscreen surface. It has no relationship to process lifetime.
-- **Suspending does not kill them either.** s2idle freezes processes in RAM and
-  restores them; hibernate writes them to swap and restores them. A Vite server or
-  Claude session is still running after resume.
-
-What genuinely breaks across a suspend is **network state, not processes**: open
-sockets die, so an in-flight API call fails and HMR websockets drop until the
-browser reconnects. And while suspended the machine is simply unreachable — which
-is the real conflict with ADR-0016, and an argument for never suspending rather
-than for changing timings.
+The belief that idle behaviour kills background processes did not hold up under
+hypridle and still does not: nothing auto-suspends this machine, locking is a
+fullscreen surface with no relationship to process lifetime, and the one suspend
+on record was manual (bedtime, not idle). What genuinely breaks across a suspend
+is **network state, not processes** — open sockets die, HMR websockets drop. And
+while suspended the machine is unreachable, which is the real conflict with
+ADR-0016 — an argument for never suspending rather than for changing timings.
 
 So the timings are worth changing because 2.5 minutes is annoying, not because
 anything is being lost.
 
 ## Standing requirement
 
-The machine must stay usable from away over SSH, with long-running processes still
-alive. That is a fixed requirement for anything decided here, not an open question —
-so no change may introduce an idle suspend. The specifics are deliberately deferred;
-this ADR only records the constraint so a future change does not violate it.
+The machine must stay usable from away over SSH, with long-running processes
+still alive. That is a fixed requirement for anything decided here, not an open
+question — so no change may introduce an idle suspend. Verified to hold under
+quattro (no suspend listener anywhere in the idle plugin), and now backed by an
+actual remote path: Tailscale SSH is enabled (ADR-0016).
 
-## The trap in the current config
+## Still to settle
 
-The two timeouts are **not independent**, which makes the numbers look wrong:
-
-```
-listener { timeout = 150   on-timeout = pidof hyprlock || omarchy-launch-screensaver }
-listener { timeout = 152   on-timeout = omarchy-system-lock }
-```
-
-Launching the screensaver resets the idle timer — it dispatches
-`focusmonitor` and spawns a terminal per monitor, which registers as activity. So
-the second listener does not fire 2 seconds after the first; it fires 152 seconds
-after the *reset*, putting the lock at roughly 302s ≈ 5 minutes. Hence the config's
-"half + 2s margin" comment.
-
-The upside of that coupling is that the second number reads directly as "time from
-screensaver to lock", which is exactly the knob wanted here. Bumping the first to
-`300` and the second to e.g. `1800` gives a 5-minute screensaver and a lock 30
-minutes later. Re-firing the first listener after the reset is harmless:
-`omarchy-launch-screensaver` exits early when `org.omarchy.screensaver` is already
-running.
-
-This reset behaviour is documented from observation, not from hypridle's docs, so
-it should be re-measured after any change rather than trusted.
-
-## To settle at grill time
-
-- **The two numbers.** "Slightly too fast" and "much longer" need actual values.
-- **Whether to lock on idle at all**, given the remote goal. A machine you SSH into
-  does not benefit from its local screen locking — but it is a physical desktop, so
-  this is a security decision, not a technical one.
-- **Whether to remove Sleep from the System Palette.** It is currently one keystroke
-  and two clicks away, and it is the only thing that makes this machine unreachable.
-  Hibernate has the same problem and is also offered.
-- **Whether display-off should exist.** There is no DPMS listener today; the
-  screensaver stays lit indefinitely. A monitor that never sleeps is its own cost.
-- `inhibit_sleep = 3` already makes hypridle wait for the lock to appear before
-  sleeping, so the lock-then-sleep ordering is not a concern.
+- **The two numbers.** "Slightly too fast" and "much longer" still need actual
+  values; under the new semantics they are trivially expressible — e.g.
+  `screensaver: 300, lock: 1800` reads exactly as it behaves. They live in
+  `shell.json`, which is hot-reloaded, so trying values costs nothing.
+- **Whether to lock on idle at all**, given the remote goal. A machine you SSH
+  into does not benefit from its local screen locking — but it is a physical
+  desktop, so this is a security decision, not a technical one.
+- **Whether to remove Sleep from the menu.** Suspend and hibernate remain the
+  only things that make this machine unreachable, and both are still offered.
+- ~~Whether display-off should exist~~ — it does now, attached to the lock
+  rather than the screensaver. Whether the screensaver *itself* should ever
+  blank the display is a smaller question and probably answered by "no, that is
+  what the lock stage is for".
