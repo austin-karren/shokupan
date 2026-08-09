@@ -4,6 +4,22 @@ status: accepted
 
 # Flathub on the web, with a ref handler
 
+> **Verified under quattro, 2026-08-09.** The decision and the handler survive
+> whole; the watcher in the export story changed name. Measured: both mimetypes
+> still resolve to `flatpakref-install.desktop` (`xdg-mime query default` on
+> each), the desktop entry is a live symlink into the repo, Shelly and its
+> Flatpak backend are still installed, and both export directories exist with
+> the system one carrying Dawn and Eloquent. Elephant — the watcher the export
+> section below is written around — was uninstalled by the upgrade. Its role
+> passed to quattro's launcher, which subscribes to Quickshell's
+> `DesktopEntries.applications.onValuesChanged`, and the quickshell process has
+> both Flatpak `exports/share` paths on `XDG_DATA_DIRS` (read from its
+> environ). So exports still become launcher-visible without a restart, by a
+> different subscriber. The migration that pre-creates the export directories
+> stays applied and stays right: it exists so *whatever* watches the path has a
+> directory to attach to before the first install, and that constraint is not
+> Elephant's — it is inotify's.
+
 Flatpaks are browsed on flathub.org in the browser and installed by handing the
 Ref to `flatpakref-install`, a terminal wrapper around `flatpak install --from`.
 No store GUI is the browse surface.
