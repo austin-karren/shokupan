@@ -5,9 +5,9 @@ status: accepted
 # Promote the single-window aspect-ratio toggle out of a menu and onto the bar
 
 > **Ported 2026-08-09, and it moved.** The toggle is back on the bar, but no
-> longer in the right cluster: it is a hover-revealed module at the end of the
-> *centre*, next to the indicators. `ratio-toggle` itself is unchanged. See the
-> addendum at the foot.
+> longer in the right cluster: it joined the centre's indicator cluster, with
+> the indicators' own block behaviour — visible unprompted while on, dimmed and
+> hover-revealed while off. See the addendum at the foot.
 
 The single-window aspect-ratio toggle — constraining a lone window via Hyprland's
 `single_window_aspect_ratio` — is used often enough that living three levels deep
@@ -171,19 +171,20 @@ levels deep in a menu is the wrong home. That still holds. What changed is that
 quattro's bar has a state the Waybar bar did not: the centre section reveals its
 quiet modules on hover, and a module can opt into that.
 
-So the toggle is no longer the right cluster's action prefix. It sits in the
-**centre's hover tier**, immediately before the Claude-usage chip, and is
-**hover-only in both states**: on or off, it occupies no resting width and
-appears only while the centre is hovered. State still reads at a glance *while
-revealed* — the glyph takes the theme's `[bar] active` colour when the
-constraint is on.
+So the toggle is no longer the right cluster's action prefix. It joined the
+**centre's indicator cluster**, and after two revisions in each direction the
+settled behaviour is the indicators' own block semantics: **visible unprompted
+while the constraint is on** (jumping to the left of the cluster, exactly as
+night light does when it activates), hover-revealed and dimmed 0.45 while off.
+Full indicator dress throughout — caption font, 5px margins, foreground colour,
+never the urgent red.
 
-An intermediate revision kept the glyph visible whenever the ratio was on,
-mirroring the indicators, on the argument that the constrained state was worth
-seeing unprompted. The settled behaviour is uniformity with the hover group
-instead: the point of promoting the toggle was reach, not presence, and hover
-is one flick away. This supersedes the "Settled: always visible" section above
-in full.
+Because Indicators.qml loads its blocks only from the package's own directory,
+an outside module cannot interleave; the block jump is implemented as one
+control with two faces, `ratio-on.qml` before the cluster and `ratio.qml` after
+it, each rendering only in its own state. This amends the original "Settled:
+always visible, with a state distinction" section to quattro's richer
+vocabulary: always visible *when on*, discoverable on hover when off.
 
 **It is a `type: "qml"` module, not `type: "command"`.** A command module was the
 obvious port — `ratio-toggle --status` still emits Waybar-style JSON and quattro

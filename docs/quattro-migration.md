@@ -75,7 +75,6 @@ carry it:
     .config/omarchy/bar/modules/ratio-on.qml         zen-ratio toggle, active face
     .config/omarchy/bar/modules/omenu.qml            menu button wearing the power glyph
     .config/omarchy/bar/modules/calendar.qml         static, left of clock (ADR-0006)
-    .config/omarchy/bar/modules/model-usage.qml      hosts upstream's widget, hover-revealed
     .config/omarchy/bar/modules/barcfg.qml           bar-settings gear, after workspaces
     .config/omarchy/themed/shell.toml.tpl            pins the bar to Tailwind-950
 
@@ -122,10 +121,11 @@ Traps found the hard way (first ones recorded in ADR-0013):
   Font glyphs must be embedded as literal characters (or `\u{F00ED}`).
 
 Resolved since first noted here: `omarchy.model-usage` *can* hover-reveal
-without cloning its chip. `Ui/BarWidget.qml` is a plain `Item`, so
-`bar/modules/model-usage.qml` hosts upstream's real `Widget.qml` by absolute
-path, injects `bar` / `moduleName` / `settings` the way the host would, and owns
-only visibility — popup, provider tabs and upstream fixes all retained.
+without cloning its chip — `Ui/BarWidget.qml` is a plain `Item`, so a module
+can host upstream's real `Widget.qml` by absolute path and own only visibility
+(the Hosted widget pattern, CONTEXT.md). Proven, then removed from the bar the
+same day by ADR-0039: the chip is a metric in a row of switches. The pattern
+and the file live on in git history.
 
 **Re-decide — quattro may already do it natively** — ✅ emptied 2026-08-09
 

@@ -298,11 +298,13 @@ _Avoid_: stash, shelf, drawer
 
 **Hover-reveal group**:
 The quiet modules at the centre of the bar, which collapse to zero width until
-the centre section is hovered. Upstream's indicators live there, and so do the
-zen-ratio toggle (ADR-0013) and the Claude-usage chip. Active members jump to
-the left of the cluster and show unprompted; inactive ones sit right and only
-hover-reveal — the ratio mimics that with a two-faced module pair, since the
-indicators' own blocks are closed to outside modules. The calendar is deliberately *not* a member: it is
+the centre section is hovered. Upstream's indicators live there, and so does
+the zen-ratio toggle (ADR-0013). Active members jump to the left of the cluster
+and show unprompted; inactive ones sit right and only hover-reveal — the ratio
+mimics that with a two-faced module pair, since the indicators' own blocks are
+closed to outside modules. Everything in the group is a single caption-sized
+switch glyph; ADR-0039 removed the one text-bearing member for exactly that
+reason. The calendar is deliberately *not* a member: it is
 static, being half of ADR-0029's bracket around the date. A module joins the
 group by binding to the bar's `centerSectionRevealHeld`, which is why joining it
 requires a QML module rather than a Command module. The bar-settings gear after
@@ -320,8 +322,8 @@ _Avoid_: custom module (ambiguous with the QML kind), script module
 A bar entry backed by a `.qml` file in `.config/omarchy/bar/modules/`, which
 receives the bar root and can therefore do what a Command module cannot — hide
 itself, animate, read live bar state, or host an upstream widget. `omenu`,
-`barcfg`, `calendar`, `ratio`/`ratio-on` (one control, two faces) and
-`model-usage` are the six files. New files here
+`barcfg`, `calendar` and `ratio`/`ratio-on` (one control, two faces) are the
+five files. New files here
 register only at shell startup: `omarchy-restart-shell` after adding one, plain
 edits hot-reload.
 _Avoid_: plugin (a plugin is upstream's packaging unit, with a manifest)
@@ -330,8 +332,9 @@ _Avoid_: plugin (a plugin is upstream's packaging unit, with a manifest)
 A QML module whose body is upstream's own widget, loaded by absolute path and
 handed the three properties the bar host would inject — the module owns only
 visibility, upstream owns everything else, and upstream's fixes keep arriving.
-`model-usage` is the one we have. The alternative, copying the widget's source
-into the rice, is what this term exists to argue against.
+`model-usage` proved the pattern before ADR-0039 took it off the bar; none is
+currently mounted, and the file lives in git history. The alternative, copying
+the widget's source into the rice, is what this term exists to argue against.
 _Avoid_: wrapper (says nothing about who owns the body), clone, fork
 
 **Indicator dress**:

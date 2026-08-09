@@ -205,9 +205,13 @@ hover-revealed modules, invisible until the pointer is on their section):
 
     left    menu(power glyph) · workspaces · ⌁bar-settings
     centre  media · calendar · CLOCK · weather · system-update · ratio(on-face)
-            · indicators · ⌁ratio(off-face) · ⌁model-usage
+            · indicators · ⌁ratio(off-face)
     right   tray · notifications · apexshot · sp2 · tailscale · sp3 · bluetooth
             · sp2 · network · audio · sp9 · monitor · power
+
+The Claude-usage chip was in the hidden group for part of the day and is gone
+per ADR-0039: it was the group's one text-bearing member, and a metric is not a
+switch. The hosted-widget pattern it proved outlives it.
 
 **The hover tier is new, and it is a third answer to this ADR's question.**
 Waybar offered two states: on the bar or not. Quattro's centre reveals quiet
