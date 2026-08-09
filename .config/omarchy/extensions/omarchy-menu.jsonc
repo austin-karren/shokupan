@@ -114,6 +114,14 @@
   // Icon f021 refresh, the old palette's for this entry.
   "update.system": {"icon":"","label":"System","keywords":"upgrade cachyos arch pacman aur flatpak base packages","action":"omarchy-launch-floating-terminal-with-presentation /home/austinkarren/.local/bin/system-update"},
 
+  // OVERRIDE. Quattro's row opens the image grid with no names and no
+  // type-to-filter; wallpaper-menu opens the same picker with both flags on and
+  // moves an active ADR-0007 pin to whatever gets picked. Because upstream's
+  // "background" alias routes SUPER+CTRL+SPACE through this same row, one
+  // override swaps the binding and the menu entry together. Fields are restated
+  // per mechanism 1; icon f03e is upstream's own.
+  "style.background": {"icon":"","label":"Background","aliases":["background","wallpaper"],"keywords":"wallpaper backgrounds picker named search","action":"/home/austinkarren/.local/bin/wallpaper-menu"},
+
   // Calendar. ADR-0006 keeps GNOME Calendar for online meetings; quattro's clock
   // is a bar label with no popup and no month grid, so nothing native replaces
   // it. Its other entry point is SUPER+SHIFT+C in bindings.conf, which is not

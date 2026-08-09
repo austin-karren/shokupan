@@ -295,6 +295,7 @@ are the to-do list.
 | [0037](./docs/adr/0037-the-about-window-is-sized-to-fastfetch.md) | The About window is sized to fastfetch, by measuring the cell | accepted |
 | [0038](./docs/adr/0038-helium-plays-drm-through-a-donated-widevine.md) | Helium plays DRM through a donated Widevine; Chrome is gone | accepted |
 | [0039](./docs/adr/0039-claude-usage-belongs-in-the-launcher-not-on-the-bar.md) | Claude usage belongs in the launcher, not on the bar | proposed |
+| [0040](./docs/adr/0040-the-wallpaper-picker-shows-names-and-moves-the-pin.md) | Wallpaper picker shows names and moves the pin | accepted |
 
 ## To do
 

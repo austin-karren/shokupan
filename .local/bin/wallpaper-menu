@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# The wallpaper picker, restored to what 3.8.4's felt like (see the ADR).
+#
+# Quattro's stock switcher (omarchy-theme-bg-switcher) opens the image grid
+# with NO names and NO type-to-filter - omarchy-menu-images supports both, the
+# stock script just never passes the flags. The old Walker selector
+# (default/elephant/omarchy_background_selector.lua at upstream v3.8.4) was a
+# searchable list of prettified names with a preview beside it. This wrapper
+# recovers the names and the search inside quattro's own picker, so there is
+# no UI of ours to maintain - two flags and the pin logic below are the whole
+# deviation.
+#
+#   wallpaper-menu             open the picker over the current theme's
+#                              backgrounds (theme-shipped + per-theme user dir)
+#   wallpaper-menu <image>     skip the picker, apply <image> directly
+#
+# THE PIN FOLLOWS AN EXPLICIT PICK. Under ADR-0007 a pinned wallpaper outranks
+# every theme, restored by a theme-set.d hook - which made the stock picker a
+# trap: pick a background while pinned and it applies, then silently reverts
+# on the next theme change. Neither the old selector nor quattro's had an
+# answer. The rule here: choosing a wallpaper from this menu IS the act the
+# pin exists to remember, so an active pin moves to the new choice (and says
+# so). No pin, no change - transient picks stay transient, per ADR-0007's
+# "wallpaper follows the theme" default.
+
+set -uo pipefail
+
+MARKER="$HOME/.local/state/omarchy/wallpaper-pin"
+STATE="$HOME/.local/state/omarchy/current"
+
+if [[ -n ${1:-} ]]; then
+  selection="$1"
+  [[ -f $selection ]] || { echo "not a file: $selection" >&2; exit 1; }
+else
+  theme_name=$(cat "$STATE/theme.name" 2>/dev/null)
+  current=$(readlink -f "$STATE/background" 2>/dev/null)
+  selection=$(omarchy-menu-images \
+    --selected "$current" \
+    --show-labels \
+    --filterable \
+    "$STATE/theme/backgrounds" \
+    "$HOME/.config/omarchy/backgrounds/$theme_name")
+  [[ -n $selection && -f $selection ]] || exit 0
+fi
+
+omarchy-theme-bg-set "$selection"
+
+if [[ -f $MARKER ]]; then
+  pinned=$(<"$MARKER")
+  if [[ $(readlink -f "$pinned" 2>/dev/null) != $(readlink -f "$selection") ]]; then
+    pin-wallpaper "$selection" >/dev/null
+    notify-send -u low "Wallpaper pinned" \
+      "Pin moved to $(basename "$selection"). pin-wallpaper --off to let themes choose again."
+  fi
+fi
