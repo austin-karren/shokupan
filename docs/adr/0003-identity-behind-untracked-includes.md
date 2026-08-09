@@ -23,5 +23,14 @@ Because the repo installs `~/.config/git/config`, git ignores `~/.gitconfig`
 entirely — it reads the latter only when the former does not exist. A stray
 `~/.gitconfig` is a red herring.
 
-Not yet applied to `~/.XCompose`, which holds a literal email expansion and is
-therefore still untracked rather than split. See ADR-0010.
+Applied to `~/.XCompose` on 2026-08-09: the identity expansions moved to
+`~/.XCompose.local` behind an `include`, and the rest is tracked (ADR-0010).
+Same pattern, one sharper failure mode — a *missing* include file there aborts
+the whole compose table rather than failing one commit, so the README documents
+that an empty file is enough to parse.
+
+**Verified under quattro, 2026-08-09.** All three includes hold on the upgraded
+machine: `~/.config/git/config` is a live symlink into the repo, ends in the
+`~/.gitconfig.local` include, and `git config user.email` resolves through it;
+no stray `~/.gitconfig` exists. Every commit in the quattro migration was made
+through this path.
