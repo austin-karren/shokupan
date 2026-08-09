@@ -330,8 +330,9 @@ _Avoid_: double click, click toggle
 
 **Toggle wrapper**:
 A script standing between a bar module and the command it launches, added solely
-to give that module Second-click dismissal. `window-toggle`, `menu-toggle` and
-`calendar-toggle` are the three we have.
+to give that module Second-click dismissal. Retiring under quattro, whose bar
+dismisses natively (ADR-0033): `window-toggle` is deleted, `menu-toggle` and
+`calendar-toggle` remain pending their own ADRs' calls.
 _Avoid_: handler, launcher script
 
 **Dismiss**:

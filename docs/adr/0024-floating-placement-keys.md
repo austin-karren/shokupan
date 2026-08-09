@@ -125,9 +125,9 @@ that is **Drag snap**, not the **Keyboard snap** in this ADR.
 returns the true double, and `monitor.reserved` arrives as a named table instead of a
 positional array. The usable area is now pure arithmetic, so the whole
 ask-Hyprland-for-100%-once dance and its cache
-(`~/.local/state/omarchy/hypr-logical-size`) are **deleted, not ported** — the cache
-file can be removed whenever `float-snap` and `window-resize` are (quattrotools owns
-that sweep).
+(`~/.local/state/omarchy/hypr-logical-size`) are **deleted, not ported** — and with
+`float-snap` and `window-resize` now removed (their raw `hyprctl dispatch` calls
+stopped parsing when dispatch became Lua), the cache file is deleted too.
 
 `float-snap` itself is ~30 lines of Lua in `~/.config/hypr/bindings.lua`. The
 geometry, the ↑-fills asymmetry, resize-before-move and the bare `centerwindow`

@@ -302,7 +302,9 @@ are the to-do list.
 - Decide whether `loaf heal` should ever act on `.displaced.*` files, or only
   ever leave them for a human to read
 - Settle wrap versus clamp for the Size ladder (ADR-0022) after using both, and put
-  the switch in the Toggle Menu instead of `window-resize --toggle-mode`
+  the switch in the Toggle Menu. Until then it is the flag file itself:
+  `~/.local/state/omarchy/toggles/window-resize-clamp` (present = clamp) —
+  `window-resize --toggle-mode` went with the script in the quattro port
 - Put Tailscale in the right-hand group of the bar. `omarchy install tailscale`
   already exists and installs the service plus an admin-console web app, so the
   work is the module, not the install. Placement follows ADR-0029 — the question

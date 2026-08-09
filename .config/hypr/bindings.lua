@@ -206,9 +206,10 @@ local EPS = 0.04
 local TOL_PX = 12
 local MIN_PX = 40
 
--- Wrap/clamp at the ladder ends. Same flag file as the .conf era, so
--- `window-resize --toggle-mode` (until retired) and any Toggle Menu entry keep
--- working. Wrap is the default: it reaches every size from a single key.
+-- Wrap/clamp at the ladder ends. Same flag file as the .conf era, so a future
+-- Toggle Menu entry needs only to create/remove it (present = clamp). Wrap is
+-- the default: it reaches every size from a single key. The window-resize
+-- script and its --toggle-mode are deleted; this file is the whole interface.
 local function clamp_mode()
   local flag = io.open(paths.state_home .. "/omarchy/toggles/window-resize-clamp", "r")
   if flag then

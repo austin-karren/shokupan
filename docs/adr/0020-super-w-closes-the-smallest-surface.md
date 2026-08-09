@@ -124,8 +124,10 @@ The script is gone. `close-surface` is now ~40 lines of Lua inside
 `~/.config/hypr/bindings.lua`, running in the compositor's own VM — the class comes
 from `hl.get_active_window().class` instead of a `hyprctl | jq` round trip, and no
 process is spawned per keypress. The whitelist, the fallback and the reasoning above
-are unchanged. `.local/bin/close-surface` should be deleted with its callers
-(quattrotools owns the sweep of `~/.local/bin`).
+are unchanged. `.local/bin/close-surface` is deleted — confirmed unreachable from
+any live binding or menu first, and doubly dead: quattro's `hyprctl dispatch` now
+parses Lua, so the script's `dispatch sendshortcut` calls would fail even if
+something still ran it.
 
 Two things changed in substance rather than syntax:
 

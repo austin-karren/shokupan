@@ -242,8 +242,11 @@ What did change:
 - **The logical-size problem is gone**: `monitor.scale` is the true double and
   `monitor.reserved` is a named table, so the usable area is pure arithmetic. The
   `hypr-logical-size` probe cache is deleted, not ported (see ADR-0024's addendum).
-- Wrap/clamp reads the **same flag file**, so `window-resize --toggle-mode` still
-  switches it until the script is retired (quattrotools owns the `~/.local/bin` sweep).
+- Wrap/clamp reads the **same flag file**. The script is now deleted (its raw
+  `hyprctl dispatch` calls stopped parsing when quattro made dispatch take Lua),
+  which takes `--toggle-mode` with it — until the Toggle Menu grows an entry, the
+  switch is the flag file itself:
+  `~/.local/state/omarchy/toggles/window-resize-clamp`, present = clamp.
 
 Verification re-run under quattro (usable area 2384×1558 at the current 1.6 scale),
 driving the live handler from `hyprctl repl`:
