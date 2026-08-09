@@ -19,6 +19,20 @@ status: accepted
 > stays applied and stays right: it exists so *whatever* watches the path has a
 > directory to attach to before the first install, and that constraint is not
 > Elephant's — it is inotify's.
+>
+> **Execution path proven later the same day, from `xdg-open` in.** The earlier
+> pass verified registration; this one ran the chain:
+> `xdg-open 'flatpak+https://…org.gnome.Calculator.flatpakref'` resolved to the
+> handler, spawned ghostty (`Exec=ghostty -e … %u`, ghostty 1.3.1 present), the
+> script translated the scheme URL to https and handed it to
+> `flatpak install --from` — screenshot shows its "Installing from:" banner. The
+> terminal was killed at the prompt; `flatpak list` confirms nothing installed.
+> Every tracked web-app entry was batch-validated: Exec resolves
+> (`omarchy-launch-webapp` lives at the package path now), every absolute Icon
+> path exists, every entry is a live symlink; Gmail's window confirmed on screen.
+> The one link still unproven is the browser's own half — Helium handing the
+> scheme to `xdg-open` when the Flathub Install button is clicked needs a real
+> click in the browser, which no script can stand in for.
 
 Flatpaks are browsed on flathub.org in the browser and installed by handing the
 Ref to `flatpakref-install`, a terminal wrapper around `flatpak install --from`.
