@@ -7,9 +7,15 @@
 # emits TAP and follows the shape of Omarchy's own test/omarchy-cli-test.sh.
 #
 # Every test builds a throwaway home under $BUILD and points LOAF_HOME at it, so
-# nothing here can touch the real one. `pacman` and the Omarchy tree are stubbed;
-# `git` and `stow` are real, because what they do to a fixture is exactly what
-# they would do to the machine.
+# nothing here can touch the real one. `pacman` and the files doctor reads under
+# /etc are stubbed; `git` and `stow` are real, because what they do to a fixture
+# is exactly what they would do to the machine.
+#
+# The /etc stubs matter more than they look. Omarchy became package-backed
+# (ADR-0035) and doctor's base checks now assert things about pacman's config and
+# NetworkManager's, so a suite reading the real /etc would pass or fail on how the
+# machine running it happens to be set up — and would have gone red on the very
+# machine whose broken wifi backend prompted the check.
 #
 # Run: test/loaf-test.sh
 
@@ -21,6 +27,11 @@ trap 'rm -rf "$BUILD"' EXIT
 
 tests=0
 failures=0
+
+# What the stubbed pacman reports for `pacman -Q omarchy`. Declared up here rather
+# than beside the stub because the fixture writes it into packages/omarchy.pin, and
+# the two agreeing is what makes the pin check pass on a healthy fixture.
+STUB_OMARCHY_VERSION='4.0.0.r1046.gd570d99-1'
 
 pass() {
   tests=$((tests + 1))
@@ -80,9 +91,13 @@ assert_file_exists() {
 # ---------------------------------------------------------
 
 # Builds a complete fake machine: a home, a rice repo inside it with one tracked
-# config file, a stubbed Omarchy checkout carrying the bridge's CachyOS
-# adaptations, and a stubbed pacman that reports every package installed.
-# Returns the home path on stdout.
+# config file and a version pin matching the stubbed pacman, a stubbed /etc
+# holding the three files doctor's base checks read, and a stubbed pacman that
+# reports every package installed. Returns the home path on stdout.
+#
+# The fixture is deliberately the HEALTHY state for every check — a test that
+# wants a broken one breaks it explicitly afterwards, so what it is asserting is
+# visible at the point of the assertion.
 make_home() {
   # mktemp, not a counter: this function is called as $(make_home), so it runs in
   # a subshell and any counter it incremented would be discarded — every fixture
@@ -101,6 +116,9 @@ make_home() {
     mkdir -p "$repo/.config/hypr" "$repo/packages" "$repo/migrations"
     echo "# tracked config" >"$repo/.config/hypr/looknfeel.conf"
     printf 'bat\n' >"$repo/packages/chosen.packages"
+    # Must match what the stubbed pacman reports for `pacman -Q omarchy`, or every
+    # fixture warns about version drift.
+    printf '%s\n' "$STUB_OMARCHY_VERSION" >"$repo/packages/omarchy.pin"
     # Mirrors the real repo: without this, stow symlinks packages/ and
     # migrations/ into the fixture home and doctor correctly reports them as
     # leaks — a fixture artefact rather than the condition under test.
@@ -112,46 +130,69 @@ make_home() {
     git -C "$repo" add -A
     git -C "$repo" commit -qm fixture
 
-  # The Omarchy checkout, with the bridge adaptations applied
-    local omarchy="$home/.local/share/omarchy"
-    mkdir -p "$omarchy/install/preflight" "$omarchy/bin"
-    git -C "$omarchy" init -q 2>/dev/null
-    printf 'eza\n' >"$omarchy/install/omarchy-base.packages" # tldr correctly absent
-    printf 'run_logged other.sh\n' >"$omarchy/install/preflight/all.sh"
-    git -C "$omarchy" add -A 2>/dev/null
-    git -C "$omarchy" -c user.email=t@e.c -c user.name=t commit -qm base 2>/dev/null
-
-  # The bridge, with the ADR-0001 path fix applied
-    mkdir -p "$home/omarchy-on-cachyos/bin"
-    # Single quotes on purpose: doctor greps these files for the literal string
-    # SCRIPT_DIR/../omarchy, so expanding it here would defeat the test.
+  # The /etc files doctor's base checks read. There is no Omarchy checkout to
+  # build any more — it is a package, and the stubbed pacman reports it.
+    mkdir -p "$home/etc/pacman.d"
+    # Single quotes on purpose: pacman's own config uses $repo and $arch as its
+    # literal placeholders, so expanding them here would not be a pacman.conf.
     # shellcheck disable=SC2016
-    printf 'TARGET_DIR="$SCRIPT_DIR/../omarchy"\n' >"$home/omarchy-on-cachyos/bin/fetch-omarchy.sh"
-    # shellcheck disable=SC2016
-    printf 'OMARCHY_DIR="$SCRIPT_DIR/../omarchy"\n' >"$home/omarchy-on-cachyos/bin/install-omarchy-on-cachyos.sh"
+    printf '[cachyos-znver4]\nServer = https://cdn.cachyos.org/repo/$arch_v4/$repo\n\n[core]\nInclude = /etc/pacman.d/mirrorlist\n' \
+      >"$home/etc/pacman.conf"
+    # shellcheck disable=SC2016  # same: pacman's placeholders, not shell variables
+    printf 'Server = https://archlinux.cachyos.org/repo/$repo/os/$arch\n' \
+      >"$home/etc/pacman.d/mirrorlist"
+    # No [device] stanza: NetworkManager falls back to wpa_supplicant, which is
+    # what quattro leaves it on and therefore the healthy default here.
+    printf '# Configuration file for NetworkManager.\n' \
+      >"$home/etc/NetworkManager.conf"
   } >/dev/null 2>&1
 
   echo "$home"
 }
 
 # Stubbed pacman, so tests never consult the real package database.
+#
+# `pacman -Q omarchy` reports omarchy-DEV, matching this machine: the real package
+# installed here is omarchy-dev, which `Provides: omarchy`, and pacman resolves the
+# provide. doctor relies on that, so the stub has to reproduce it rather than
+# answering to the plain name.
+#
+# Everything is installed by default; $STUB_ABSENT names packages that are not, so
+# a test can express "the configured wifi backend is missing" without also having
+# to describe every package that is present.
 mkdir -p "$BUILD/stub"
-cat >"$BUILD/stub/pacman" <<'STUB'
+cat >"$BUILD/stub/pacman" <<STUB
 #!/bin/bash
-case "$1" in
-  -Qq) exit 0 ;;    # every package is installed
+absent=" \${STUB_ABSENT:-} "
+case "\$1" in
+  -Q)
+    [[ \$absent == *" \$2 "* ]] && exit 1
+    [[ \$2 == omarchy ]] && echo "omarchy-dev $STUB_OMARCHY_VERSION"
+    exit 0
+    ;;
+  -Qq)
+    [[ \$absent == *" \$2 "* ]] && exit 1
+    exit 0
+    ;;
   -Qqe) echo bat ;; # the record
 esac
 STUB
 chmod +x "$BUILD/stub/pacman"
 
 # Run a rice command against a fixture home.
+#
+# $OMARCHY_PATH is deliberately NOT set: doctor defaults it to /usr/share/omarchy
+# and warns when it points anywhere else, so setting it to a fixture path would
+# make every test emit the dev-checkout warning. The one test that wants that
+# warning sets it itself.
 loaf_run() {
   local home=$1 cmd=$2
   shift 2
   LOAF_HOME="$home" LOAF_ROOT="$home/shokupan" \
-    OMARCHY_PATH="$home/.local/share/omarchy" \
-    BRIDGE_ROOT="$home/omarchy-on-cachyos" \
+    PACMAN_CONF="$home/etc/pacman.conf" \
+    MIRRORLIST="$home/etc/pacman.d/mirrorlist" \
+    NM_CONF="$home/etc/NetworkManager.conf" \
+    STUB_ABSENT="${STUB_ABSENT:-}" \
     XDG_STATE_HOME="$home/.local/state" \
     PATH="$BUILD/stub:$ROOT/.local/bin:$PATH" \
     "loaf-$cmd" "$@" 2>&1
@@ -168,8 +209,22 @@ out=$(loaf_run "$home" doctor)
 status=$?
 assert_contains "doctor: clean fixture reports no problems" "$out" "No problems"
 assert_equals "doctor: clean fixture exits 0" "$status" "0"
-assert_contains "doctor: confirms bridge patch intact" "$out" "path fix intact"
-assert_contains "doctor: confirms cachyos adaptations intact" "$out" "adaptations intact"
+assert_contains "doctor: reports the installed omarchy package version" \
+  "$out" "package        omarchy $STUB_OMARCHY_VERSION"
+assert_contains "doctor: confirms the version pin matches" \
+  "$out" "verified against $STUB_OMARCHY_VERSION"
+assert_contains "doctor: confirms the CachyOS repos" "$out" "CachyOS repo section(s)"
+assert_contains "doctor: confirms the mirrorlist is not Omarchy's" "$out" "none from omarchy.org"
+assert_contains "doctor: accepts NetworkManager's default wifi backend" \
+  "$out" "NetworkManager default"
+
+# The retired bridge (ADR-0035) took three checks with it, and a package-backed
+# Omarchy took a fourth. Asserted by absence: leaving one behind would mean doctor
+# reporting on an installer that can no longer run, which is exactly the noise
+# ADR-0028 says to delete rather than tolerate.
+for gone in "bridge patch" "stale clone" "walker hold" "cachyos patch" "checkout"; do
+  assert_not_contains "doctor: no longer reports '$gone'" "$out" "$gone"
+done
 
 # A displaced symlink — the failure the whole thing exists for. Note git stays
 # clean throughout, which is why nothing else would catch this.
@@ -189,17 +244,103 @@ touch "$home/CONTEXT.md"
 out=$(loaf_run "$home" doctor)
 assert_contains "doctor: detects a leaked repo-only path" "$out" "repo-only path"
 
-# A reverted CachyOS adaptation
+# Omarchy is packages now (ADR-0035), so "the desktop layer is gone" means the
+# package is gone rather than a checkout being absent.
 home=$(make_home)
-printf 'tldr\n' >>"$home/.local/share/omarchy/install/omarchy-base.packages"
-out=$(loaf_run "$home" doctor)
-assert_contains "doctor: detects a reverted bridge adaptation" "$out" "conflicts with tealdeer"
+out=$(STUB_ABSENT=omarchy loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: detects a missing omarchy package" "$out" "no omarchy package installed"
+assert_equals "doctor: exits non-zero when omarchy is not installed" "$status" "1"
+assert_not_contains "doctor: does not compare a pin against a missing package" \
+  "$out" "verified against"
 
-# The stale clone ADR-0001 warns about
+# `omarchy dev link` repoints OMARCHY_PATH at a source checkout. Legitimate, but
+# the package version doctor just reported is then not what is running.
+#
+# Stowed, unlike most fixtures here: this asserts the exit CODE, and an unstowed
+# fixture always has uninstalled symlinks to fail on. The stow is what narrows the
+# assertion down to the check under test.
 home=$(make_home)
-mkdir -p "$home/omarchy"
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
+out=$(OMARCHY_PATH="$home/omarchy-src" loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: warns when a dev checkout is live instead of the package" \
+  "$out" "a dev checkout is live, not the package"
+assert_equals "doctor: a dev checkout is a warning, not a failure" "$status" "0"
+
+# The version pin. Compared by equality against the installed package version,
+# because quattro's `4.0.0.r1046.gd570d99-1` cannot be meaningfully ordered against
+# the old `v3.8.4` shape — which is how the previous sort -V logic came to pick the
+# omarchy-v3.8.4-prequattro ROLLBACK tag as the pin.
+home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null) # asserts the exit code
+printf '3.8.4\n' >"$home/shokupan/packages/omarchy.pin"
+# Committed, not just written: the pin lives in the repo, so leaving it dirty would
+# trip doctor's `git` check and this test would pass on the wrong problem.
+git -C "$home/shokupan" commit -qam 'pin an older Omarchy' 2>/dev/null
 out=$(loaf_run "$home" doctor)
-assert_contains "doctor: detects the stale ~/omarchy clone" "$out" "stale clone"
+status=$?
+assert_contains "doctor: warns when the pin and the installed version differ" \
+  "$out" "verified against 3.8.4, Omarchy is $STUB_OMARCHY_VERSION"
+assert_equals "doctor: version drift is a warning, not a failure" "$status" "0"
+
+# Comments and blank lines are stripped, so the pin file can explain itself the
+# way every other manifest in packages/ does.
+home=$(make_home)
+printf '# which Omarchy this was verified against\n\n  %s  \n' "$STUB_OMARCHY_VERSION" \
+  >"$home/shokupan/packages/omarchy.pin"
+out=$(loaf_run "$home" doctor)
+assert_contains "doctor: reads a commented pin file" "$out" "verified against $STUB_OMARCHY_VERSION"
+
+home=$(make_home)
+rm "$home/shokupan/packages/omarchy.pin"
+out=$(loaf_run "$home" doctor)
+assert_contains "doctor: warns when nothing records the verified version" \
+  "$out" "no packages/omarchy.pin"
+
+# The wifi backend. NetworkManager does not provide the backend it delegates to and
+# says nothing when it is absent — the device just reports unavailable and never
+# scans. Measured on this machine after quattro removed iwd while the stanza naming
+# it stayed behind, which the old check reported as ✓.
+home=$(make_home)
+printf '[device]\nwifi.backend=iwd\n' >>"$home/etc/NetworkManager.conf"
+out=$(STUB_ABSENT=iwd loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: fails when the configured wifi backend is not installed" \
+  "$out" "wifi.backend=iwd, but iwd is not installed"
+assert_equals "doctor: a backendless NetworkManager is a failure, not a warning" "$status" "1"
+
+# The same stanza is fine when the backend is actually there, so a machine that
+# deliberately kept iwd is not nagged for it.
+home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null) # asserts the exit code
+printf '[device]\nwifi.backend=iwd\n' >>"$home/etc/NetworkManager.conf"
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: accepts an installed wifi backend" "$out" "wifi backend   iwd"
+assert_equals "doctor: an installed backend is not a problem" "$status" "0"
+
+# The mirrorlist. ADR-0035's measured root cause: Omarchy pins a frozen Arch
+# snapshot, CachyOS is rolling, and the two skew permanently. Note the fixture's
+# pacman.conf still has its [cachyos*] section — the repo list surviving is exactly
+# what makes this failure look fine until pacman starts refusing downgrades.
+home=$(make_home)
+# shellcheck disable=SC2016  # pacman's own $repo/$arch placeholders, kept literal
+printf 'Server = https://stable-mirror.omarchy.org/$repo/os/$arch\n' \
+  >"$home/etc/pacman.d/mirrorlist"
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: detects an Omarchy mirror in the mirrorlist" \
+  "$out" "points at an Omarchy mirror"
+assert_contains "doctor: still sees the CachyOS repos while the mirrorlist is wrong" \
+  "$out" "CachyOS repo section(s)"
+assert_equals "doctor: a frozen mirror is a failure" "$status" "1"
+
+# The base is gone entirely — stock Arch pacman.conf.
+home=$(make_home)
+printf '[core]\nInclude = /etc/pacman.d/mirrorlist\n' >"$home/etc/pacman.conf"
+out=$(loaf_run "$home" doctor)
+assert_contains "doctor: detects a base replaced with stock Arch" "$out" "no CachyOS repos"
 
 # Read-only by construction: a dirty fixture must be unchanged afterwards.
 home=$(make_home)

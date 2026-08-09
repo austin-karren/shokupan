@@ -3,9 +3,9 @@
 # loaf:summary=Check the three layers for drift, without changing anything
 
 # This machine is three layers deep: CachyOS is the base, Omarchy is the desktop
-# layered on with a third-party bridge repo (ADR-0001), and the rice sits on top
-# of both. Each layer updates on its own schedule and can quietly undo the one
-# above it, so this asserts what should be true and reports what is not.
+# layered on top of it as distro packages (ADR-0035), and the rice sits on top of
+# both. Each layer updates on its own schedule and can quietly undo the one above
+# it, so this asserts what should be true and reports what is not.
 #
 # Read-only by construction: it never writes, never sudos, and never touches the
 # network. `loaf heal` is the half that fixes things. Exits non-zero if anything
@@ -25,9 +25,22 @@ LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
 # doctor reports a file as missing that stow was never going to install. The
 # test suite asserts they stay in step.
 REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|CONTEXT|packages\.txt|\.gitignore|\.stow-local-ignore)'
-BRIDGE_ROOT="${BRIDGE_ROOT:-$LOAF_HOME/omarchy-on-cachyos}"
-OMARCHY_ROOT="${OMARCHY_PATH:-$LOAF_HOME/.local/share/omarchy}"
 STATE_DIR="${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/loaf"
+
+# Omarchy is package-backed at a fixed path now, so this is a constant rather
+# than something to discover. $OMARCHY_PATH is still read, because `omarchy dev
+# link` repoints it at a source checkout — a legitimate state, but one where the
+# installed package is not what is live.
+OMARCHY_PKG_ROOT=/usr/share/omarchy
+OMARCHY_ROOT="${OMARCHY_PATH:-$OMARCHY_PKG_ROOT}"
+
+# The base checks below read files under /etc, which is neither writable nor
+# predictable from a test. They are injectable for the same reason every path
+# derives from $LOAF_HOME: so the suite asserts against a fixture rather than
+# against whatever the machine running it happens to be configured with.
+PACMAN_CONF="${PACMAN_CONF:-/etc/pacman.conf}"
+MIRRORLIST="${MIRRORLIST:-/etc/pacman.d/mirrorlist}"
+NM_CONF="${NM_CONF:-/etc/NetworkManager/NetworkManager.conf}"
 
 problems=0
 
@@ -45,33 +58,19 @@ bad() {
 warn() { printf '  \033[33m!\033[0m %-14s %s\n' "$1" "$2"; }
 
 # ---------------------------------------------------------
-# Base — CachyOS, and the bridge that put Omarchy on it
+# Base — CachyOS
 # ---------------------------------------------------------
 
+# The bridge that originally put Omarchy on this base is retired (ADR-0035), and
+# its three sentinels went with it: `bridge patch` and `stale clone` guarded an
+# installer that will never run again, and `walker hold` guarded a Walker that
+# quattro does not ship. Deleted rather than left warning, per ADR-0028 —
+# tolerated noise stops being read.
+#
+# What replaces them is `mirrorlist`, which guards the one thing measured to
+# actually destroy this base.
+
 layer "Base (CachyOS)"
-
-if [[ -d $BRIDGE_ROOT ]]; then
-  # ADR-0001: the installer shipped with two scripts disagreeing about where the
-  # Omarchy checkout goes. The fix is an uncommitted local edit, so a `git pull`
-  # in the bridge repo silently reverts it and the next install breaks again.
-  if grep -q 'SCRIPT_DIR/\.\./\.\./omarchy' "$BRIDGE_ROOT/bin/fetch-omarchy.sh" \
-    "$BRIDGE_ROOT/bin/install-omarchy-on-cachyos.sh" 2>/dev/null; then
-    bad "bridge patch" "ADR-0001 installer path fix has been reverted" \
-      "upstream reset the ../../omarchy path — reapply before re-running the installer"
-  else
-    ok "bridge patch" "ADR-0001 path fix intact (uncommitted, as expected)"
-  fi
-else
-  warn "bridge" "$BRIDGE_ROOT missing — cannot re-run the Omarchy installer"
-fi
-
-if [[ -d $LOAF_HOME/omarchy ]]; then
-  # shellcheck disable=SC2088  # display text for a human, not a path to expand
-  bad "stale clone" "~/omarchy exists again" \
-      "ADR-0001: this is the wrong-path clone, it should not come back"
-else
-  ok "stale clone" "no ~/omarchy"
-fi
 
 # Omarchy is a DESKTOP layer here and nothing more. The base is CachyOS, and the
 # base is not Omarchy's to manage -- see ADR-0034.
@@ -88,34 +87,69 @@ fi
 # (index 2 vs 14), so a same-named script here would never be reached. Hence a
 # check, which at least makes the damage loud and immediate.
 
-if [[ -f /etc/pacman.conf ]]; then
-  cachyos_repos=$(grep -c '^\[cachyos' /etc/pacman.conf 2>/dev/null || echo 0)
+if [[ -f $PACMAN_CONF ]]; then
+  cachyos_repos=$(grep -c '^\[cachyos' "$PACMAN_CONF" 2>/dev/null || echo 0)
   if ((cachyos_repos >= 1)); then
     ok "repos" "$cachyos_repos CachyOS repo section(s)"
   else
-    bad "repos" "no CachyOS repos in /etc/pacman.conf" \
-      "the base has been replaced with stock Arch — restore /etc/pacman.conf.bak" \
-      "then re-run the bridge installer; do NOT run omarchy-channel-set"
-  fi
-
-  # A bridge adaptation with a side effect on /etc rather than in the checkout, so
-  # the "cachyos patch" check below cannot see it. CachyOS ships its own walker,
-  # which would otherwise overwrite Omarchy's.
-  if grep -q '^IgnorePkg *=.*walker' /etc/pacman.conf 2>/dev/null; then
-    ok "walker hold" "IgnorePkg keeps CachyOS's walker out"
-  else
-    warn "walker hold" "IgnorePkg = walker is gone from /etc/pacman.conf — CachyOS's walker can replace Omarchy's"
+    bad "repos" "no CachyOS repos in $PACMAN_CONF" \
+      "the base has been replaced with stock Arch — restore $PACMAN_CONF.bak" \
+      "then re-add the [cachyos*] sections; do NOT run omarchy-channel-set"
   fi
 fi
 
-# The other bridge side effect on /etc. Losing it does not break the desktop, but
-# it silently changes which wifi backend is in use.
-nm_conf=/etc/NetworkManager/NetworkManager.conf
-if [[ -f $nm_conf ]]; then
-  if grep -q '^wifi.backend=iwd' "$nm_conf" 2>/dev/null; then
-    ok "wifi backend" "iwd"
+# The measured root cause of the quattro upgrade's near-miss (ADR-0035). Omarchy's
+# `configure_pacman_channel` overwrites the mirrorlist with a single
+# `Server = https://stable-mirror.omarchy.org/...`, which is a FROZEN Arch snapshot.
+# CachyOS tracks Arch rolling, so pinning core/extra to that snapshot puts the two
+# halves of the system into permanent version skew and pacman starts refusing
+# partial downgrades. It presented as an unrelated aquamarine ABI conflict and was
+# not; restoring the rolling mirrorlist collapsed the whole thing.
+#
+# Unguarded until now, and — alongside omarchy-channel-set — the remaining way the
+# base gets destroyed. `[cachyos*]` surviving in pacman.conf does not imply the
+# mirrorlist did: the upgrade's pacman.conf edit is a surgical awk that leaves the
+# repo list alone while the mirrorlist is replaced wholesale.
+if [[ -f $MIRRORLIST ]]; then
+  if grep -qE '^[[:space:]]*Server[[:space:]]*=[[:space:]]*https?://[a-z-]*mirror\.omarchy\.org/' \
+    "$MIRRORLIST" 2>/dev/null; then
+    bad "mirrorlist" "$MIRRORLIST points at an Omarchy mirror" \
+      "that mirror is a frozen Arch snapshot; CachyOS is rolling — the two will skew" \
+      "restore the CachyOS mirrorlist (cachyos-rate-mirrors), then reconcile with pacman -Syu"
   else
-    warn "wifi backend" "wifi.backend=iwd is gone from NetworkManager.conf"
+    ok "mirrorlist" "$(grep -cE '^[[:space:]]*Server' "$MIRRORLIST" 2>/dev/null) mirror(s), none from omarchy.org"
+  fi
+fi
+
+# NetworkManager delegates wifi to a backend it does not itself provide, and says
+# nothing when the one it was told to use is absent — the device simply reports
+# `unavailable` and scans nothing. On a machine that lives on ethernet that is
+# invisible.
+#
+# This is the check ADR-0034 wrote as "warns if wifi.backend=iwd is gone", which
+# quattro made not merely stale but actively misleading: it went on reporting ✓
+# after quattro's `pacman -Rns` removed iwd on 2026-08-09, because the stanza
+# naming iwd was still there. It asserted a bridge side effect rather than
+# anything true about this machine.
+#
+# So it neither inverts nor goes. Inverting — warning when iwd IS set — would
+# assert quattro's preference and nag a machine where iwd was deliberately
+# reinstalled and works. The invariant that survives either resolution is that
+# the configured backend exists. Backend names match their package names for the
+# two NetworkManager accepts (`iwd`, `wpa_supplicant`).
+if [[ -f $NM_CONF ]]; then
+  wifi_backend=$(sed -n 's/^[[:space:]]*wifi\.backend[[:space:]]*=[[:space:]]*//p' "$NM_CONF" | head -1)
+  if [[ -z $wifi_backend ]]; then
+    # No stanza is not a problem: NetworkManager falls back to wpa_supplicant,
+    # which is what quattro leaves it on.
+    ok "wifi backend" "NetworkManager default (wpa_supplicant)"
+  elif pacman -Qq "$wifi_backend" &>/dev/null; then
+    ok "wifi backend" "$wifi_backend"
+  else
+    bad "wifi backend" "wifi.backend=$wifi_backend, but $wifi_backend is not installed" \
+      "NetworkManager has no wifi backend — the device will report unavailable and never scan" \
+      "either reinstall $wifi_backend, or drop the [device] stanza from $NM_CONF" \
+      "to fall back to wpa_supplicant"
   fi
 fi
 
@@ -131,70 +165,68 @@ fi
 
 layer "Desktop (Omarchy)"
 
-if [[ -d $OMARCHY_ROOT/.git ]]; then
-  ok "checkout" "$(git -C "$OMARCHY_ROOT" describe --tags --always 2>/dev/null || echo present)"
-
-  # Which Omarchy this rice was last VERIFIED against, versus what is installed.
-  # The rice reaches into upstream's files -- bar modules, menu overrides, window
-  # rules -- so "does this work" is only answerable together with a version. Each
-  # verified state is tagged omarchy-vX.Y.Z; see the README.
-  #
-  # The tag on the checkout is the source of truth, NOT `omarchy-version`: that
-  # just cats $OMARCHY_PATH/version, a file written at install time which lags.
-  # Measured 2026-08-08: it said 3.8.3 on a tree whose tag was v3.8.4.
-  #
-  # A mismatch is a WARNING, not a failure. Upstream moving ahead is normal; it
-  # means the rice has not been re-verified there yet, which is a prompt to walk
-  # the inventory and re-tag, not a broken machine.
-  installed_omarchy=$(git -C "$OMARCHY_ROOT" describe --tags --always 2>/dev/null)
-  rice_pin=$(git -C "$LOAF_ROOT" tag -l 'omarchy-v*' 2>/dev/null | sort -V | tail -1)
-  if [[ -z $rice_pin ]]; then
-    warn "version pin" "no omarchy-v* tag — nothing records which Omarchy this was verified against"
-  elif [[ ${rice_pin#omarchy-} == "$installed_omarchy" ]]; then
-    ok "version pin" "verified against $installed_omarchy"
-  else
-    warn "version pin" "verified against ${rice_pin#omarchy-}, Omarchy is $installed_omarchy — re-verify, then re-tag"
-  fi
-
-  # Omarchy's tree is NOT pristine here and should not be. The bridge installer
-  # seds CachyOS adaptations directly into it (ADR-0001), so these files are
-  # expected to show as modified. They are uncommitted, which means an
-  # `omarchy update` git pull can revert them — so check the adaptations
-  # themselves rather than just counting dirty files.
-  expected='^(install\.sh|install/(config/(hardware/(network|nvidia)|omarchy-ai-skill|walker-elephant)\.sh|login/all\.sh|omarchy-base\.packages|post-install/all\.sh|preflight/all\.sh)|bin/omarchy-update-restart)$'
-
-  # Read into an array so each path becomes its own detail line. Relying on word
-  # splitting instead would break on a filename containing a space, and could
-  # glob if one contained a *.
-  mapfile -t unexpected < <(git -C "$OMARCHY_ROOT" status --porcelain 2>/dev/null |
-    awk '{print $2}' | grep -vE "$expected")
-  if ((${#unexpected[@]})); then
-    bad "checkout" "edits upstream does not expect" "${unexpected[@]}" \
-      "the bridge's CachyOS patches are fine; these are not — they vanish on update"
-  fi
-
-  # Sentinels for the CachyOS adaptations that are still load-bearing.
-  #
-  # Deliberately NOT checked: the bridge also seds bin/omarchy-update-restart to
-  # swap `pacman -Q linux` for linux-cachyos. Upstream has since rewritten that
-  # script to compare /usr/lib/modules/*/vmlinuz against `uname -r`, which is
-  # distro-agnostic and already correct here — the patch is obsolete, and
-  # asserting it would fail forever on a machine that is fine. Re-add a check
-  # only if kernel-restart prompts actually misbehave.
-  reverted=()
-  grep -qx 'tldr' "$OMARCHY_ROOT/install/omarchy-base.packages" 2>/dev/null &&
-    reverted+=("tldr back in omarchy-base.packages — conflicts with tealdeer")
-  grep -q 'preflight/pacman\.sh' "$OMARCHY_ROOT/install/preflight/all.sh" 2>/dev/null &&
-    reverted+=("preflight/pacman.sh restored — conflicts with CachyOS packages")
-
-  if ((${#reverted[@]})); then
-    bad "cachyos patch" "${#reverted[@]} bridge adaptation(s) reverted" "${reverted[@]}" \
-      "re-run ~/omarchy-on-cachyos/bin/install-omarchy-on-cachyos.sh"
-  else
-    ok "cachyos patch" "bridge adaptations intact"
-  fi
+# Omarchy used to be a git checkout at ~/.local/share/omarchy, and this asked
+# whether that checkout was intact. Under quattro it is distro packages at
+# /usr/share/omarchy (ADR-0035), so there is no tree to describe, nothing to be
+# dirty, and no `git pull` to revert a local edit. Three checks went with it:
+#
+#   `checkout`      — became this, an assertion about the package
+#   the porcelain   — deleted; there is no worktree to have unexpected edits in
+#   `cachyos patch` — deleted. It asserted two bridge `sed`s inside the checkout.
+#                     Quattro ships that package list INSIDE the omarchy package,
+#                     so any edit to it is reverted by the next upgrade — a check
+#                     that must eventually fail on a healthy machine.
+#
+# `pacman -Q omarchy` rather than a hardcoded package name: this machine carries
+# `omarchy-dev`, which `Provides: omarchy`, and pacman resolves that.
+omarchy_version=$(pacman -Q omarchy 2>/dev/null | awk '{print $2}')
+if [[ -n $omarchy_version ]]; then
+  ok "package" "omarchy $omarchy_version"
 else
-  bad "checkout" "$OMARCHY_ROOT is not a git checkout"
+  bad "package" "no omarchy package installed" \
+    "the desktop layer is gone — reinstall omarchy (or omarchy-dev) from the [omarchy] repo"
+fi
+
+# `omarchy dev link` repoints $OMARCHY_PATH at a source checkout, which is a
+# legitimate state but means the version reported above is not what is running.
+# Worth saying out loud rather than silently comparing the pin against something
+# that is not live.
+if [[ $OMARCHY_ROOT != "$OMARCHY_PKG_ROOT" ]]; then
+  warn "omarchy path" "OMARCHY_PATH is $OMARCHY_ROOT — a dev checkout is live, not the package"
+fi
+
+# Which Omarchy this rice was last VERIFIED against, versus what is installed.
+# The rice reaches into upstream's files -- bar modules, menu overrides, window
+# rules -- so "does this work" is only answerable together with a version.
+#
+# The pin is a tracked file, not a tag. It used to be derived from
+# `git tag -l 'omarchy-v*' | sort -V | tail -1`, which was wrong twice over.
+# One namespace held two kinds of claim, so the rollback point
+# omarchy-v3.8.4-prequattro sorted above the actual pin omarchy-v3.8.4 and won.
+# And quattro's version string is `4.0.0.r1046.gd570d99-1` — no leading v, and an
+# .r<n>.g<sha>-<pkgrel> suffix that sort -V cannot meaningfully order against
+# v3.8.4. Ordering was never going to survive package-backing.
+#
+# A file compares by EQUALITY, so the version's shape stops mattering, and it
+# answers the question for every commit rather than only for tagged ones — which
+# is what the README section it backs actually asks. Tags stay for marking
+# releases; see the README.
+#
+# A mismatch is a WARNING, not a failure. Upstream moving ahead is normal; it
+# means the rice has not been re-verified there yet, which is a prompt to walk
+# the inventory and re-pin, not a broken machine.
+PIN_FILE="$LOAF_ROOT/packages/omarchy.pin"
+if [[ ! -f $PIN_FILE ]]; then
+  warn "version pin" "no packages/omarchy.pin — nothing records which Omarchy this was verified against"
+elif [[ -z $omarchy_version ]]; then
+  : # already reported as a missing package; nothing to compare against
+else
+  rice_pin=$(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$PIN_FILE" | head -1)
+  if [[ $rice_pin == "$omarchy_version" ]]; then
+    ok "version pin" "verified against $omarchy_version"
+  else
+    warn "version pin" "verified against $rice_pin, Omarchy is $omarchy_version — re-verify, then re-pin"
+  fi
 fi
 
 # weather-icon carries a byte-for-byte copy of omarchy-weather-icon's condition
