@@ -1,0 +1,19 @@
+# Put ~/.local/bin on the session PATH.
+#
+# This one line is what survives of the old ~/.config/uwsm/env. The quattro
+# upgrade displaced that file and replaced its Omarchy-managed lines with no-op
+# markers in env.d/99-omarchy-upgrade-env - including this one, which was NOT
+# Omarchy's to omit. The result was a session where quickshell, and everything
+# it spawns (bar modules, menu actions, floating terminals), could not resolve
+# a single rice script by name; every caller had to carry an absolute path.
+#
+# env.d/* is the override point upstream's own 10-omarchy names as preferred.
+# Appended, not prepended: nothing in ~/.local/bin may shadow a system binary
+# (the rice's scripts all have unique names, and pan/ADR-style collisions are
+# guarded by naming, not by PATH order).
+#
+# Changes require a session restart to take effect - except for quickshell,
+# which omarchy-restart-shell relaunches with the CALLER's PATH baked in, so a
+# restart from any terminal (which has ~/.local/bin via .bashrc) applies this
+# to the shell immediately.
+export PATH="$PATH:$HOME/.local/bin"

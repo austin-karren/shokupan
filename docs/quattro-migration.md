@@ -125,12 +125,43 @@ without cloning its chip. `Ui/BarWidget.qml` is a plain `Item`, so
 path, injects `bar` / `moduleName` / `settings` the way the host would, and owns
 only visibility — popup, provider tabs and upstream fixes all retained.
 
-**Re-decide — quattro may already do it natively**
+**Re-decide — quattro may already do it natively** — ✅ emptied 2026-08-09
 
-    .config/swayosd/*        quattro has its own OSD
-    .config/uwsm/{default,env}
-    .config/xdg-terminals.list
-    .local/share/applications/icons/*   (web-app icons; ADR-0032 flatpak handler)
+Each entry got a measured decision:
+
+- `.config/swayosd/*` — **retired.** The package itself was uninstalled by the
+  upgrade (`pacman -Q swayosd` fails) and quattro's `omarchy.osd` plugin is the
+  OSD. No tracked file referenced it outside the archived upgrade script.
+- `.config/uwsm/env` — **retired, one line promoted.** The upgrade displaced it
+  and no-op'd its Omarchy-managed lines in `env.d/99-omarchy-upgrade-env` —
+  including `PATH += ~/.local/bin`, which was ours, not Omarchy's to omit. That
+  omission is the root cause of every "command not found" this migration hit:
+  quickshell and all its children lost the rice's bin directory. The line now
+  lives in tracked `.config/uwsm/env.d/20-local-bin` — `env.d/*` being the
+  override point upstream's own `10-omarchy` names as preferred. Everything else
+  in the old file is upstream's job now (OMARCHY_PATH, omarchy bin, mise) or was
+  preserved by the upgrade (the snap XDG_DATA_DIRS block).
+- `.config/uwsm/default` — **retired.** Upstream still sources
+  `~/.config/uwsm/default` for compatibility, but every line of ours is now
+  expressed upstream: `TERMINAL=xdg-terminal-exec` is the quattro default, and
+  `EDITOR=nvim` is what `omarchy-launch-editor` falls back to anyway — no
+  default editor is configured and druk is not installed, so ADR-0017's bakeoff
+  is unaffected and still proposed.
+- `.config/xdg-terminals.list` — **kept, re-linked.** `xdg-terminal-exec` is
+  quattro's TERMINAL and three terminals are installed (ghostty, alacritty,
+  foot), so the deterministic ghostty pin still earns its place. Verified by
+  spawning through it: class `com.mitchellh.ghostty`.
+- `.local/share/applications/icons/*` — **kept, verified whole** under the
+  ADR-0032 pass: every tracked entry's Exec resolves, every Icon path exists,
+  every link live.
+
+The absolute paths written into `extensions/omarchy-menu.jsonc` during the menu
+port **stay as belt-and-braces**: the env fix makes bare names work, but this
+exact upgrade demonstrated how a session-env line can be silently dropped by a
+migration, and the absolute paths cost nothing while surviving that class of
+failure. `omarchy-restart-shell` bakes the *caller's* PATH into the relaunched
+quickshell, so the fix applies to the live shell without a session restart; the
+`env.d` drop-in covers every future session.
 
 Three tracked files were overwritten with real files by the upgrade and need
 diffing against ours before anything is restored:
