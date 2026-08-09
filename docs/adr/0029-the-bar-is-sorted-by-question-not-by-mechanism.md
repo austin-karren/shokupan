@@ -203,11 +203,11 @@ derived from its own glyph, so reordering moves no gap. Verified after the move.
 The rule and its tiebreak both ported. The bar now reads (⌁ marks the
 hover-revealed modules, invisible until the pointer is on their section):
 
-    left    menu · workspaces · ⌁bar-settings
+    left    menu(power glyph) · workspaces · ⌁bar-settings
     centre  media · calendar · CLOCK · weather · system-update · indicators
             · ⌁ratio · ⌁model-usage
-    right   tray · apexshot · tailscale · bluetooth · network · audio
-            · monitor · power
+    right   tray · notifications · apexshot · tailscale · bluetooth · network
+            · audio · spacer(8) · monitor · power
 
 **The hover tier is new, and it is a third answer to this ADR's question.**
 Waybar offered two states: on the bar or not. Quattro's centre reveals quiet
@@ -239,6 +239,31 @@ a connection switcher and machine browser, so `tailscale-icon` is retired rather
 than ported. The addendum above argued about *where* it goes; that answer is
 unchanged, only the implementation is upstream's.
 
-**Nothing measures the bar any more, and that is fine.** The Spacing section
-above exists because Waybar made the author own pixel geometry. Quattro does not
-expose it, so there is nothing to assert and nothing to drift.
+**The ink-gap discipline came back, scaled down.** The Spacing section above
+exists because Waybar made the author own pixel geometry; quattro mostly does
+not, but two imbalances were visible and were fixed the same way — measured
+from screenshots, not eyeballed (physical px at scale 1.6):
+
+- *Centre bracket*: calendar→date was 28 against date→weather's 23, because the
+  calendar module carried +13 logical padding. Reduced to +8; measured after at
+  **23 / 23**.
+- *Right cluster*: audio's speaker glyph draws its sound waves into the right
+  half of a fixed 27-unit box, leaving ethernet→speaker at 33 while
+  speaker→monitor collapsed to 18. Upstream widgets expose no margin settings,
+  so the quattro-native lever is `omarchy.spacer`: `{"id":"omarchy.spacer",
+  "size":8}` between audio and monitor. Measured after: 33 / **31**, with the
+  whole cluster in a 27–33 band. This is Waybar's pulseaudio compromise
+  reincarnated — the unclassable volume ramp still costs a couple of pixels
+  somewhere, and the spacer pins where.
+
+**The menu button wears the rice's power glyph** (`omenu` QML module, U+F011 —
+the same glyph `custom/omarchy` carried on Waybar). Upstream's widget hardcodes
+its logo in a private icon font with no setting, so the swap is a module that
+reuses upstream's own two click actions verbatim.
+
+**`omarchy.notifications` is back** at the head of the right cluster, next to
+the tray, where an earlier pass had removed it as duplicating the DND indicator.
+The bell is a popup surface (recent notifications, DND toggle), not just a
+state light — the indicator answers "am I silenced", the bell answers "what did
+I miss", and those are different questions. The microphone module remains the
+one quattro widget deliberately not placed.

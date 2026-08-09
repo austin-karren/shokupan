@@ -317,11 +317,27 @@ _Avoid_: custom module (ambiguous with the QML kind), script module
 **QML module**:
 A bar entry backed by a `.qml` file in `.config/omarchy/bar/modules/`, which
 receives the bar root and can therefore do what a Command module cannot — hide
-itself, animate, read live bar state, or host an upstream widget (`model-usage`
-does exactly that). `ratio`, `calendar`, `model-usage` and `barcfg` are the four.
-New files here register only at shell startup: `omarchy-restart-shell` after
-adding one, plain edits hot-reload.
+itself, animate, read live bar state, or host an upstream widget. `omenu`,
+`barcfg`, `calendar`, `ratio` and `model-usage` are the five. New files here
+register only at shell startup: `omarchy-restart-shell` after adding one, plain
+edits hot-reload.
 _Avoid_: plugin (a plugin is upstream's packaging unit, with a manifest)
+
+**Hosted widget**:
+A QML module whose body is upstream's own widget, loaded by absolute path and
+handed the three properties the bar host would inject — the module owns only
+visibility, upstream owns everything else, and upstream's fixes keep arriving.
+`model-usage` is the one we have. The alternative, copying the widget's source
+into the rice, is what this term exists to argue against.
+_Avoid_: wrapper (says nothing about who owns the body), clone, fork
+
+**Indicator dress**:
+The styling contract a module adopts to sit among the built-in indicators:
+`WidgetButton`, caption font size, 5px margins, foreground colour — never the
+urgent red — at full opacity when its state is on and dimmed 0.45 otherwise.
+`ratio` wears it; a module in the Hover-reveal group that ignores it reads as
+foreign at a glance.
+_Avoid_: theme (taken), style (too generic to grep for)
 
 **Second-click dismissal**:
 Clicking a bar module opens its window; clicking the same module again dismisses

@@ -34,7 +34,7 @@ Item {
   property bool ratioOn: false
   property string tip: ""
 
-  readonly property bool revealed: true // DIAG
+  readonly property bool revealed: bar && bar.centerSectionRevealHeld === true
 
   // Collapse entirely at rest so no hole sits between the indicators and the
   // usage chip. The WidgetButton below carries the indicators' own opacity

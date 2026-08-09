@@ -24,7 +24,7 @@ Item {
   property string moduleName
   property var settings
 
-  readonly property bool revealed: true // DIAG
+  readonly property bool revealed: bar && bar.centerSectionRevealHeld === true
 
   implicitWidth: revealed && inner.item ? inner.item.implicitWidth : 0
   implicitHeight: bar ? bar.barSize : 26
