@@ -117,9 +117,9 @@ end in *deleting* code, which is the good news:
 |---|---|
 | 0004, 0011 second-click dismissal | Native. **Delete the toggle wrappers** |
 | 0029 bar sorted by question | Native layout. The measured-width CSS goes entirely |
-| 0012 / 0027 merged app + command list | Search is native; the palette is a mechanical rewrite into the plugin's config language |
+| 0012 / 0027 merged app + command list | ✅ Done. **Not** mechanical, and the merge is **withdrawn** — the launcher takes applications only. 21 of 27 entries were already native; 10 rows remain in `extensions/omarchy-menu.jsonc` |
 | 0005 waybar watchdog | Retire. It guarded a Waybar GTK3 crash that no longer exists |
-| 0006 calendar on a special workspace | Quattro's clock popup ships a month grid |
+| 0006 calendar on a special workspace | **This row was wrong.** Quattro's clock is a 66-line bar label with no popup and no month grid, and there is no clock panel. ADR-0006 keeps GNOME Calendar — see its own correction |
 | 0019 idle timings | Moves into `shell.json` as `idle.screensaver` / `idle.lock` |
 | 0030 audio TUI opens on Output | `omarchy.audio` replaces wiremix |
 | 0009 bar stays dark in every theme | Ports, modest work |
@@ -131,10 +131,18 @@ The bar's command-module tier reads Waybar-style JSON, and `tailscale-icon --sta
 `ratio-toggle --status` and `weather-icon` already emit exactly that shape. They
 port as-is.
 
-**Known collision:** quattro binds `SUPER+SPACE` and `SUPER+ALT+SPACE` to its own
-menu; ADR-0027 put the merged list on `SUPER+SPACE` and `ALT+SPACE`. Decide whether
-to keep our chords or adopt theirs before rebuilding the palette — ADR-0027's whole
-point was that either reflex lands somewhere sensible.
+**Known collision — resolved 2026-08-09.** Quattro binds `SUPER+SPACE` to its
+launcher and `SUPER+ALT+SPACE` to its menu; ADR-0027 had the merged list on
+`SUPER+SPACE` and `ALT+SPACE`. With the list split across two surfaces both
+reflexes can no longer land in the same place.
+
+Decided: **adopt upstream's chords, and add bare `ALT+SPACE` → launcher** so both
+old app reflexes still reach applications. One added binding, no unbinds. Recorded
+in ADR-0027; **not yet applied**, because `~/.config/hypr/bindings.lua` is still
+untracked stock — it belongs with the `bindings.conf` → `.lua` port above, which
+must carry this line:
+
+    o.bind("ALT + SPACE", "Launch apps", "omarchy-shell shell toggle omarchy.launcher \"{}\"")
 
 ## Tooling that is now wrong
 
@@ -180,14 +188,22 @@ second is the easy one:
   inactive indicator becomes permanently visible too. That is a bar-composition
   decision, and ADR-0029 owns it.
 
-**2. "Same with the Claude usage."** Needs one clarification before anyone changes
-anything, because the premise did not reproduce. `omarchy.model-usage` sits in the
-**right** section of `shell.json`, and only the *centre* section has a hover-reveal
-group (`Bar.qml:47` `centerSectionRevealHeld`). Its widget has no hover gating, no
-`alwaysShow` setting, and renders an `EmptyUsageChip` when no provider has data, so
-by construction something is always drawn. So either something else is hiding it,
-or what reads as "hidden" is the empty/compact chip rather than an absent module.
-Ask what is actually on screen before treating this as the same fix.
+**2. "Same with the Claude usage."** This one *closes* an open item rather than
+opening one. The bar section above records `omarchy.model-usage` as still-open
+because it "cannot be made to hover-reveal by configuration", with the proposed fix
+being a second QML module that re-implements its chip and loses its popup.
+
+That work should be dropped, not done. The request is for model-usage to be
+**always visible**, which is what it already does: it sits in the **right** section
+of `shell.json`, only the *centre* section has a hover-reveal group (`Bar.qml:47`
+`centerSectionRevealHeld`), its widget has no hover gating and no `alwaysShow`
+setting, and it draws an `EmptyUsageChip` when no provider has data. So the
+inability to hover-reveal it stopped being a problem the moment hover-reveal
+stopped being the goal — and the expensive workaround buys a behaviour no longer
+wanted, at the cost of the popup.
+
+Both asks point the same direction: the two modules that were being tuned toward
+hiding should both simply stay on screen.
 
 **Also flagged, not edited:** `docs/adr/0026` still points at
 `~/.config/omarchy/extensions/menu.sh` for the Toggle Menu override. That file is
