@@ -4,6 +4,14 @@ status: accepted
 
 # The bar stays dark in every theme, at a fixed Tailwind-950
 
+> **Implementation deleted 2026-08-09, intent unported.** Both halves are gone:
+> `theme-override.css` was removed with Waybar, and the
+> `theme-set.d/20-waybar-theme-override` hook that generated it no longer exists
+> anywhere on the system — quattro ships no `theme-set.d` at all. So the bar
+> currently follows the theme, which is exactly what this ADR argues against.
+> ADR-0033 rates the port "modest work"; it has not been done. Old file: tag
+> `omarchy-v3.8.4-prequattro`.
+
 Waybar is pinned to `#0b0c14` — roughly Tailwind's 950 level — regardless of the
 active Theme's Appearance. The bar reads as system chrome rather than as part of
 the theme, and that only works if it stays put. Implemented as a generated

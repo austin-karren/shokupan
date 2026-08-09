@@ -2,7 +2,7 @@
 
 The configuration of one desktop: CachyOS running Omarchy on Hyprland. This
 glossary exists because the vocabulary here is genuinely ambiguous — Omarchy,
-Hyprland, Walker and this repo all use words like "theme", "menu" and "toggle"
+Hyprland, Omarchy and this repo all use words like "theme", "menu" and "toggle"
 to mean different things, and three of the menus are one keystroke apart.
 
 ## Layers
@@ -215,8 +215,8 @@ bare "snap" is ambiguous.
 _Avoid_: snap, snapping (unqualified)
 
 **Usable area**:
-The part of a monitor a window may occupy: the logical monitor minus whatever Waybar
-reserved, minus the outer gap. What a Size ladder fraction and a Snap are both
+The part of a monitor a window may occupy: the logical monitor minus whatever the
+bar reserved, minus the outer gap. What a Size ladder fraction and a Snap are both
 measured against, so "half the screen" always means half of this and never half of
 the panel.
 _Avoid_: screen, monitor, viewport
@@ -265,7 +265,12 @@ window there, `SUPER+S` summons it from anywhere. Closest in spirit to Pop out u
 transport, but purpose-built for it and without forcing the window to float.
 _Avoid_: stash, shelf, drawer
 
-## Waybar behaviour
+## Bar behaviour
+
+> **Waybar removed 2026-08-09.** The bar is quattro's Quickshell surface now and
+> `config.jsonc` is deleted (ADR-0033). Second-click dismissal is native there, so
+> the Toggle wrapper term below is on its way out; the dismissal *behaviour* is
+> what the vocabulary is protecting.
 
 **Second-click dismissal**:
 Clicking a bar module opens its window; clicking the same module again dismisses
@@ -333,6 +338,12 @@ Surface. The distinction the W and Q keys encode: W closes a Surface, Q quits.
 _Avoid_: exit, close (Close belongs to the ladder)
 
 ## Launcher internals
+
+> **Stack removed 2026-08-09.** Walker and Elephant are uninstalled and their
+> configs deleted (ADR-0033). These terms are kept because they name the *shape*
+> the merged list has to keep — a front-end, a set of entry sources, a ranking —
+> and ADR-0027 has not been ported yet. Expect them to be replaced by quattro's
+> own vocabulary once it is, not simply dropped.
 
 **Walker**:
 The launcher front-end. Owns the window, the theme and the list widget.

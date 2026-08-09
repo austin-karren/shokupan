@@ -4,6 +4,13 @@ status: accepted
 
 # The bar is sorted by the question each module answers
 
+> **Implementation deleted 2026-08-09.** `config.jsonc` held the ordering and
+> `style.css` the measured ink widths; both are gone with Waybar. Per ADR-0033 the
+> measured-width CSS does not come back — quattro lays the bar out natively — but
+> the *ordering by question* is a decision, not a mechanism, and still has to be
+> re-expressed in the new bar's config. The old module order is the specification
+> for that: tag `omarchy-v3.8.4-prequattro`.
+
 Three changes made together, because they are one decision applied three times:
 
 | Change | Before | After |

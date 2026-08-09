@@ -4,6 +4,10 @@ status: accepted
 
 # The single-window zen aspect ratio: a reading column, not a square
 
+> **Bar surface deleted 2026-08-09.** The `6 5` value and `ratio-toggle` are
+> untouched; only the `custom/ratio` row of the table below is void, since
+> `config.jsonc` is gone (ADR-0013). Old file: tag `omarchy-v3.8.4-prequattro`.
+
 Omarchy's **single-window square aspect ratio**, kept as a feature and renamed to
 **single-window zen aspect ratio**, with the value widened from `1 1` to `6 5`. The point
 of the feature is holding a lone window to a comfortable reading width on a wide display;

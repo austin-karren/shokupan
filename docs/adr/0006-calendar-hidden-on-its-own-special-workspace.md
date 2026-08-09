@@ -4,6 +4,11 @@ status: accepted
 
 # The calendar popup gets its own special workspace, not the scratchpad
 
+> **Mechanism deleted 2026-08-09.** The `custom/calendar` module died with
+> `config.jsonc`. `calendar-toggle` and the workspace rule still exist, but
+> ADR-0033 expects both to go: quattro's clock popup ships a month grid, which is
+> what this ADR was reaching for. Old file: tag `omarchy-v3.8.4-prequattro`.
+
 `calendar-toggle` shows and hides GNOME Calendar on a Hyprland special workspace
 named `calendar`, deliberately not the `scratchpad` one that `SUPER+S` toggles.
 Sharing the scratchpad would mean `SUPER+S` also summoned the calendar, and that

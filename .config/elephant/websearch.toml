@@ -1,7 +1,0 @@
-# Rename the default engine from "Google" to "Search Google": "Google" alone reads as
-# the name of an application, and several Google web apps are installed, so the entry
-# was ambiguous in a list that mixes applications and commands.
-[[entries]]
-default = true
-name = "Search Google"
-url = "https://www.google.com/search?q=%TERM%"

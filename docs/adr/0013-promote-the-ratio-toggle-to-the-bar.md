@@ -4,6 +4,12 @@ status: accepted
 
 # Promote the single-window aspect-ratio toggle out of a menu and onto the bar
 
+> **Mechanism deleted 2026-08-09.** `custom/ratio` went with `config.jsonc`, so
+> the toggle is back to living in a menu — the state this ADR was written to end.
+> `ratio-toggle --status` survives untouched and already emits Waybar-style JSON,
+> which is exactly what quattro's command-module tier consumes (ADR-0033), so the
+> port is re-declaring the module. Old file: tag `omarchy-v3.8.4-prequattro`.
+
 The single-window aspect-ratio toggle — constraining a lone window via Hyprland's
 `single_window_aspect_ratio` — is used often enough that living three levels deep
 in a menu is the wrong home for it. It is now `custom/ratio` on the right of the bar,

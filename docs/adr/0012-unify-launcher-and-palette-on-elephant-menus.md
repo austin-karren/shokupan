@@ -4,6 +4,12 @@ status: proposed
 
 # Unify the Launcher and System Palette on one Elephant menu
 
+> **Mechanism deleted 2026-08-09.** Already superseded by ADR-0027; now the
+> substrate is gone too. Walker and Elephant are uninstalled, and
+> `.config/elephant/` — the per-provider `*.toml` overrides and `menus/palette.lua`
+> — is deleted. Read this ADR for the *why*; the *how* is void. Old files: tag
+> `omarchy-v3.8.4-prequattro`.
+
 Today the System Palette's entries live in a bash `case` statement inside
 `~/.local/bin/quick-menu`, invisible to the Launcher. The goal is Raycast's model:
 one list where applications and commands are searched together. The proposal is to

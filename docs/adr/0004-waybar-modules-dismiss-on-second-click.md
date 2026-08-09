@@ -4,6 +4,12 @@ status: accepted
 
 # Waybar launcher modules dismiss on a second click
 
+> **Mechanism deleted 2026-08-09.** `config.jsonc`, which carried the `on-click`
+> entries, went with Waybar. The wrappers in `.local/bin/` are still tracked but
+> nothing calls them; ADR-0033 retires them because quattro dismisses natively.
+> The behaviour is what survives, not the wrappers. Old file: tag
+> `omarchy-v3.8.4-prequattro`.
+
 Omarchy's bar modules call `omarchy-launch-*` / `omarchy-launch-or-focus-tui`,
 which by design *focus* an existing window instead of dismissing it. Since Waybar
 takes no keyboard focus, the window was usually already focused, so clicking a

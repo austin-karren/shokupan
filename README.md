@@ -19,7 +19,7 @@ This is a single flat Stow package: paths mirror `$HOME` directly.
 ```
 .bashrc                 -> ~/.bashrc
 .config/hypr/*.conf     -> ~/.config/hypr/*.conf
-.config/waybar/*        -> ~/.config/waybar/*
+.local/bin/*            -> ~/.local/bin/*
 ...
 ```
 
@@ -91,13 +91,10 @@ it can also override anything the tracked `.bashrc` set.
 | Path | Notes |
 |---|---|
 | `.config/hypr/` | Hyprland: bindings, monitors, looknfeel, windows, idle/lock/sunset |
-| `.config/waybar/` | Bar config, styles, and theme override |
-| `.config/walker/` | Launcher front-end: window, theme, list widget |
-| `.config/elephant/` | Launcher backend: what appears in the list. `menus/` defines the System Palette; the `*.toml` files are per-provider overrides, each holding only the keys that differ from the default — `elephant generate config` will expand them into full default dumps, which is not what you want |
 | `.config/ghostty/`, `alacritty/`, `foot/` | Terminals. Ghostty sources Omarchy's dynamic theme path, which stays machine-side |
 | `.config/zed/` | Editor + agent settings |
 | `.config/git/config` | Aliases, delta pager, zdiff3, rerere |
-| `.config/uwsm/` | Session env (incl. making snap apps visible to walker) |
+| `.config/uwsm/` | Session env (incl. making snap apps visible to the launcher) |
 | `.config/omarchy/extensions/menu.sh` | Omarchy menu overrides — the sanctioned extension point, not a patched Omarchy file |
 | `.config/starship.toml`, `.config/tmux/` | Prompt and multiplexer |
 | `.bashrc` | Thin — sources Omarchy's `default/bash/rc` |
@@ -212,7 +209,7 @@ git push --tags
 ## Why things are the way they are
 
 [`CONTEXT.md`](./CONTEXT.md) is the glossary. Worth reading first if you are going
-to touch the menus or the bar — Omarchy, Hyprland, Walker and this repo all use
+to touch the menus or the bar — Omarchy, Hyprland, Quickshell and this repo all use
 "theme", "menu" and "toggle" to mean different things, and three of the four menus
 are one modifier apart.
 
@@ -261,9 +258,9 @@ are the to-do list.
 ## To do
 
 - Work through the proposed ADRs above
-- Teach `loaf doctor` to check the things it currently cannot: that Waybar's
-  watchdog is actually running, and that the pinned wallpaper survived the last
-  theme change. Both are ADR'd behaviours with no assertion behind them
+- Teach `loaf doctor` to check that the pinned wallpaper survived the last theme
+  change — an ADR'd behaviour with no assertion behind it. The watchdog half of
+  this item died with Waybar (ADR-0005, ADR-0033)
 - Decide whether `loaf heal` should ever act on `.displaced.*` files, or only
   ever leave them for a human to read
 - Settle wrap versus clamp for the Size ladder (ADR-0022) after using both, and put

@@ -40,13 +40,24 @@ Verified after the reboot, not assumed:
 3 were replaced by real files. Each falls into one of three buckets, and deciding
 the bucket is most of the work:
 
-**Delete — the software is gone, the config is dead weight**
+**Delete — the software is gone, the config is dead weight** — ✅ done 2026-08-09
 
-    .config/waybar/{config.jsonc,style.css,theme-override.css}
-    .config/walker/{config.toml,themes/omarchy-custom/*}
-    .config/elephant/{calc,desktopapplications,symbols,websearch}.toml
-    .config/elephant/menus/palette.lua
-    .config/wiremix/wiremix.toml
+All 12 files removed; see the addendum on ADR-0033 for what was measured first.
+`loaf doctor`'s not-installed count drops 31 → 19.
+
+Two of them are the *specification* for the Port bucket and must be read before it
+is attempted — `config.jsonc` for the bar's module list and order, `palette.lua`
+for the merged list's entries:
+
+    git show omarchy-v3.8.4-prequattro:.config/waybar/config.jsonc
+    git show omarchy-v3.8.4-prequattro:.config/elephant/menus/palette.lua
+
+Still dead but *not* deleted, because they are code rather than config and belong
+with their own ADRs: `.local/bin/waybar-watchdog` (ADR-0005, retire), the three
+toggle wrappers (ADR-0004/0011, native now), and the `omarchy-toggle-waybar` line
+in `.config/omarchy/extensions/menu.sh`. `packages.txt` also still lists `waybar`,
+`omarchy-walker` and `wiremix`; regenerating it sweeps in the whole upgrade's
+package churn, so it wants its own commit.
 
 **Port — the behaviour is still wanted, the mechanism changed**
 

@@ -4,6 +4,14 @@ status: accepted
 
 # One list for applications and system commands
 
+> **Mechanism deleted 2026-08-09.** Walker and Elephant are uninstalled, and both
+> halves of the merged list — `.config/walker/config.toml` and
+> `.config/elephant/menus/palette.lua` — are deleted. The list is therefore *not*
+> merged right now. `palette.lua` is the entry inventory the rewrite has to
+> translate, so read it before rebuilding: tag `omarchy-v3.8.4-prequattro`.
+> Note the unresolved chord collision — quattro already binds `SUPER+SPACE` and
+> `SUPER+ALT+SPACE` to its own menu (ADR-0033).
+
 The Launcher (`ALT+SPACE`, applications) and the System Palette (`SUPER+SPACE`, a
 hand-written list of Omarchy commands) are now the same list. Both keys open Walker with
 two providers merged: `menus:palette` and `desktopapplications`.

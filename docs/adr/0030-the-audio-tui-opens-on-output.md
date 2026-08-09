@@ -4,6 +4,12 @@ status: accepted
 
 # The audio TUI opens on Output Devices
 
+> **Implementation deleted 2026-08-09.** `wiremix` is uninstalled — the upgrade
+> itself does `rm -rf ~/.config/wiremix` — and `wiremix.toml` is deleted with it.
+> ADR-0033 replaces the TUI with `omarchy.audio`, so the open question is whether
+> that surface has an equivalent of "start on Output", not how to set `tab`. Old
+> file: tag `omarchy-v3.8.4-prequattro`.
+
 wiremix starts on the Output Devices tab instead of Playback. One line of config:
 
 ```toml

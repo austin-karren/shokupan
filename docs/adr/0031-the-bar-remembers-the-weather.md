@@ -4,6 +4,12 @@ status: accepted
 
 # The bar remembers the weather
 
+> **Bar surface deleted 2026-08-09.** The `custom/weather` module went with
+> `config.jsonc`, so there is no weather on the bar today. `weather-icon` itself
+> is untouched and still keeps its cached Reading on disk, which is the part this
+> ADR is actually about. ADR-0033 calls this the one real regression of the
+> quattro move. Old file: tag `omarchy-v3.8.4-prequattro`.
+
 The weather module reads a cached reading from disk and refreshes it in the background,
 rather than fetching wttr.in on every poll. Implemented as
 [`weather-icon`](../../.local/bin/weather-icon), replacing

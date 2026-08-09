@@ -4,6 +4,10 @@ status: proposed
 
 # Extend second-click dismissal to the audio and CPU modules
 
+> **Mechanism deleted 2026-08-09.** As ADR-0004: the `on-click` entries went with
+> `config.jsonc`, and the audio side lost its target too — `wiremix` is
+> uninstalled (ADR-0030). Old file: tag `omarchy-v3.8.4-prequattro`.
+
 > **Half settled.** ADR-0029 deleted the `cpu` module outright and moved btop to
 > `SUPER CTRL + T` with the `window-toggle` treatment described below, so that row
 > of the table is resolved — by removing its subject rather than by converting it.
