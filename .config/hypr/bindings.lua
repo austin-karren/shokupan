@@ -8,6 +8,13 @@
 -- app search since before the merge, and it should land on apps, not on nothing.
 o.bind("ALT + SPACE", "Launch apps", "omarchy-shell shell toggle omarchy.launcher \"{}\"")
 
+-- Herdr replaced tmux (ADR-0015), but quattro's default still binds this chord
+-- to omarchy-launch-terminal-tmux, which now opens nothing: tmux is uninstalled.
+-- Same chord, same meaning - the ALT variant of the terminal key opens the
+-- terminal with the multiplexer in it.
+hl.unbind("SUPER + ALT + RETURN")
+o.bind("SUPER + ALT + RETURN", "Herdr", 'uwsm-app -- xdg-terminal-exec --dir="$(omarchy-cmd-terminal-cwd)" herdr')
+
 -- The Close ladder (ADR-0020) ------------------------------------------------
 --
 -- W closes the smallest unit, Q closes the whole thing - the axis macOS and
@@ -130,3 +137,322 @@ end)
 
 -- Last resort for windows that ignore both: SIGKILL. No save prompt.
 o.bind("SUPER + SHIFT + Q", "Force kill window", hl.dsp.window.kill())
+
+-- The arrow modifier scheme (ADR-0023) -----------------------------------------
+--
+-- The modifier says what you are acting on; count carries intensity, the letter
+-- carries the axis:
+--   SUPER             navigate - move focus, change nothing
+--   SUPER+SHIFT/ALT   act on the window        (SHIFT swaps it, ALT resizes it)
+--   SUPER+CTRL        leave the window         (switch workspace)
+--   SUPER+CTRL+ALT    floating placement       (a different mode, ADR-0024)
+--   SUPER+SHIFT+ALT   move a whole workspace to another monitor (Omarchy default)
+--
+-- macOS-Spaces-style workspace switching. Quattro binds SUPER+CTRL+left/right to
+-- group focus cycling, the same collision the .conf era had: groups lost arrow
+-- navigation then (ADR-0023) and nothing in use is lost now. e-1/e+1 hop between
+-- workspaces that actually have windows, same as SUPER + mouse wheel.
+hl.unbind("SUPER + CTRL + LEFT")
+hl.unbind("SUPER + CTRL + RIGHT")
+o.bind("SUPER + CTRL + LEFT", "Previous workspace", hl.dsp.focus({ workspace = "e-1" }))
+o.bind("SUPER + CTRL + RIGHT", "Next workspace", hl.dsp.focus({ workspace = "e+1" }))
+
+-- Shared plumbing for the Size ladder and floating placement --------------------
+
+local paths = require("default.hypr.paths")
+
+local function outer_gap()
+  local gap = hl.get_config("general.gaps_out")
+  if type(gap) == "table" then
+    gap = gap.top or gap[1]
+  end
+  return tonumber(gap) or 8
+end
+
+-- The usable area (see CONTEXT.md): the logical monitor minus what the bar
+-- reserved, minus the outer gap. Under quattro this is pure arithmetic - the Lua
+-- API hands over the true scale (hyprctl rounds it; the API does not) and the
+-- reserved edges by name, so the .conf era's probe-and-cache dance
+-- (~/.local/state/omarchy/hypr-logical-size) is deleted, not ported.
+local function usable_area(mon)
+  local gap = outer_gap()
+  local logical_w = math.floor(mon.width / mon.scale + 0.5)
+  local logical_h = math.floor(mon.height / mon.scale + 0.5)
+  local r = mon.reserved
+  local x0 = mon.position.x + r.left + gap
+  local y0 = mon.position.y + r.top + gap
+  local uw = logical_w - r.left - r.right - 2 * gap
+  local uh = logical_h - r.top - r.bottom - 2 * gap
+  return x0, y0, uw, uh, gap
+end
+
+-- The Size ladder (ADR-0022) -----------------------------------------------------
+--
+-- Step the focused window through 1/3, 1/2, 2/3 of the usable area. The arrow says
+-- where the SHARED EDGE goes, not whether the window grows: RIGHT moves the divider
+-- right whichever window is focused - widening the left one, narrowing the right
+-- one - which matches dragging that border with a mouse. Floating windows have no
+-- shared edge, so there left/up shrink and right/down grow unconditionally.
+--
+-- Tiled and floating share the ladder and the keys but almost no machinery: a tiled
+-- window has no size of its own - it holds a share of a split, so resizing it means
+-- moving a boundary. Everything difficult below is the tiled case.
+
+local LADDER = { 1 / 3, 1 / 2, 2 / 3 }
+-- Wide enough to absorb gaps and rounding, narrow enough that adjacent rungs
+-- (1/3 and 1/2 are 0.167 apart) never collide.
+local EPS = 0.04
+-- A landing within this many px of target is close enough to skip correcting.
+local TOL_PX = 12
+local MIN_PX = 40
+
+-- Wrap/clamp at the ladder ends. Same flag file as the .conf era, so
+-- `window-resize --toggle-mode` (until retired) and any Toggle Menu entry keep
+-- working. Wrap is the default: it reaches every size from a single key.
+local function clamp_mode()
+  local flag = io.open(paths.state_home .. "/omarchy/toggles/window-resize-clamp", "r")
+  if flag then
+    flag:close()
+    return true
+  end
+  return false
+end
+
+-- The next rung strictly in the direction of travel, rather than an advanced
+-- index: a border dragged with the mouse leaves the split off-ladder entirely,
+-- where an index has no meaning but "next rung below where I am" still does.
+local function next_rung(current, usable, going_up)
+  local fraction = current / usable
+  local best
+  if going_up then
+    for _, rung in ipairs(LADDER) do
+      if rung > fraction + EPS and (not best or rung < best) then
+        best = rung
+      end
+    end
+    if not best then
+      best = clamp_mode() and LADDER[#LADDER] or LADDER[1]
+    end
+  else
+    for _, rung in ipairs(LADDER) do
+      if rung < fraction - EPS and (not best or rung > best) then
+        best = rung
+      end
+    end
+    if not best then
+      best = clamp_mode() and LADDER[1] or LADDER[#LADDER]
+    end
+  end
+  return best
+end
+
+local function window_resize(dir)
+  local window = hl.get_active_window()
+  if not window or not window.monitor then
+    return
+  end
+
+  local axis = (dir == "left" or dir == "right") and "w" or "h"
+  local going_up = (dir == "right" or dir == "down")
+
+  local x0, y0, uw, uh = usable_area(window.monitor)
+
+  -- FLOATING: the easy case. The window owns its geometry, so there is no split
+  -- to move and no sign to work out - just tell it what size to be.
+  -- resize without `relative` is exact and resizes about the window's own centre,
+  -- which is wanted (stepping a size should not relocate the window), but growing
+  -- near an edge can push part of it off screen - so clamp back inside the usable
+  -- rect. Dispatches are synchronous in the config VM, so the re-read is honest.
+  if window.floating then
+    local rung
+    if axis == "w" then
+      rung = next_rung(window.size.x, uw, going_up)
+      hl.dispatch(hl.dsp.window.resize({ x = math.floor(rung * uw), y = window.size.y }))
+    else
+      rung = next_rung(window.size.y, uh, going_up)
+      hl.dispatch(hl.dsp.window.resize({ x = window.size.x, y = math.floor(rung * uh) }))
+    end
+
+    local now = hl.get_active_window()
+    local nx, ny = now.at.x, now.at.y
+    nx = math.min(nx, x0 + uw - now.size.x)
+    ny = math.min(ny, y0 + uh - now.size.y)
+    nx = math.max(nx, x0)
+    ny = math.max(ny, y0)
+    if nx ~= now.at.x or ny ~= now.at.y then
+      hl.dispatch(hl.dsp.window.move({ x = nx, y = ny }))
+    end
+    return
+  end
+
+  -- TILED. One tiled window has no split to move - the single-window zen aspect
+  -- ratio owns that case, and resizing would just fight it.
+  local tiled = hl.get_windows({ workspace = window.workspace, floating = false, mapped = true })
+  if #tiled < 2 then
+    return
+  end
+
+  -- Which side of the split boundary we are on. Used twice: the ladder direction
+  -- here, and the sign of the delta below. The test: a tiled window abuts our low
+  -- edge (left for width, top for height) and overlaps us on the other axis, so
+  -- we are the SECOND child. +8 absorbs the gap. Right for two windows, a 2x2
+  -- grid and one window beside a stack; wrong only for a window in the middle of
+  -- a nested run of columns - which the measure-and-flip loop below absorbs.
+  local second_child = false
+  for _, other in ipairs(tiled) do
+    if other.address ~= window.address then
+      if axis == "w" then
+        if
+          other.at.x + other.size.x <= window.at.x + 8
+          and other.at.y < window.at.y + window.size.y
+          and other.at.y + other.size.y > window.at.y
+        then
+          second_child = true
+        end
+      else
+        if
+          other.at.y + other.size.y <= window.at.y + 8
+          and other.at.x < window.at.x + window.size.x
+          and other.at.x + other.size.x > window.at.x
+        then
+          second_child = true
+        end
+      end
+    end
+  end
+
+  -- The flip that makes the key describe the boundary: a second child's shared
+  -- edge is its low edge, so its ladder runs the other way (ADR-0022).
+  if second_child then
+    going_up = not going_up
+  end
+
+  local current = (axis == "w") and window.size.x or window.size.y
+  local usable = (axis == "w") and uw or uh
+  local target = math.floor(next_rung(current, usable, going_up) * usable)
+  if math.abs(target - current) <= TOL_PX then
+    return
+  end
+
+  -- Hyprland's resize delta always grows the FIRST child of the split, whoever
+  -- has focus (measured, ADR-0022) - a second child needs the sign inverted.
+  local sign = second_child and -1 or 1
+
+  local function measure()
+    local w = hl.get_active_window()
+    return (axis == "w") and w.size.x or w.size.y
+  end
+
+  -- Converge instead of computing one perfect delta, because two Hyprland quirks
+  -- make a single dispatch unreliable: the delta is bounds-checked against the
+  -- focused window's size but applied to the boundary inverted (so a second child
+  -- can only grow by about its own size per call - large moves need chunking),
+  -- and the sign guess is a heuristic. The same loop absorbs both: request the
+  -- remainder, measure, flip once if the window travelled away from the target.
+  -- In-process dispatches apply synchronously, so no settle delays are needed -
+  -- the .conf era's 96ms per keypress is gone.
+  local flipped = false
+  for _ = 1, 5 do
+    local now = measure()
+    local remaining = target - now
+    if math.abs(remaining) <= TOL_PX then
+      break
+    end
+
+    local request = sign * remaining
+    -- Keep the request inside what Hyprland will accept, or it is dropped.
+    if now + request < MIN_PX then
+      request = MIN_PX - now
+    end
+    if request == 0 then
+      break
+    end
+
+    if axis == "w" then
+      hl.dispatch(hl.dsp.window.resize({ x = request, y = 0, relative = true }))
+    else
+      hl.dispatch(hl.dsp.window.resize({ x = 0, y = request, relative = true }))
+    end
+
+    local after = measure()
+    if after == now then
+      -- Refused: either the sign is wrong, or the target is unreachable.
+      if flipped then
+        break
+      end
+      sign = -sign
+      flipped = true
+    elseif (after - now) * remaining < 0 then
+      sign = -sign
+      flipped = true
+    end
+  end
+end
+
+-- SUPER+ALT+arrows: two modifiers because it acts on the window, ALT because it
+-- resizes rather than moves. Takes the chords from quattro's "move window into
+-- group" - groups keep SUPER+G, SUPER+ALT+G, SUPER+ALT+TAB and the scroll bind,
+-- so they remain reachable, just without arrows (ADR-0023).
+hl.unbind("SUPER + ALT + LEFT")
+hl.unbind("SUPER + ALT + RIGHT")
+hl.unbind("SUPER + ALT + UP")
+hl.unbind("SUPER + ALT + DOWN")
+o.bind("SUPER + ALT + LEFT", "Resize left", function() window_resize("left") end)
+o.bind("SUPER + ALT + RIGHT", "Resize right", function() window_resize("right") end)
+o.bind("SUPER + ALT + UP", "Resize up", function() window_resize("up") end)
+o.bind("SUPER + ALT + DOWN", "Resize down", function() window_resize("down") end)
+
+-- Floating placement (ADR-0024) --------------------------------------------------
+--
+-- Keyboard snap: halves, fill, centre. A different MODE, not a different
+-- intensity, so it gets its own modifier set - SUPER+CTRL+ALT was left free by
+-- ADR-0023 for exactly this. All five no-op on tiled windows.
+--
+-- UP fills rather than taking the top half - the one asymmetry, and the more
+-- useful action on this display. DOWN keeps the bottom half reachable.
+-- Centre is not SUPER+C: that is Universal copy, and taking it would break copy
+-- in every application.
+local function float_snap(dir)
+  local window = hl.get_active_window()
+  if not window or not window.floating or not window.monitor then
+    return
+  end
+
+  -- centerwindow needs no help: it keeps the size and already offsets by the
+  -- reserved area rather than centring on the raw monitor.
+  if dir == "center" then
+    hl.dispatch(hl.dsp.window.center())
+    return
+  end
+
+  local x0, y0, uw, uh, gap = usable_area(window.monitor)
+  local half_w = math.floor((uw - gap) / 2)
+  local half_h = math.floor((uh - gap) / 2)
+
+  local geometry = {
+    left = { x = x0, y = y0, w = half_w, h = uh },
+    right = { x = x0 + half_w + gap, y = y0, w = half_w, h = uh },
+    up = { x = x0, y = y0, w = uw, h = uh },
+    down = { x = x0, y = y0 + half_h + gap, w = uw, h = half_h },
+  }
+  local g = geometry[dir]
+  if not g then
+    return
+  end
+
+  -- Resize first: exact resize is about the window's own centre, so the position
+  -- it leaves behind is meaningless until the move lands.
+  hl.dispatch(hl.dsp.window.resize({ x = g.w, y = g.h }))
+  hl.dispatch(hl.dsp.window.move({ x = g.x, y = g.y }))
+end
+
+o.bind("SUPER + CTRL + ALT + LEFT", "Float left half", function() float_snap("left") end)
+o.bind("SUPER + CTRL + ALT + RIGHT", "Float right half", function() float_snap("right") end)
+o.bind("SUPER + CTRL + ALT + UP", "Float fill screen", function() float_snap("up") end)
+o.bind("SUPER + CTRL + ALT + DOWN", "Float bottom half", function() float_snap("down") end)
+o.bind("SUPER + CTRL + ALT + C", "Float centre", function() float_snap("center") end)
+
+-- Exposed for repl-driven verification, like the close family above.
+shokupan.window_resize = window_resize
+shokupan.float_snap = float_snap
+shokupan.usable_area = usable_area

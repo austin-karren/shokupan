@@ -72,3 +72,24 @@ they are window-structural rather than navigational.
 - Still unbound and arguably worth keys later: `layoutmsg swapsplit` (swap the two
   sides of a split — the companion to `togglesplit`) and `pin` (keep a floating window
   above others across workspaces).
+
+## Addendum: ported to quattro, 2026-08-09
+
+The scheme survives unchanged, and so — remarkably — did its collisions: quattro binds
+the same two group chords in the same two places (`SUPER+CTRL+←/→` group focus cycling,
+`SUPER+ALT`+arrows move-into-group), so the same two unbinds resolve them for the same
+reason. Groups keep `SUPER+G`, `SUPER+ALT+G`, `SUPER+ALT+TAB` and the scroll binds, so
+they remain reachable without arrows, exactly as before.
+
+`SUPER+CTRL+ALT`+arrows was still free under quattro's defaults — measured before
+anything was changed — so ADR-0024's floating placement kept its modifier set without a
+fight.
+
+The `bindd`-visibility point translates: `o.bind`'s description argument is what the
+`SUPER+K` keybindings menu lists, so the discipline is unchanged in substance —
+a bind without a description is invisible in the menu.
+
+One quattro default worth noting fell to this file on the same day: `SUPER+ALT+RETURN`
+was upstream's tmux chord (`omarchy-launch-terminal-tmux`), dead since herdr replaced
+tmux (ADR-0015). Rebound to open the terminal running herdr — same chord, same grammar,
+the ALT variant of the terminal key means "terminal with the multiplexer in it".

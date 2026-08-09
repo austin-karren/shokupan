@@ -117,3 +117,33 @@ release.
 `general:snap`, Hyprland's snapping for *dragged* floating windows, was the cheap
 companion to this and is now enabled — see ADR-0025. Note the vocabulary collision:
 that is **Drag snap**, not the **Keyboard snap** in this ADR.
+
+## Addendum: ported to quattro, 2026-08-09
+
+**The scale rounding trap is gone, and the probe with it.** The trap existed because
+`hyprctl monitors -j` rounds the scale (`1.67` for `1.666667`); quattro's Lua API
+returns the true double, and `monitor.reserved` arrives as a named table instead of a
+positional array. The usable area is now pure arithmetic, so the whole
+ask-Hyprland-for-100%-once dance and its cache
+(`~/.local/state/omarchy/hypr-logical-size`) are **deleted, not ported** — the cache
+file can be removed whenever `float-snap` and `window-resize` are (quattrotools owns
+that sweep).
+
+`float-snap` itself is ~30 lines of Lua in `~/.config/hypr/bindings.lua`. The
+geometry, the ↑-fills asymmetry, resize-before-move and the bare `centerwindow`
+dispatch all carried over unchanged.
+
+Verified live at the machine's current 1.6 scale (2400×1600 logical; the bar now
+reserves **26px**, not the `.conf` era's 32 — reading `reserved` at runtime is what
+keeps this table from going stale again). Usable area `x0 8, y0 34, 2384×1558`:
+
+| Action | Result |
+|---|---|
+| left | `(8,34) 1188×1558` |
+| right | `(1204,34) 1188×1558` — right edge 2392, an 8px margin matching the left |
+| fill | `(8,34) 2384×1558` |
+| bottom half | `(8,817) 2384×775` |
+| centre | size preserved, `y = 426` — clears the bar with nothing computed |
+
+The Size ladder's floating branch and its edge clamp were re-verified alongside
+(ADR-0022's addendum has the numbers).

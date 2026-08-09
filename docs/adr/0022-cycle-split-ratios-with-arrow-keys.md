@@ -223,3 +223,42 @@ It belongs in the Toggle Menu eventually (ADR-0013).
 - **Interaction with Floating mode** (ADR-0021): meaningless for floating windows,
   which want half/edge snapping instead. Two sizing gestures for two modes, possibly
   on the same keys.
+
+## Addendum: ported to quattro, 2026-08-09
+
+`window-resize` is now Lua inside `~/.config/hypr/bindings.lua`, running in the
+compositor's own VM. **The central problem survives intact**: quattro's API still does
+not expose the dwindle tree (`window.layout` is `{ name = "dwindle" }` and nothing
+else), so the sign guess, the wrong-window bounds check and the convergence loop all
+ported as logic, not as syntax. Confirming evidence that this is simply how it has to
+be done: quattro's own `omarchy-hyprland-window-width` contains the identical
+probe-then-converge loop.
+
+What did change:
+
+- **Dispatches are synchronous in-process** — a resize is applied and measurable on
+  the next Lua line (measured: 1184 → 1084 with no wait). Every `settle` delay is
+  deleted and the ~96ms per keypress is gone; the loop converges in microseconds.
+- **The logical-size problem is gone**: `monitor.scale` is the true double and
+  `monitor.reserved` is a named table, so the usable area is pure arithmetic. The
+  `hypr-logical-size` probe cache is deleted, not ported (see ADR-0024's addendum).
+- Wrap/clamp reads the **same flag file**, so `window-resize --toggle-mode` still
+  switches it until the script is retired (quattrotools owns the `~/.local/bin` sweep).
+
+Verification re-run under quattro (usable area 2384×1558 at the current 1.6 scale),
+driving the live handler from `hyprctl repl`:
+
+| Case | Result |
+|---|---|
+| Two windows, focus first child, `RIGHT` | `1184/1184 → 1589/779` — divider right, 2/3 exact |
+| Focus second child at 1/3, `RIGHT` | wrapped to 2/3 — and was briefly misread as a failure, *again*; the warning below stands |
+| Vertical pair, bottom window `DOWN`, `UP`, `UP` | `771 → 519 → 779 → 1038` (1/2, 1/3, 1/2, 2/3), divider tracking the key |
+| Horizontal key on a vertical pair | heights unchanged |
+| Floating, `LEFT` from fill | `2384 → 1589 → 1192 → 794`, every rung exact, position held |
+| Floating at the right edge, grow | clamped to `x = 803 = 2392 − 1589`, nothing off screen |
+| **Special workspace** (scratchpad) | rungs are fractions of the *monitor's* usable area, and the scratchpad's box is smaller — some rungs are unreachable and the loop stops after one refused flip, harmlessly. Same class as the nested-splits approximation above; not worth special-casing. |
+
+The measurement trap from the original table struck again during this port's testing:
+a rung at the end of the ladder wraps, and the wrap reads as "the key went the wrong
+way" unless the test starts mid-ladder. It cost a re-run in the `.conf` era and nearly
+cost one here. Test from 1/2.
