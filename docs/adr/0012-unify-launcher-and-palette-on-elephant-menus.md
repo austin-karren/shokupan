@@ -1,5 +1,6 @@
 ---
-status: proposed
+status: superseded
+superseded-by: 0027
 ---
 
 # Unify the Launcher and System Palette on one Elephant menu

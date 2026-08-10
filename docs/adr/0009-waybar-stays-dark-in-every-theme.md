@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded-by: 0033
 ---
 
 # The bar stays dark in every theme, at a fixed Tailwind-950

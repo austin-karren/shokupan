@@ -243,7 +243,9 @@ cmd_check_icons() {
     echo "weather-icon: omarchy-weather-icon not on PATH" >&2
     return 2
   }
+  # shellcheck disable=SC2016  # $weather_code is the literal text sed matches
   mine=$(sed -n '/^case \$weather_code in/,/^esac$/p' "$0")
+  # shellcheck disable=SC2016  # same literal match against upstream's source
   theirs=$(sed -n '/^case \$weather_code in/,/^esac$/p' "$upstream")
 
   if [[ -z $theirs ]]; then

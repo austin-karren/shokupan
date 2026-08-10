@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded-by: 0033
 ---
 
 # Waybar is supervised by a polling watchdog, not systemd

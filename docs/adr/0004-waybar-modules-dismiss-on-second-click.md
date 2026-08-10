@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded-by: 0033
 ---
 
 # Waybar launcher modules dismiss on a second click
