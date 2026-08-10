@@ -12,21 +12,10 @@
 // quickshell runs these through `bash -lc`, whose PATH does not include
 // ~/.local/bin (see .config/uwsm/env, not currently installed).
 //
-// EVENT-DRIVEN, NOT POLLED. This used to re-run --status on a 3-second timer,
-// a leftover of the Waybar command-module contract — ~40 shell spawns a minute
-// between the two faces, to learn whether one file exists. Now a FileView
-// watches the toggles directory (upstream's own idiom — the idle service
-// watches its stay-awake flag the same way) and the probe runs only when
-// something in it actually changes, plus once at startup and once on click.
-// SUPER+CTRL+BACKSPACE and the Toggle Menu are covered by the watcher, since
-// both ultimately create or delete the flag file.
-//
-// NOTE: module FILES are read at startup only — both adding one and editing
-// one need omarchy-restart-shell (measured 2026-08-10: edits do not hot-reload,
-// despite what this note used to claim; only shell.json hot-reloads).
+// NOTE: the shell registers new files in bar/modules/ only at startup. Editing
+// this file hot-reloads; *adding* a module file needs omarchy-restart-shell.
 
 import QtQuick
-import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
@@ -42,7 +31,6 @@ Item {
   property bool ratioOn: false
   property string tip: ""
 
-  readonly property string togglesDir: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr"
   readonly property bool revealed: bar && bar.centerSectionRevealHeld === true
 
   // Collapse entirely at rest so no hole sits between the indicators and the
@@ -71,8 +59,7 @@ Item {
     onPressed: function(b) {
       if (!root.bar) return
       root.bar.run("$HOME/.local/bin/ratio-toggle")
-      // The watcher will fire when the flag lands, but probe immediately too
-      // so the face swap tracks the click rather than the filesystem event.
+      statusTimer.restart()
       Qt.callLater(function() { statusProc.running = true })
     }
   }
@@ -96,16 +83,12 @@ Item {
     }
   }
 
-  // Fires on any change in the toggles directory — the flag file being copied
-  // in or deleted by ANY entry point (bar click, SUPER+CTRL+BACKSPACE, the
-  // Toggle Menu all converge on omarchy-hyprland-toggle). The probe is cheap
-  // and idempotent, so over-firing on sibling toggles is fine.
-  FileView {
-    path: root.togglesDir
-    watchChanges: true
-    printErrors: false
-    onFileChanged: statusProc.running = true
+  Timer {
+    id: statusTimer
+    interval: 3000
+    running: true
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: statusProc.running = true
   }
-
-  Component.onCompleted: statusProc.running = true
 }

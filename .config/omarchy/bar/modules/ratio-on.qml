@@ -9,17 +9,13 @@
 // (full opacity, always visible, indicator dress); ratio.qml sits after the
 // cluster and renders only while OFF and hovered (dimmed 0.45).
 //
-// Both faces probe `ratio-toggle --status` independently, but neither polls:
-// a FileView watches the toggles directory (upstream's stay-awake idiom) and
-// the probe runs on change, at startup, and immediately on click. The two
-// faces cannot disagree for longer than one inotify delivery.
+// Both faces poll `ratio-toggle --status` independently; 3s of disagreement
+// after a click is bounded by each face also re-polling immediately on press.
 //
-// NOTE: module FILES are read at startup only — both adding one and editing
-// one need omarchy-restart-shell (measured 2026-08-10: edits do not hot-reload,
-// despite what this note used to claim; only shell.json hot-reloads).
+// NOTE: the shell registers new files in bar/modules/ only at startup. Editing
+// this file hot-reloads; *adding* a module file needs omarchy-restart-shell.
 
 import QtQuick
-import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
@@ -34,8 +30,6 @@ Item {
   property string glyph: ""
   property bool ratioOn: false
   property string tip: ""
-
-  readonly property string togglesDir: Quickshell.env("HOME") + "/.local/state/omarchy/toggles/hypr"
 
   implicitWidth: ratioOn ? btn.implicitWidth : 0
   implicitHeight: bar ? bar.barSize : 26
@@ -58,8 +52,7 @@ Item {
     onPressed: function(b) {
       if (!root.bar) return
       root.bar.run("$HOME/.local/bin/ratio-toggle")
-      // The watcher covers the flag change; probe immediately anyway so the
-      // face swap tracks the click.
+      statusTimer.restart()
       Qt.callLater(function() { statusProc.running = true })
     }
   }
@@ -82,14 +75,12 @@ Item {
     }
   }
 
-  // See ratio.qml's note: fires on any toggles-directory change; the probe is
-  // cheap and idempotent, so over-firing on sibling toggles is fine.
-  FileView {
-    path: root.togglesDir
-    watchChanges: true
-    printErrors: false
-    onFileChanged: statusProc.running = true
+  Timer {
+    id: statusTimer
+    interval: 3000
+    running: true
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: statusProc.running = true
   }
-
-  Component.onCompleted: statusProc.running = true
 }
