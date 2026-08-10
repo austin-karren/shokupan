@@ -329,16 +329,33 @@ rule: ink that trails off (wave arcs, ramp glyphs) counts fractionally, and a
 glyph with trailing ink needs *both* of its gaps re-judged, not just the
 trailing side.
 
-**Click-affordance parity, defined by what actually exists.** Quattro has no
-active-underline idiom — `grep -rn underline` over the shell returns nothing,
-and the old Waybar rice's `style.css` had none either. `WidgetButton`'s whole
-affordance vocabulary is the pointing-hand cursor, the shared tooltip, the
-1 / 0.45 / 0 opacity ladder, and an opt-in glyph-colour swap
-(WidgetButton.qml:77). Every clickable rice module sits on `WidgetButton` and
-therefore carries all of it. Native widgets do not mark their open panel
-visually (weather binds `active` to its weather class, not to `opened`), so
-the calendar's click is **momentary** by design — run the toggle, no
-shown-state tracking — which is exact parity, not a gap.
+**Click-affordance parity — corrected.** An earlier revision of this note
+claimed quattro has no active-underline idiom, on the evidence that
+`grep -rn underline` returns nothing. The grep was true and the conclusion was
+false: the underline exists, it just is not called that. Each module slot owns
+an `openPanelIndicator` Rectangle (Bar.qml:1367) — an accent-coloured 2px bar
+under the glyph, lit while `bar.activePopout === slot.activeItem`. The user
+caught the miss with two screenshots: audio panel open, underline present;
+hosted network panel open, underline absent.
+
+**Why hosted widgets miss it, and the fix.** The slot compares popout
+ownership by identity with the *slot's* item. A native panel is that item; a
+Hosted widget is a wrapper, and the inner panel registers *itself* with the
+coordinator (`coordinatorKey = owner || root`, KeyboardPanel.qml:59), so the
+identities never match. `activePopout` is a writable `var`, so the wrapper
+re-points ownership to itself the moment the inner panel claims it, forwards
+`open`/`close`/`closeForPopoutSwitch`/`opened` so popout-switching still
+works, and clears ownership when the inner panel closes (the inner
+`releasePopout` no-ops once ownership moved). This is now part of the Hosted
+widget contract: **any hosted widget with its own panel must carry the popout
+identity block** (`bar/modules/network.qml` is the reference).
+
+The rest of the parity audit, verified by opening each thing: audio (native)
+lights the underline; the menu overlay is not a bar popout, so `omenu` shows
+none — same as upstream's own menu button; media's popup joins the coordinator
+with its native slot as owner (BarWidget.qml:106), untouched by the rice;
+apexshot, ratio and calendar have no popout at all, so the underline does not
+apply — the calendar's click stays **momentary** by design.
 
 **The menu button wears the rice's power glyph** (`omenu` QML module, U+F011 —
 the same glyph `custom/omarchy` carried on Waybar). Upstream's widget hardcodes

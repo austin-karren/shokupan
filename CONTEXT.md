@@ -332,9 +332,13 @@ _Avoid_: plugin (a plugin is upstream's packaging unit, with a manifest)
 A QML module whose body is upstream's own widget, loaded by absolute path and
 handed the three properties the bar host would inject — the module owns only
 visibility, upstream owns everything else, and upstream's fixes keep arriving.
-`model-usage` proved the pattern before ADR-0039 took it off the bar; none is
-currently mounted, and the file lives in git history. The alternative, copying
-the widget's source into the rice, is what this term exists to argue against.
+`network` and `microphone` are the two mounted; `model-usage` proved the
+pattern before ADR-0039 took it off the bar. A hosted widget with its own
+panel must also carry the **popout identity block** (see `network.qml`): the
+bar lights a slot's open-panel underline by identity with the slot's item, and
+without the block the underline never lights — the one parity gap the pattern
+introduces. The alternative, copying the widget's source into the rice, is
+what this term exists to argue against.
 _Avoid_: wrapper (says nothing about who owns the body), clone, fork
 
 **Indicator dress**:

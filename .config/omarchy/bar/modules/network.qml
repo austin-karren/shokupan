@@ -29,6 +29,54 @@ Item {
   implicitWidth: inner.item ? inner.item.implicitWidth : 0
   implicitHeight: bar ? bar.barSize : 26
 
+  // --- popout identity -------------------------------------------------------
+  // The bar lights a module slot's open-panel underline when
+  // `bar.activePopout === slot.activeItem` (Bar.qml, openPanelIndicator). In a
+  // native slot the panel root IS the slot item; here the slot item is this
+  // wrapper, while the hosted panel registers ITSELF as popout owner
+  // (KeyboardPanel: coordinatorKey = owner || root). Identity never matches and
+  // the underline never lights — the one parity gap the hosted-widget pattern
+  // introduces. `activePopout` is a writable var, so the fix is to re-point
+  // ownership at this wrapper the moment the inner panel claims it, and carry
+  // the coordinator's close contract so popout-switching still works.
+  readonly property bool opened: inner.item ? inner.item.opened === true : false
+
+  function open() {
+    var w = inner.item
+    if (!w) return
+    if (typeof w.openFromHotkey === "function") w.openFromHotkey()
+    else if (typeof w.open === "function") w.open()
+  }
+  function close() {
+    var w = inner.item
+    if (w && typeof w.close === "function") w.close()
+  }
+  function closeForPopoutSwitch() {
+    var w = inner.item
+    if (w && typeof w.closeForPopoutSwitch === "function") w.closeForPopoutSwitch()
+    else close()
+  }
+
+  Connections {
+    target: root.bar
+    ignoreUnknownSignals: true
+    function onActivePopoutChanged() {
+      if (root.bar && inner.item && root.bar.activePopout === inner.item)
+        root.bar.activePopout = root
+    }
+  }
+
+  Connections {
+    target: inner.item
+    ignoreUnknownSignals: true
+    function onOpenedChanged() {
+      // The inner panel's releasePopout(inner) no-ops once ownership moved to
+      // the wrapper, so drop it here when the panel closes.
+      if (root.bar && inner.item && inner.item.opened === false && root.bar.activePopout === root)
+        root.bar.activePopout = null
+    }
+  }
+
   function mapped(icon) {
     return icon === "\u{F0200}" ? "\u{F059F}" : icon
   }
@@ -68,6 +116,7 @@ Item {
     onLoaded: {
       root.inject()
       Qt.callLater(root.inject)
+
     }
   }
 }
