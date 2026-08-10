@@ -1,0 +1,144 @@
+#!/bin/bash
+
+# loaf:summary=Bootstrap the rice onto a fresh CachyOS + Omarchy machine
+# loaf:args=[--force]
+
+# The install path ADR-0035 says this repo owes: take a machine that already has
+# the two base layers — CachyOS installed normally, quattro layered onto it per
+# the lab's patched upgrade script — and put everything this repo decides on top:
+# chosen packages, flatpaks, the stowed config, the debloat list, migrations.
+#
+# It BINDS to the Omarchy version in packages/omarchy.pin. The rice reaches into
+# upstream's files (bar modules, menu overrides, window rules), so "does this
+# work" is only answerable against the version it was verified on. A different
+# installed version is a hard stop unless --force says the mismatch is accepted.
+#
+# Deliberately an orchestrator: every step below is an existing loaf command or
+# a pacman call, so a partial run is resumed by simply running it again — each
+# step is idempotent.
+
+set -uo pipefail
+
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
+export LOAF_HOME LOAF_ROOT
+PACMAN_CONF="${PACMAN_CONF:-/etc/pacman.conf}"
+
+force=false
+[[ ${1:-} == --force ]] && force=true
+
+step() { printf '\n\033[1m%s\033[0m\n' "$1"; }
+say() { printf '  %s\n' "$1"; }
+die() {
+  printf '  \033[31m✗\033[0m %s\n' "$1"
+  local detail
+  for detail in "${@:2}"; do printf '    %s\n' "$detail"; done
+  exit 1
+}
+
+# Root runs pacman directly; anyone else goes through sudo. The variable also
+# lets the test suite substitute a stub.
+SUDO=""
+((EUID)) && SUDO=sudo
+
+printf '\033[1mInstalling the rice from %s\033[0m\n' "$LOAF_ROOT"
+
+# ---------------------------------------------------------
+# 1. The base must be CachyOS
+# ---------------------------------------------------------
+
+step "Base (CachyOS)"
+
+[[ -d $LOAF_ROOT/.git ]] || die "$LOAF_ROOT is not a git checkout" \
+  "clone https://github.com/austin-karren/shokupan there first"
+
+grep -q '^\[cachyos' "$PACMAN_CONF" 2>/dev/null ||
+  die "no CachyOS repos in $PACMAN_CONF" \
+    "the base layer is not CachyOS — install it first (ADR-0034, ADR-0035)" \
+    "lab/quattro-vm documents the settings that matter"
+say "CachyOS repos present"
+
+# The kernel is part of the replication contract. On a base installed from the
+# CachyOS ISO it is already there; this covers a base that drifted or was
+# minimal. Installed if missing, but a reboot is the user's to do.
+if pacman -Qq linux-cachyos &>/dev/null; then
+  say "linux-cachyos installed"
+else
+  say "installing linux-cachyos"
+  $SUDO env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -S --needed --noconfirm linux-cachyos ||
+    die "could not install linux-cachyos"
+fi
+if [[ $(uname -r) != *cachyos* ]]; then
+  say "running $(uname -r) — reboot into linux-cachyos when done"
+fi
+
+# ---------------------------------------------------------
+# 2. Omarchy must be the version this rice was verified against
+# ---------------------------------------------------------
+
+step "Desktop (Omarchy)"
+
+omarchy_version=$(pacman -Q omarchy 2>/dev/null | awk '{print $2}')
+[[ -n $omarchy_version ]] ||
+  die "no omarchy package installed" \
+    "layer quattro onto the base first — lab/omarchy-upgrade-to-quattro.patched (ADR-0035)"
+
+PIN_FILE="$LOAF_ROOT/packages/omarchy.pin"
+[[ -f $PIN_FILE ]] || die "no packages/omarchy.pin — nothing records the verified version"
+rice_pin=$(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$PIN_FILE" | head -1)
+
+if [[ $rice_pin == "$omarchy_version" ]]; then
+  say "omarchy $omarchy_version matches the pin"
+elif $force; then
+  say "omarchy $omarchy_version differs from pin $rice_pin — continuing under --force"
+else
+  die "omarchy $omarchy_version is not the version this rice was verified against ($rice_pin)" \
+    "install the pinned version, or re-verify the rice and re-pin" \
+    "or accept the mismatch with: loaf install --force"
+fi
+
+# ---------------------------------------------------------
+# 3. Chosen packages and flatpaks
+# ---------------------------------------------------------
+
+step "Packages"
+
+mapfile -t chosen < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' \
+  "$LOAF_ROOT/packages/chosen.packages" 2>/dev/null | sort -u)
+missing=()
+for p in "${chosen[@]}"; do
+  pacman -Qq "$p" &>/dev/null || missing+=("$p")
+done
+if ((${#missing[@]})); then
+  say "installing ${#missing[@]} chosen package(s)"
+  # OMARCHY_ALLOW_DIRECT_PACMAN: quattro's pacman hook refuses a direct call
+  # without it (ADR-0035).
+  $SUDO env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -S --needed --noconfirm "${missing[@]}" ||
+    die "package install failed" "re-run 'loaf install' once fixed — every step resumes"
+else
+  say "all ${#chosen[@]} chosen packages installed"
+fi
+
+if command -v flatpak &>/dev/null && [[ -f $LOAF_ROOT/packages/chosen.flatpaks ]]; then
+  loaf-flatpaks --quiet || loaf-flatpaks --install
+  say "flatpaks reconciled"
+fi
+
+# ---------------------------------------------------------
+# 4. The rice itself: stow, debloat, migrations
+# ---------------------------------------------------------
+
+step "Rice"
+
+# heal is the whole reconciliation pass — symlinks, debloat, migrations — and
+# is what the post-update hook runs forever after. Installing IS healing from
+# nothing.
+loaf-heal || die "heal failed"
+
+# ---------------------------------------------------------
+# 5. Verdict
+# ---------------------------------------------------------
+
+step "Verifying with loaf doctor"
+
+loaf-doctor
