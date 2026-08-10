@@ -111,7 +111,7 @@ var COMMAND_ORDER = [
   "shokupan-cmd-window-gaps", "shokupan-cmd-zen-ratio", "shokupan-cmd-scale-up",
   "shokupan-cmd-scale-down", "shokupan-cmd-direct-boot", "shokupan-cmd-passwordless-sudo",
   "shokupan-cmd-appearance", "shokupan-cmd-emoji", "shokupan-cmd-clipboard",
-  "shokupan-cmd-wallpaper", "shokupan-cmd-theme", "shokupan-cmd-install",
+  "shokupan-cmd-claude-usage", "shokupan-cmd-wallpaper", "shokupan-cmd-theme", "shokupan-cmd-install",
   "shokupan-cmd-remove", "shokupan-cmd-update-omarchy", "shokupan-cmd-update-system",
   "shokupan-cmd-start-screensaver", "shokupan-cmd-lock", "shokupan-cmd-sleep",
   "shokupan-cmd-hibernate", "shokupan-cmd-logout", "shokupan-cmd-restart",
