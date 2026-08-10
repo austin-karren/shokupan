@@ -1,0 +1,11 @@
+# Omarchy default web apps this machine has decided against.
+#
+# One launcher name per line, matching the .desktop basename Omarchy ships in
+# $OMARCHY_PATH/applications. Deleting one by hand is not enough:
+# omarchy-refresh-applications copies EVERY default back into
+# ~/.local/share/applications, so the decision has to live here where
+# `loaf debloat` can re-assert it after each update.
+Basecamp
+ChatGPT
+HEY
+WhatsApp

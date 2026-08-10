@@ -244,6 +244,37 @@ if command -v weather-icon >/dev/null 2>&1; then
   fi
 fi
 
+# Forks the rice carries must notice upstream moving underneath them
+# (ADR-0042 want 1): quickshell logs to /dev/null, so a stale fork's first
+# symptom is otherwise visual. loaf-forks owns the how.
+if command -v loaf-forks &>/dev/null && [[ -f $LOAF_ROOT/packages/forks ]]; then
+  if loaf-forks --quiet; then
+    ok "forks" "upstream unchanged under every recorded fork"
+  else
+    bad "forks" "upstream moved under a fork" "run 'loaf forks' for the diff"
+  fi
+fi
+
+# Every upstream file the rice's QML references by absolute path must still
+# exist (ADR-0042 want 2): hosted widgets load Panel.qml and friends from
+# /usr/share, and an upstream rename breaks them with no error anywhere.
+if [[ -d $LOAF_ROOT/.config/omarchy ]]; then
+  broken_refs=()
+  checked_refs=0
+  while IFS= read -r ref; do
+    path=${ref#file://}
+    checked_refs=$((checked_refs + 1))
+    [[ -e $path ]] || broken_refs+=("$path")
+  done < <(grep -rhoE '(file://)?/usr/share/omarchy[^"'\''  ]*' \
+    "$LOAF_ROOT/.config/omarchy" --include='*.qml' --include='*.js' 2>/dev/null | sort -u)
+  if ((${#broken_refs[@]})); then
+    bad "upstream refs" "${#broken_refs[@]} referenced upstream path(s) missing" \
+      "${broken_refs[@]}" "an omarchy update renamed them — the widgets fail silently"
+  elif ((checked_refs)); then
+    ok "upstream refs" "$checked_refs referenced upstream path(s) all present"
+  fi
+fi
+
 # Omarchy backs a file up as <name>.bak.<epoch> right before overwriting it. On a
 # stowed machine the thing it overwrote was one of our symlinks, so these are the
 # fingerprint of a config we may have silently lost.
@@ -251,6 +282,25 @@ mapfile -t backups < <(find "$LOAF_HOME/.config" -name '*.bak.*' -newer "$STATE_
 if ((${#backups[@]})); then
   warn "clobbers" "${#backups[@]} config backup(s) since last heal"
   printf '    %s\n' "${backups[@]#$LOAF_HOME/}"
+fi
+
+# Launchers the debloat manifest says are removed must stay removed —
+# omarchy-refresh-applications restores every default web app on refresh, so a
+# resurrected one means an update ran and heal has not. Guarded on the manifest
+# existing: a repo without one has made no claim, and "no claim" is not drift.
+DEBLOAT_MANIFEST="$LOAF_ROOT/packages/removed.webapps"
+if [[ -f $DEBLOAT_MANIFEST ]]; then
+  resurrected=()
+  while IFS= read -r name; do
+    [[ -e $LOAF_HOME/.local/share/applications/$name.desktop ]] && resurrected+=("$name")
+  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' \
+    -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$DEBLOAT_MANIFEST")
+  if ((${#resurrected[@]})); then
+    bad "debloat" "${#resurrected[@]} removed launcher(s) are back" \
+      "${resurrected[@]}" "an update restored them — run 'loaf heal'"
+  else
+    ok "debloat" "removed defaults stay removed"
+  fi
 fi
 
 # ---------------------------------------------------------

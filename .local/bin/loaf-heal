@@ -37,6 +37,9 @@ dry_run=false
 
 stamp=$(date +%s)
 changed=0
+# The shell registers bar/modules/ files only at startup, so a heal that placed
+# one has silently not finished until the shell restarts (ADR-0042 want 3).
+bar_touched=false
 
 say() { printf '  %s\n' "$1"; }
 act() {
@@ -66,6 +69,7 @@ while IFS= read -r f; do
     mkdir -p "$(dirname "$target")"
     ln -s "$(realpath --relative-to="$(dirname "$target")" "$LOAF_ROOT/$f")" "$target"
     act "restored $f — upstream's version kept as $(basename "$target").displaced.$stamp"
+    [[ $f == *.config/omarchy/bar/modules/* ]] && bar_touched=true
   fi
   # Same exclusions as loaf-doctor: repo-only paths and Stow metadata never
   # belong in $LOAF_HOME, so a real file at those paths is not a displaced symlink.
@@ -80,13 +84,24 @@ if command -v stow &>/dev/null; then
   # --no-folding keeps directories real, so Omarchy dropping a new file into
   # ~/.config/hypr does not land inside the repo by way of a folded directory.
   if $dry_run; then
-    stow_out=$(cd "$LOAF_ROOT" && stow --simulate --no-folding . 2>&1)
+    stow_out=$(cd "$LOAF_ROOT" && stow -v --simulate --no-folding . 2>&1)
+    stow_rc=$?
   else
-    stow_out=$(cd "$LOAF_ROOT" && stow --no-folding . 2>&1)
+    stow_out=$(cd "$LOAF_ROOT" && stow -v --no-folding . 2>&1)
+    stow_rc=$?
+  fi
+  # A failed stow used to be reported as a green "change" — the aborted-restow
+  # trap ADR-0042 want 4 names. Failure is failure, and it stops the run: the
+  # sections below assume the links are live.
+  if ((stow_rc)); then
+    printf '  \033[31m✗\033[0m stow failed:\n'
+    printf '    %s\n' "$stow_out"
+    exit 1
   fi
   if [[ -n $stow_out ]]; then
     act "stow:"
     printf '    %s\n' "$stow_out"
+    [[ $stow_out == *bar/modules* ]] && bar_touched=true
   else
     say "stow: nothing to do"
   fi
@@ -95,7 +110,27 @@ else
 fi
 
 # ---------------------------------------------------------
-# 3. Apply pending migrations
+# 3. Re-remove Omarchy defaults decided against
+# ---------------------------------------------------------
+
+# omarchy-refresh-applications restores every default web app on refresh, so
+# a post-update heal has to take them back off. loaf-debloat owns the how; the
+# manifest at packages/removed.webapps owns the what.
+if command -v loaf-debloat &>/dev/null; then
+  if $dry_run; then
+    debloat_out=$(loaf-debloat --dry-run)
+  else
+    debloat_out=$(loaf-debloat)
+  fi
+  if [[ -n $debloat_out ]]; then
+    while IFS= read -r line; do act "debloat: $line"; done <<<"$debloat_out"
+  else
+    say "debloat: nothing to remove"
+  fi
+fi
+
+# ---------------------------------------------------------
+# 4. Apply pending migrations
 # ---------------------------------------------------------
 
 # Migrations exist because this machine cannot be rebuilt to get a fix — it is
@@ -131,6 +166,18 @@ else
 fi
 
 # ---------------------------------------------------------
+
+if $bar_touched && ! $dry_run; then
+  # Restart rather than merely advise when the shell is actually reachable:
+  # upstream's own updater does the same, and a heal that placed a bar module
+  # without a restart has silently not finished.
+  if command -v omarchy-restart-shell &>/dev/null && [[ -n ${WAYLAND_DISPLAY:-} ]]; then
+    omarchy-restart-shell &>/dev/null
+    act "bar/modules changed — restarted the shell"
+  else
+    act "bar/modules changed — restart the shell to register them (omarchy-restart-shell)"
+  fi
+fi
 
 $dry_run || touch "$STATE_DIR/last-heal"
 

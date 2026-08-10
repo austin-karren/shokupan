@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# loaf:summary=Remove Omarchy defaults this machine has decided against
+# loaf:args=[--dry-run]
+
+# Omarchy seeds ~/.local/share/applications with its default web apps, and
+# `omarchy-refresh-applications` copies every one of them back on refresh — so a
+# launcher deleted by hand is only gone until the next update. The decision not
+# to have one therefore lives in packages/removed.webapps, and this re-asserts
+# it. `loaf heal` runs it, which is what makes the removal survive updates.
+#
+# Removal mirrors omarchy-webapp-remove (the .desktop file plus its icons)
+# rather than calling it: upstream's remover reads $HOME directly and sends a
+# desktop notification, neither of which belongs in a test fixture or a
+# post-update hook.
+
+set -uo pipefail
+
+# $LOAF_HOME is $HOME everywhere except the test suite, which points it at a
+# fixture tree. Every path below derives from it, so nothing reaches the real
+# home directory unless it was asked to.
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
+MANIFEST="$LOAF_ROOT/packages/removed.webapps"
+
+APP_DIR="$LOAF_HOME/.local/share/applications"
+ICON_DIR="$LOAF_HOME/.local/share/icons/hicolor/256x256/apps"
+OLD_ICON_DIR="$APP_DIR/icons"
+
+dry_run=false
+[[ ${1:-} == --dry-run ]] && dry_run=true
+
+if [[ ! -f $MANIFEST ]]; then
+  # No manifest means no claim — a repo that predates it has decided nothing.
+  exit 0
+fi
+
+mapfile -t removed < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' \
+  -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$MANIFEST" | sort -u)
+
+changed=0
+for name in "${removed[@]}"; do
+  # Same icon-name derivation as omarchy-webapp-install, so the icon a
+  # resurrected launcher brought along goes with it.
+  icon_name=$(printf '%s\n' "$name" | tr '[:upper:]' '[:lower:]' |
+    sed 's/[^[:alnum:]]\+/-/g; s/^-//; s/-$//')
+  hit=false
+  for f in "$APP_DIR/$name.desktop" \
+    "$ICON_DIR/$icon_name.png" "$ICON_DIR/$name.png" "$OLD_ICON_DIR/$name.png"; do
+    [[ -e $f ]] || continue
+    hit=true
+    $dry_run || rm -f "$f"
+  done
+  if $hit; then
+    changed=$((changed + 1))
+    if $dry_run; then
+      printf 'would remove %s\n' "$name"
+    else
+      printf 'removed %s\n' "$name"
+    fi
+  fi
+done
+
+if ((changed)) && ! $dry_run && command -v update-desktop-database &>/dev/null; then
+  update-desktop-database "$APP_DIR" &>/dev/null
+fi
+
+exit 0
