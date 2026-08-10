@@ -43,22 +43,11 @@
           "id": "omarchy.system-update"
         },
         {
-          "id": "ratio-on",
-          "type": "qml"
-        },
-        {
-          "id": "omarchy.indicators",
+          "id": "indicators",
+          "type": "qml",
           "items": [
-            "Dnd"
-          ]
-        },
-        {
-          "id": "ratio",
-          "type": "qml"
-        },
-        {
-          "id": "omarchy.indicators",
-          "items": [
+            "Dnd",
+            "Ratio",
             "Reminder",
             "NightLight",
             "StayAwake",
