@@ -1,0 +1,6 @@
+# Forks this rice carries, the upstream file each shadows, and the SHA-256
+# that upstream file had when the fork was last verified against it.
+# Re-stamp after re-verifying: loaf forks --record   (ADR-0042)
+.config/omarchy/plugins/shokupan-launcher/Launcher.qml /usr/share/omarchy/shell/plugins/launcher/Launcher.qml 92105323efcdf0dc60f8529b9adfcdeded1a50ecf0b9c964b94672d6e952b19e
+.config/omarchy/plugins/shokupan-launcher/LauncherSearch.js /usr/share/omarchy/shell/plugins/launcher/LauncherSearch.js bbc4965f7b46932bd7127b5d921b977679f2a892e6bd9672f29049d340821bd7
+.config/omarchy/bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml d0c437c9745ab593fa90d75d7d3754b65cd08e2097632ee7d50ae638dc838216

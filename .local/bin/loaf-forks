@@ -1,0 +1,88 @@
+#!/bin/bash
+
+# loaf:summary=Check recorded forks against the upstream files they shadow
+# loaf:args=[--record] [--quiet]
+
+# The rice carries forks of upstream files it cannot patch in place (ADR-0027,
+# ADR-0042): the launcher plugin and the indicators cluster. Upstream fixes
+# never reach a fork on their own, and nothing else notices when upstream moves
+# — quickshell's output goes to /dev/null, so the first sign of drift is visual.
+#
+# packages/forks records, per fork, the upstream file it shadows and the SHA-256
+# that upstream file had when the fork was last verified against it. This
+# command compares; an omarchy update that touches a shadowed file turns the
+# board red instead of leaving a stale fork. `--record` re-stamps the hashes
+# after a re-verification — the same by-hand contract as packages/omarchy.pin.
+
+set -uo pipefail
+
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
+MANIFEST="$LOAF_ROOT/packages/forks"
+
+quiet=false
+record=false
+for arg in "$@"; do
+  case $arg in
+  --quiet) quiet=true ;;
+  --record) record=true ;;
+  *)
+    echo "usage: loaf forks [--record] [--quiet]" >&2
+    exit 64
+    ;;
+  esac
+done
+
+if [[ ! -f $MANIFEST ]]; then
+  # No manifest means no claim.
+  $quiet || echo "loaf: no fork manifest at $MANIFEST"
+  exit 0
+fi
+
+problems=0
+out=""
+
+while read -r rice_path upstream_path recorded_sha; do
+  [[ -n ${recorded_sha:-} ]] || continue
+  if [[ ! -e $LOAF_ROOT/$rice_path ]]; then
+    problems=$((problems + 1))
+    out+="✗ $rice_path — fork file missing from the repo"$'\n'
+    continue
+  fi
+  if [[ ! -e $upstream_path ]]; then
+    problems=$((problems + 1))
+    out+="✗ $rice_path — upstream $upstream_path no longer exists (renamed?)"$'\n'
+    continue
+  fi
+  current_sha=$(sha256sum "$upstream_path" | awk '{print $1}')
+  if $record; then
+    recorded_sha=$current_sha
+  fi
+  if [[ $current_sha == "$recorded_sha" ]]; then
+    out+="✓ $rice_path — upstream unchanged since verification"$'\n'
+  else
+    problems=$((problems + 1))
+    out+="✗ $rice_path — upstream moved under the fork"$'\n'
+    out+="    $upstream_path changed since the fork was verified"$'\n'
+    out+="    re-diff, carry the fix across, then: loaf forks --record"$'\n'
+  fi
+done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$MANIFEST")
+
+if $record; then
+  # Rewrite the manifest with fresh hashes, preserving comments is not worth the
+  # sed acrobatics: regenerate the data lines under the original header.
+  tmp=$(mktemp)
+  grep '^#' "$MANIFEST" >"$tmp" || true
+  while read -r rice_path upstream_path _; do
+    [[ -n ${upstream_path:-} && -e $upstream_path ]] || continue
+    printf '%s %s %s\n' "$rice_path" "$upstream_path" \
+      "$(sha256sum "$upstream_path" | awk '{print $1}')" >>"$tmp"
+  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$MANIFEST")
+  mv "$tmp" "$MANIFEST"
+  $quiet || echo "recorded — commit packages/forks with the re-verification"
+  exit 0
+fi
+
+$quiet || printf '%s' "$out"
+((problems)) && exit 1
+exit 0
