@@ -41,6 +41,25 @@ Item {
   property string moduleName
   property var settings
 
+  // Read by Bar.qml's openPanelIndicator: shift the underline from the
+  // advance's centre to the INK's centre, computed from TextMetrics — the
+  // same programmatic fix as audio.qml, no measured pixels. The FA gear's
+  // ink sits slightly right of its advance centre, which reads as the
+  // underline hanging left.
+  readonly property real openIndicatorInlineOffset: {
+    if (!bar || bar.vertical) return 0
+    var r = metrics.tightBoundingRect
+    if (!r || r.width <= 0) return 0
+    return (r.x + r.width / 2) - metrics.advanceWidth / 2
+  }
+
+  TextMetrics {
+    id: metrics
+    text: btn.text
+    font.family: btn.fontFamily
+    font.pixelSize: btn.fontSize
+  }
+
   // open/close/opened make this slot quack like a panel for findPanelWidget,
   // so `omarchy-shell shell toggle barcfg` works (same forwarding as audio.qml).
   readonly property bool panelOpen: panelLoader.item ? panelLoader.item.opened === true : false
