@@ -23,6 +23,8 @@
 // this file hot-reloads; *adding* a module file needs omarchy-restart-shell.
 
 import QtQuick
+import Quickshell.Hyprland
+import qs.Commons
 import qs.Ui
 
 Item {
@@ -32,8 +34,57 @@ Item {
   property string moduleName
   property var settings
 
+  // The calendar's "panel" is a Hyprland special workspace, not a shell
+  // popout, so the bar's own open-panel indicator can never light up for it
+  // (that one keys on bar.activePopout identity). This tracks the workspace
+  // instead: Hyprland emits `activespecial` with the workspace name when a
+  // special shows and an empty name when it hides — event-driven, no polling.
+  property bool calendarShown: false
+
+  Connections {
+    target: Hyprland
+    function onRawEvent(event) {
+      if (event.name !== "activespecial") return
+      root.calendarShown = event.data.indexOf("special:calendar") === 0
+    }
+  }
+
   implicitWidth: btn.implicitWidth
   implicitHeight: bar ? bar.barSize : 26
+
+  // A twin of Bar.qml's openPanelIndicator (same tokens: accent, 0.9, 55%
+  // width, space(2) bar and inset), drawn here because the real one is
+  // unreachable for a non-popout panel. Centred on the glyph's INK via
+  // TextMetrics, not the advance — the audio/barcfg lesson.
+  TextMetrics {
+    id: metrics
+    text: btn.text
+    font.family: btn.fontFamily
+    font.pixelSize: btn.fontSize
+  }
+
+  Rectangle {
+    readonly property int inset: Style.space(2)
+    readonly property real inkOffset: {
+      var r = metrics.tightBoundingRect
+      if (!r || r.width <= 0) return 0
+      return (r.x + r.width / 2) - metrics.advanceWidth / 2
+    }
+
+    visible: opacity > 0 && bar && !bar.vertical
+    opacity: root.calendarShown ? 0.9 : 0
+    color: Color.accent
+    radius: Math.min(width, height) / 2
+    width: Math.max(Style.space(10), Math.round(parent.width * 0.55))
+    height: Style.space(2)
+    x: (parent.width - width) / 2 + inkOffset
+    y: bar && bar.position === "bottom" ? inset : parent.height - height - inset
+    z: 50
+
+    Behavior on opacity {
+      NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+    }
+  }
 
   WidgetButton {
     id: btn

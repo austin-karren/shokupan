@@ -62,10 +62,23 @@ hl.config({
 -- default/hypr/looknfeel.lua now ships `shadow { enabled = false }` itself, so
 -- restating it would be a no-op pretending to be a decision.
 
--- The specialWorkspaceIn/Out slide direction also used to live here, and belongs
--- to the calendar popup (ADR-0006) rather than to this file's own concerns. It is
--- deliberately not ported here: quattro's clock popup ships a month grid, so
--- whether that special workspace still exists at all is ADR-0006's call to make.
+-- Special workspaces drop in from the TOP and retract back up into the bar,
+-- instead of the default of rising from the bottom. Makes the calendar popup
+-- (ADR-0006, special:calendar) read as emerging from the bar that launched it.
+-- Ported from looknfeel.conf on request, 2026-08-10 — the earlier revision of
+-- this file deferred it to ADR-0006, which kept GNOME Calendar, so the popup
+-- exists and deserves its motion back.
+--
+-- THE DIRECTION ARGUMENT MEANS OPPOSITE THINGS ON THE TWO TREES (measured in
+-- the .conf era by slowing the animation to 5s and tracking the bounding box):
+-- `top` on In slides DOWN from the top; on Out it also slides DOWN. So the
+-- retract-upward exit needs `bottom` on Out. Do not "fix" this to match.
+--
+-- These are global animation trees — no per-workspace override exists, so the
+-- SUPER+S scratchpad moves the same way. Speed 3 (=300ms) and easeOutQuint
+-- kept from Omarchy's default so the popup matches the desktop's motion.
+hl.animation({ leaf = "specialWorkspaceIn", enabled = true, speed = 3, bezier = "easeOutQuint", style = "slidevert top" })
+hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 3, bezier = "easeOutQuint", style = "slidevert bottom" })
 
 -- The single-window zen aspect ratio lives here in spirit but NOT in this file:
 -- ratio-toggle writes it to ~/.local/state/omarchy/toggles/hypr/ so it can be
