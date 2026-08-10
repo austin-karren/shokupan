@@ -8,6 +8,14 @@
 // Hence this module; the built-in stays hidden because it only renders when
 // the clock is the centre anchor, and our shell.json sets centerAnchor: "".
 //
+// THE PANEL IS HOSTED HERE, NOT LAUNCHED. `omarchy-launch-bar-settings` is a
+// dead end on this layout: it IPCs openBarConfig, whose openConfigPanel()
+// skips every BarConfigControl with visible !== true — and with no clock
+// anchor they are ALL invisible, so the shell answers "unknown" and nothing
+// opens. So this module loads BarConfigPanel.qml itself (the same hosted-
+// panel pattern as audio.qml) and anchors it to the gear; the click toggles
+// it directly, no IPC involved.
+//
 // An earlier revision lived in the LEFT section after the workspaces and
 // owned its own reveal: a 14px always-present strip that painted the glyph
 // only under its own pointer. Undiscoverable in practice — it read as
@@ -33,9 +41,15 @@ Item {
   property string moduleName
   property var settings
 
-  readonly property bool revealed: bar
+  // open/close/opened make this slot quack like a panel for findPanelWidget,
+  // so `omarchy-shell shell toggle barcfg` works (same forwarding as audio.qml).
+  readonly property bool panelOpen: panelLoader.item ? panelLoader.item.opened === true : false
+  readonly property bool opened: panelOpen
+  function open() { if (panelLoader.item) panelLoader.item.open() }
+  function close() { if (panelLoader.item) panelLoader.item.close() }
+  readonly property bool revealed: panelOpen || (bar
     && bar.centerSectionRevealHeld === true
-    && bar.centerHoverRevealSuppressed !== true
+    && bar.centerHoverRevealSuppressed !== true)
 
   // Collapse entirely at rest so no hole sits in the centre cluster.
   implicitWidth: revealed ? btn.implicitWidth : 0
@@ -53,11 +67,48 @@ Item {
     // with no error anywhere (same lesson as ratio-toggle's header).
     text: "\uf013"
     tooltipText: "Bar settings"
-    dimmed: true
+    dimmed: !root.panelOpen
     concealed: !root.revealed
     interactive: root.revealed
     onPressed: function(b) {
-      if (root.bar) root.bar.run("omarchy-launch-bar-settings")
+      if (b === Qt.LeftButton && panelLoader.item) panelLoader.item.toggle()
     }
+  }
+
+  Loader {
+    id: panelLoader
+    active: true
+    source: "file:///usr/share/omarchy/shell/plugins/bar/BarConfigPanel.qml"
+    // anchorItem FIRST, and bar guarded: at load time the host has not
+    // injected `bar` yet, and assigning undefined to a QObject* property
+    // throws — which would abort this handler before anchorItem is set,
+    // leaving the panel unable to open (its open gate is anchorItem !== null).
+    onLoaded: {
+      item.anchorItem = btn
+      if (root.bar) item.bar = root.bar
+    }
+  }
+
+  // Registered into bar.configControls so openConfigPanel() — the target of
+  // `omarchy-launch-bar-settings` — finds a control to open. It must be a
+  // separate always-visible Item: openConfigPanel skips controls with
+  // visible !== true, and root itself hides at rest.
+  Item {
+    id: configControlProxy
+    visible: true
+    width: 0
+    height: 0
+    function openPanel() { root.open() }
+  }
+
+  onBarChanged: {
+    if (panelLoader.item) panelLoader.item.bar = root.bar
+    if (bar && typeof bar.registerConfigControl === "function")
+      bar.registerConfigControl(configControlProxy)
+  }
+
+  Component.onDestruction: {
+    if (bar && typeof bar.unregisterConfigControl === "function")
+      bar.unregisterConfigControl(configControlProxy)
   }
 }
