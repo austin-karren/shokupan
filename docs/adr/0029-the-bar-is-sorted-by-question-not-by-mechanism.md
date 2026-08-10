@@ -325,6 +325,17 @@ rule: ink that trails off (wave arcs, ramp glyphs) counts fractionally, and a
 glyph with trailing ink needs *both* of its gaps re-judged, not just the
 trailing side.
 
+**Click-affordance parity, defined by what actually exists.** Quattro has no
+active-underline idiom — `grep -rn underline` over the shell returns nothing,
+and the old Waybar rice's `style.css` had none either. `WidgetButton`'s whole
+affordance vocabulary is the pointing-hand cursor, the shared tooltip, the
+1 / 0.45 / 0 opacity ladder, and an opt-in glyph-colour swap
+(WidgetButton.qml:77). Every clickable rice module sits on `WidgetButton` and
+therefore carries all of it. Native widgets do not mark their open panel
+visually (weather binds `active` to its weather class, not to `opened`), so
+the calendar's click is **momentary** by design — run the toggle, no
+shown-state tracking — which is exact parity, not a gap.
+
 **The menu button wears the rice's power glyph** (`omenu` QML module, U+F011 —
 the same glyph `custom/omarchy` carried on Waybar). Upstream's widget hardcodes
 its logo in a private icon font with no setting, so the swap is a module that
