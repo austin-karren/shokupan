@@ -93,5 +93,13 @@ upstream's own state (`bar.json`, `branding/`, upgrade `.bak` droppings).
 - A decision nobody has made yet: whether the rice-named directory is
   `~/.config/shokupan/` (clean, one more top-level name) or a subtree of an
   existing tracked path. Bikeshed-sized, but it names the namespace forever.
-- Verifying `source` expansion end-to-end on one module before moving five —
-  the `~` expansion is read from `BarModel.js`, not yet exercised.
+- ~~Verifying `source` expansion end-to-end on one module before moving five~~
+  — done 2026-08-10, incidentally: the audio underline fix registered
+  `bar/modules/audio.qml` through an explicit
+  `"source": "~/.config/omarchy/bar/modules/audio.qml"` entry in `shell.json`,
+  and the `~` expansion resolved and loaded. The mechanism is proven; the move
+  itself still waits on the other two items. Two lessons for whoever does it:
+  the shell registers module *files* only at startup (`omarchy-restart-shell`
+  after adding one — hot-reload covers edits, not additions), and a panel-type
+  module hosted this way must keep its upstream id as the entry `id`
+  (`findPanelWidget` matches `slot.moduleName`, or IPC summon breaks).
