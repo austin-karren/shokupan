@@ -22,8 +22,9 @@
 // inner KeyboardPanel exposes `owner` for exactly this coordination, so the
 // wrapper reassigns it to itself.
 //
-// NOTE: the shell registers new files in bar/modules/ only at startup. Editing
-// this file hot-reloads; *adding* a module file needs omarchy-restart-shell.
+// NOTE: module FILES are read at startup only — both adding one and editing
+// one need omarchy-restart-shell (measured 2026-08-10: edits do not hot-reload,
+// despite what this note used to claim; only shell.json hot-reloads).
 
 import QtQuick
 import qs.Commons
