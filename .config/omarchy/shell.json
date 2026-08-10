@@ -37,9 +37,7 @@
           "verticalFormat": "h\n—\nmm"
         },
         {
-          "id": "omarchy.weather",
-          "type": "qml",
-          "source": "~/.config/omarchy/bar/modules/weather.qml"
+          "id": "omarchy.weather"
         },
         {
           "id": "omarchy.system-update"
