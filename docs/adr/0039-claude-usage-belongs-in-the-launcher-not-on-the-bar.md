@@ -1,8 +1,24 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Claude usage belongs in the launcher, not on the bar
+
+> **User-ratified 2026-08-09** ("keep the usage in the launcher, no veto") and
+> completed the same day. Of the three options below, **option 1 is what got
+> built**: a `Claude Usage` entry in the merged launcher
+> (`shokupan-cmd-claude-usage.desktop`, via the `shokupan-launcher-cmds`
+> generator) runs `~/.local/bin/claude-usage`, which reuses the model-usage
+> plugin's own `claude_usage_scanner.py` and renders the reading as a
+> notification: today's tokens, sessions and prompts, per-model split, and a
+> seven-day sparkline. Option 2 was measured dead first, as suspected — the
+> plugin is `kinds: ["bar-widget"]` only, so without a bar anchor
+> `shell toggle omarchy.model-usage` is a silent no-op with no window to show.
+> What the notification does not carry is the plan-limit percentages: those came
+> from the OAuth side in QML, and re-implementing token refresh in a shell
+> script is option-3 territory, declined. Verified live: two invocations minutes
+> apart showed advancing numbers, so the reading is current at activation, not
+> cached at generation.
 
 The `omarchy.model-usage` widget — Claude Code usage and limits, with a tabbed
 popup — is removed from the bar entirely. The intent it served is real and

@@ -295,7 +295,7 @@ are the to-do list.
 | [0036](./docs/adr/0036-middle-click-autoscroll-via-the-flags-file.md) | Middle-click autoscroll, set where the browser reads it | accepted |
 | [0037](./docs/adr/0037-the-about-window-is-sized-to-fastfetch.md) | The About window is sized to fastfetch, by measuring the cell | accepted |
 | [0038](./docs/adr/0038-helium-plays-drm-through-a-donated-widevine.md) | Helium plays DRM through a donated Widevine; Chrome is gone | accepted |
-| [0039](./docs/adr/0039-claude-usage-belongs-in-the-launcher-not-on-the-bar.md) | Claude usage belongs in the launcher, not on the bar | proposed |
+| [0039](./docs/adr/0039-claude-usage-belongs-in-the-launcher-not-on-the-bar.md) | Claude usage belongs in the launcher, not on the bar | accepted |
 | [0040](./docs/adr/0040-the-wallpaper-picker-shows-names-and-moves-the-pin.md) | Wallpaper picker shows names and moves the pin | accepted |
 | [0041](./docs/adr/0041-rice-files-out-of-the-omarchy-namespace.md) | Rice files leave the omarchy namespace where upstream's contract allows | proposed |
 

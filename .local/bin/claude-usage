@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# The Claude usage Reading, as a notification (ADR-0039, option 1).
+#
+# The bar chip is gone; this is what the launcher's "Claude Usage" entry runs.
+# It reuses the model-usage plugin's OWN scanner - the same numbers the old
+# popup's local tab showed, from the same cache - and renders them with
+# notify-send. Deliberately option 1 of ADR-0039's three: option 2 (summon the
+# existing popup) is dead, measured - the plugin is kinds:["bar-widget"] only,
+# so without a bar anchor `shell toggle` is a silent no-op. And the plan-limit
+# percentages the popup's other tab showed came from the OAuth side in QML;
+# re-implementing token refresh in bash is not worth a notification.
+#
+# So this shows the LOCAL reading: today's tokens by model, sessions, prompts,
+# and a seven-day sparkline. The scanner keeps its own cache and lock, so
+# invoking this repeatedly is cheap.
+
+set -uo pipefail
+
+SCANNER=/usr/share/omarchy/shell/plugins/model-usage/scripts/claude_usage_scanner.py
+
+[[ -f $SCANNER ]] || { notify-send -u critical "Claude Usage" "scanner missing: $SCANNER"; exit 1; }
+
+python3 - "$SCANNER" <<'PY'
+import json, subprocess, sys
+
+out = subprocess.run(
+    [sys.executable, sys.argv[1], f"{__import__('os').environ['HOME']}/.claude/projects"],
+    capture_output=True, text=True, timeout=120)
+if out.returncode != 0:
+    subprocess.run(["notify-send", "-u", "critical", "Claude Usage",
+                    f"scanner failed: {out.stderr.strip()[:120]}"])
+    sys.exit(1)
+
+d = json.loads(out.stdout)
+
+def human(n):
+    for div, suffix in ((1e9, "B"), (1e6, "M"), (1e3, "k")):
+        if n >= div:
+            return f"{n / div:.1f}{suffix}"
+    return str(n)
+
+models = sorted(d.get("todayTokensByModel", {}).items(), key=lambda kv: -kv[1])
+per_model = "  ".join(f"{name.replace('claude-', '')} {human(count)}" for name, count in models) or "no activity"
+
+days = d.get("recentDays", [])[-7:]
+peak = max((day.get("messageCount", 0) for day in days), default=0) or 1
+blocks = "▁▂▃▄▅▆▇█"
+spark = "".join(blocks[min(7, int(day.get("messageCount", 0) / peak * 7))] for day in days)
+
+body = (f"Today: {human(d.get('todayTotalTokens', 0))} tokens - "
+        f"{d.get('todaySessions', 0)} sessions, {d.get('todayPrompts', 0)} prompts\n"
+        f"{per_model}\n"
+        f"7 days: {spark}")
+
+subprocess.run(["notify-send", "-u", "low", "-i", "utilities-system-monitor",
+                "Claude Usage", body])
+PY

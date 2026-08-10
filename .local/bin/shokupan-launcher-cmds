@@ -75,6 +75,7 @@ ENTRIES = [
     ("appearance",       "Toggle Light/Dark",      0xF0594, "dark;light;appearance;mode;theme",               f"{LBIN}/toggle-appearance", "Switch between light and dark appearance", True),
     ("emoji",            "Emoji & Symbols",        0xF01F2, "emoji;symbol;unicode;character",                 f"{OBIN}/omarchy-shell shell toggle omarchy.emojis", "Pick an emoji or symbol", True),
     ("clipboard",        "Clipboard History",      0xF014D, "clipboard;paste;history;copy",                   f"{OBIN}/omarchy-shell shell toggle omarchy.clipboard", "Paste from clipboard history", True),
+    ("claude-usage",     "Claude Usage",           0xF0128, "claude;usage;tokens;ai;limits;quota;reading",    f"{LBIN}/claude-usage", "Today's Claude Code usage reading (ADR-0039)", True),
     ("wallpaper",        "Wallpaper",              0xF0E09, "background;wallpaper",                           f"{OBIN}/omarchy-menu summon style.background", "Pick a background", True),
     ("theme",            "Theme",                  0xF03D8, "theme;colours;colors;appearance",                f"{OBIN}/omarchy-menu summon style.theme", "Pick a theme", True),
     ("install",          "Install",                0xF0249, "install;add;package;software",                   f"{OBIN}/omarchy-menu summon install", "Install packages and services", True),
