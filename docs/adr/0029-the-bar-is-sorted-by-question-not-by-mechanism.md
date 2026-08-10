@@ -227,10 +227,14 @@ back into the calendar's slot on hover) and rebuilt as a hover module after
 the workspaces, so it slides right as workspaces are added.
 
 `media` joins the centre because it answers a *now* question like the clock and
-weather. `notifications` and `microphone` are **not** added: the indicators
-cluster already answers "did anything happen" and dictation state, and a second
-bell and a second mic would be the provenance-sorting mistake this ADR opens
-with, applied to new modules.
+weather. `notifications` and `microphone` were initially skipped as duplicating
+the indicators; **both calls were reversed by the user** and both are on the
+bar. The bell's popup answers "what did I miss", not "am I silenced" — and the
+mic reads and *acts on* the input device (click mutes, scroll sets source
+volume), where the Dictation indicator only reports dictation state. One
+subsystem, two directions, so the mic sits next to `omarchy.audio` — hosted
+(`bar/modules/microphone.qml`) only to pin the `Style.space(27)` box upstream's
+own widget lacks.
 
 **One departure worth naming:** giving up `centerAnchor` costs the pinned-clock
 guarantee — the centre now centres as a group, so a very wide media label can
