@@ -116,6 +116,10 @@ make_home() {
     mkdir -p "$repo/.config/hypr" "$repo/packages" "$repo/migrations"
     echo "# tracked config" >"$repo/.config/hypr/looknfeel.conf"
     printf 'bat\n' >"$repo/packages/chosen.packages"
+    # The healthy state for the debloat manifest is the launcher being absent,
+    # which a fresh fixture home already is — so listing one here exercises
+    # doctor's debloat check on every clean fixture.
+    printf 'HEY\n' >"$repo/packages/removed.webapps"
     # Must match what the stubbed pacman reports for `pacman -Q omarchy`, or every
     # fixture warns about version drift.
     printf '%s\n' "$STUB_OMARCHY_VERSION" >"$repo/packages/omarchy.pin"
@@ -175,9 +179,19 @@ case "\$1" in
     exit 0
     ;;
   -Qqe) echo bat ;; # the record
+  -S)
+    # loaf-install's writes. Recorded rather than performed, so a test can
+    # assert WHAT would have been installed.
+    echo "pacman \$*" >>"\${STUB_LOG:-/dev/null}"
+    ;;
 esac
 STUB
 chmod +x "$BUILD/stub/pacman"
+
+# Stubbed sudo: loaf-install prefixes its pacman calls with it when not root.
+# Exec the command as-is, so the stubbed pacman is still what runs.
+printf '#!/bin/bash\nexec "$@"\n' >"$BUILD/stub/sudo"
+chmod +x "$BUILD/stub/sudo"
 
 # Run a rice command against a fixture home.
 #
@@ -193,7 +207,9 @@ loaf_run() {
     MIRRORLIST="$home/etc/pacman.d/mirrorlist" \
     NM_CONF="$home/etc/NetworkManager.conf" \
     STUB_ABSENT="${STUB_ABSENT:-}" \
+    STUB_LOG="${STUB_LOG:-}" \
     XDG_STATE_HOME="$home/.local/state" \
+    WAYLAND_DISPLAY='' \
     PATH="$BUILD/stub:$ROOT/.local/bin:$PATH" \
     "loaf-$cmd" "$@" 2>&1
 }
@@ -415,6 +431,191 @@ out=$(loaf_run "$home" heal)
 after=$(find "$home" -not -path '*/.git/*' -not -name last-heal | sort | md5sum)
 assert_equals "heal: is idempotent" "$before" "$after"
 assert_contains "heal: says so" "$out" "Nothing to heal"
+
+# ---------------------------------------------------------
+# debloat
+# ---------------------------------------------------------
+
+# A launcher on the removed list, resurrected the way omarchy-refresh-applications
+# does it: the .desktop file plus its icon.
+home=$(make_home)
+mkdir -p "$home/.local/share/applications" "$home/.local/share/icons/hicolor/256x256/apps"
+touch "$home/.local/share/applications/HEY.desktop"
+touch "$home/.local/share/icons/hicolor/256x256/apps/hey.png"
+
+out=$(loaf_run "$home" debloat)
+assert_contains "debloat: removes a listed launcher" "$out" "removed HEY"
+if [[ -e $home/.local/share/applications/HEY.desktop ]]; then
+  fail "debloat: the .desktop file is gone"
+else
+  pass "debloat: the .desktop file is gone"
+fi
+if [[ -e $home/.local/share/icons/hicolor/256x256/apps/hey.png ]]; then
+  fail "debloat: the icon goes with it"
+else
+  pass "debloat: the icon goes with it"
+fi
+
+out=$(loaf_run "$home" debloat)
+assert_equals "debloat: second run is silent — idempotent" "$out" ""
+
+# --dry-run reports without touching
+home=$(make_home)
+mkdir -p "$home/.local/share/applications"
+touch "$home/.local/share/applications/HEY.desktop"
+out=$(loaf_run "$home" debloat --dry-run)
+assert_contains "debloat: --dry-run says what it would do" "$out" "would remove HEY"
+assert_file_exists "debloat: --dry-run touches nothing" "$home/.local/share/applications/HEY.desktop"
+
+# A repo with no manifest has decided nothing
+home=$(make_home)
+rm "$home/shokupan/packages/removed.webapps"
+out=$(loaf_run "$home" debloat)
+status=$?
+assert_equals "debloat: no manifest is a silent no-op" "$out" ""
+assert_equals "debloat: no manifest exits 0" "$status" "0"
+
+# doctor flags a resurrected launcher; heal re-removes it
+home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
+mkdir -p "$home/.local/share/applications"
+touch "$home/.local/share/applications/HEY.desktop"
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: detects a resurrected launcher" "$out" "removed launcher(s) are back"
+assert_equals "doctor: a resurrected launcher is a failure" "$status" "1"
+
+out=$(loaf_run "$home" heal)
+assert_contains "heal: re-removes a resurrected launcher" "$out" "debloat: removed HEY"
+if [[ -e $home/.local/share/applications/HEY.desktop ]]; then
+  fail "heal: the launcher is gone afterwards"
+else
+  pass "heal: the launcher is gone afterwards"
+fi
+
+# ---------------------------------------------------------
+# forks
+# ---------------------------------------------------------
+
+# A recorded fork whose upstream is unchanged is healthy.
+home=$(make_home)
+mkdir -p "$home/shokupan/.config/omarchy/plugins"
+echo "fork" >"$home/shokupan/.config/omarchy/plugins/Fork.qml"
+echo "upstream v1" >"$home/upstream.qml"
+printf '.config/omarchy/plugins/Fork.qml %s %s\n' "$home/upstream.qml" \
+  "$(sha256sum "$home/upstream.qml" | awk '{print $1}')" \
+  >"$home/shokupan/packages/forks"
+out=$(loaf_run "$home" forks)
+status=$?
+assert_contains "forks: unchanged upstream is healthy" "$out" "upstream unchanged"
+assert_equals "forks: healthy exits 0" "$status" "0"
+
+# Upstream moving under the fork is the whole point of the check (ADR-0042).
+echo "upstream v2 - a fix the fork never got" >"$home/upstream.qml"
+out=$(loaf_run "$home" forks)
+status=$?
+assert_contains "forks: detects upstream moving under a fork" "$out" "upstream moved under the fork"
+assert_equals "forks: drift exits non-zero" "$status" "1"
+
+out=$(loaf_run "$home" doctor)
+assert_contains "doctor: surfaces fork drift" "$out" "upstream moved under a fork"
+
+# --record re-stamps and the board goes green again.
+loaf_run "$home" forks --record >/dev/null
+out=$(loaf_run "$home" forks)
+assert_contains "forks: --record re-stamps the verification" "$out" "upstream unchanged"
+
+# A renamed upstream file is worse than a changed one.
+rm "$home/upstream.qml"
+out=$(loaf_run "$home" forks)
+status=$?
+assert_contains "forks: detects a renamed-away upstream file" "$out" "no longer exists"
+assert_equals "forks: a missing upstream is a failure" "$status" "1"
+
+# Absolute upstream paths referenced from the rice's QML must exist
+# (ADR-0042 want 2) — hosted widgets fail silently when a rename lands.
+home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
+mkdir -p "$home/shokupan/.config/omarchy/bar/modules"
+printf 'source: "file:///usr/share/omarchy/shell/definitely-renamed-away.qml"\n' \
+  >"$home/shokupan/.config/omarchy/bar/modules/hosted.qml"
+git -C "$home/shokupan" add -A && git -C "$home/shokupan" commit -qm 'bar module' 2>/dev/null
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: detects a broken upstream QML reference" \
+  "$out" "referenced upstream path(s) missing"
+assert_equals "doctor: a broken upstream reference is a failure" "$status" "1"
+
+# ---------------------------------------------------------
+# heal reporting honesty (ADR-0042 want 4, and want 3's restart)
+# ---------------------------------------------------------
+
+# A foreign symlink at a tracked path: section 1 skips it (it IS a link), stow
+# then refuses the conflict. That used to be reported as a green change.
+home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
+rm "$home/.config/hypr/looknfeel.conf"
+ln -s /nonexistent "$home/.config/hypr/looknfeel.conf"
+out=$(loaf_run "$home" heal)
+status=$?
+assert_contains "heal: reports a failed stow as a failure" "$out" "stow failed"
+assert_equals "heal: exits non-zero when stow fails" "$status" "1"
+
+# Placing a bar module is unfinished until the shell restarts — the shell only
+# registers bar/modules/ files at startup.
+home=$(make_home)
+mkdir -p "$home/shokupan/.config/omarchy/bar/modules"
+echo "// module" >"$home/shokupan/.config/omarchy/bar/modules/new.qml"
+git -C "$home/shokupan" add -A && git -C "$home/shokupan" commit -qm 'bar module' 2>/dev/null
+out=$(loaf_run "$home" heal)
+assert_contains "heal: says the shell must restart after placing a bar module" \
+  "$out" "bar/modules changed"
+
+# ---------------------------------------------------------
+# install
+# ---------------------------------------------------------
+
+# The version binding is the point: a rice verified against one Omarchy must
+# refuse to install onto another.
+home=$(make_home)
+printf '3.8.4\n' >"$home/shokupan/packages/omarchy.pin"
+git -C "$home/shokupan" commit -qam 'pin an older Omarchy' 2>/dev/null
+out=$(loaf_run "$home" install)
+status=$?
+assert_contains "install: refuses an Omarchy the rice was not verified against" \
+  "$out" "not the version this rice was verified against"
+assert_equals "install: a pin mismatch is a hard stop" "$status" "1"
+
+out=$(loaf_run "$home" install --force)
+assert_contains "install: --force accepts the mismatch out loud" \
+  "$out" "continuing under --force"
+
+# Happy path: pin matches, everything installed — install stows, heals and ends
+# with a clean doctor.
+home=$(make_home)
+out=$(loaf_run "$home" install)
+status=$?
+assert_contains "install: confirms the pin matches" "$out" "matches the pin"
+assert_contains "install: ends with a clean doctor" "$out" "No problems"
+assert_equals "install: exits 0 on a healthy machine" "$status" "0"
+assert_symlink "install: stowed the rice" "$home/.config/hypr/looknfeel.conf"
+
+# A missing chosen package is installed via pacman, through sudo, with quattro's
+# direct-pacman guard variable satisfied by construction (env sets it).
+home=$(make_home)
+out=$(STUB_ABSENT=bat STUB_LOG="$home/pacman.log" loaf_run "$home" install)
+assert_contains "install: installs missing chosen packages" "$out" "installing 1 chosen package(s)"
+assert_contains "install: hands pacman the missing package" \
+  "$(cat "$home/pacman.log" 2>/dev/null)" "pacman -S --needed --noconfirm bat"
+
+# No CachyOS base, no install.
+home=$(make_home)
+printf '[core]\nInclude = /etc/pacman.d/mirrorlist\n' >"$home/etc/pacman.conf"
+out=$(loaf_run "$home" install)
+status=$?
+assert_contains "install: refuses a base that is not CachyOS" "$out" "not CachyOS"
+assert_equals "install: a foreign base is a hard stop" "$status" "1"
 
 # ---------------------------------------------------------
 # dispatch

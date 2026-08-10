@@ -55,3 +55,24 @@ acceptable until upstream churn proves otherwise.
 This ADR is the work list for making loaf quattro-complete. It stays proposed
 until the four wants above exist and a real `omarchy update` has been survived
 without hands.
+
+## Status, 2026-08-10
+
+Measured against the suite (`test/loaf-test.sh`, 95 checks green):
+
+1. **Done.** `packages/forks` records each fork, the upstream file it shadows,
+   and that file's SHA-256 at verification. `loaf forks` compares (re-stamp
+   with `--record`), and doctor carries a `forks` check. Same by-hand
+   re-verification contract as `omarchy.pin`.
+2. **Done.** Doctor's `upstream refs` check greps the rice's QML/JS for
+   absolute `/usr/share/omarchy/...` references and fails when one is missing.
+3. **Done.** Heal tracks whether its restore or stow pass touched
+   `bar/modules/` and restarts the shell (or says it must be restarted when no
+   session is reachable).
+4. **Half done.** Heal now checks stow's exit status — a failed restow is a
+   red failure that stops the run, not a green "change". The adopt-identical-
+   real-files half is still open, under the learned constraint that a real
+   file is only cleared if the restow replacing it succeeds in the same breath.
+
+Still owed before `accepted`: want 4's adoption pass, and a real
+`omarchy update` survived without hands.

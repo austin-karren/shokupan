@@ -35,6 +35,13 @@ git diff         # review what --adopt pulled in from the live system
 loaf doctor      # confirm all three layers agree
 ```
 
+`--adopt` is the first-machine move — it captures a live system into the repo.
+A **fresh** machine goes the other way: install CachyOS normally, layer quattro
+(`lab/`, ADR-0035), then run `.local/bin/loaf-install` from the clone. It
+refuses an Omarchy other than `packages/omarchy.pin` (ADR-0043), installs the
+chosen packages and flatpaks, stows, debloats and migrates — every step
+idempotent, so a failed run resumes by running it again.
+
 The directory name matters: `loaf` defaults to `~/shokupan` when `LOAF_ROOT` is
 unset, so cloning it anywhere else means exporting that variable.
 
@@ -143,6 +150,10 @@ loaf              # list commands
 loaf doctor       # check all three layers for drift — read-only, no sudo
 loaf heal         # re-assert the rice on top, apply pending migrations
 loaf packages     # diff the manifest against what is installed
+loaf flatpaks     # same, for the Flatpak manifest
+loaf debloat      # re-remove the Omarchy defaults decided against (ADR-0043)
+loaf forks        # check recorded forks against the upstream files they shadow
+loaf install      # bootstrap a fresh CachyOS + Omarchy machine, bound to the pin
 ```
 
 `loaf heal` runs automatically after every `omarchy update`, via
@@ -157,6 +168,13 @@ See [ADR-0028](./docs/adr/0028-the-rice-re-asserts-itself-after-upstream-updates
 for why this exists and why migrations are worth having on a single machine.
 
 ## Packages
+
+The manifests in `packages/` each record one kind of decision: `chosen.packages`
+and `chosen.flatpaks` (what was added), `removed.webapps` (which Omarchy default
+launchers were removed — re-asserted by `loaf debloat`, ADR-0043), `forks` (which
+upstream files the rice forks, and the SHA-256 each had at verification —
+checked by `loaf forks`, ADR-0042), and `omarchy.pin` (which Omarchy all of it
+was verified against).
 
 Two files, doing different jobs:
 
@@ -260,12 +278,12 @@ are the to-do list.
 | [0001](./docs/adr/0001-omarchy-on-cachyos-not-the-omarchy-iso.md) | Omarchy layered onto CachyOS, not the Omarchy ISO — includes the installer path fix | accepted |
 | [0002](./docs/adr/0002-single-flat-stow-package.md) | One flat Stow package, adopted in place | accepted |
 | [0003](./docs/adr/0003-identity-behind-untracked-includes.md) | Identity behind untracked includes | accepted |
-| [0004](./docs/adr/0004-waybar-modules-dismiss-on-second-click.md) | Bar modules dismiss on a second click | accepted |
-| [0005](./docs/adr/0005-waybar-supervised-by-a-userspace-watchdog.md) | Waybar supervised by a polling watchdog | accepted |
+| [0004](./docs/adr/0004-waybar-modules-dismiss-on-second-click.md) | Bar modules dismiss on a second click | superseded by 0033 |
+| [0005](./docs/adr/0005-waybar-supervised-by-a-userspace-watchdog.md) | Waybar supervised by a polling watchdog | superseded by 0033 |
 | [0006](./docs/adr/0006-calendar-hidden-on-its-own-special-workspace.md) | Calendar on its own special workspace | accepted |
 | [0007](./docs/adr/0007-wallpaper-pinned-independently-of-the-theme.md) | Wallpaper pinned independently of the theme | accepted |
 | [0008](./docs/adr/0008-aether-confined-to-generated-named-themes.md) | Aether may generate themes, not apply them | accepted |
-| [0009](./docs/adr/0009-waybar-stays-dark-in-every-theme.md) | The bar stays dark in every theme | accepted |
+| [0009](./docs/adr/0009-waybar-stays-dark-in-every-theme.md) | The bar stays dark in every theme | superseded by 0033 |
 | [0010](./docs/adr/0010-split-xcompose-to-track-it.md) | Split `~/.XCompose` so it can be tracked | accepted |
 | [0011](./docs/adr/0011-extend-second-click-dismissal-to-audio-and-cpu.md) | Second-click dismissal for audio and CPU | proposed |
 | [0012](./docs/adr/0012-unify-launcher-and-palette-on-elephant-menus.md) | Unify Launcher and System Palette | superseded by 0027 |
@@ -299,6 +317,7 @@ are the to-do list.
 | [0040](./docs/adr/0040-the-wallpaper-picker-shows-names-and-moves-the-pin.md) | Wallpaper picker shows names and moves the pin | accepted |
 | [0041](./docs/adr/0041-rice-files-out-of-the-omarchy-namespace.md) | Rice files leave the omarchy namespace where upstream's contract allows | proposed |
 | [0042](./docs/adr/0042-loaf-must-reassert-the-quattro-rice-without-hands.md) | Loaf must re-assert the quattro rice without hands | proposed |
+| [0043](./docs/adr/0043-loaf-installs-and-debloats-bound-to-the-pin.md) | Loaf installs and debloats, bound to the Omarchy pin | accepted |
 
 ## To do
 
