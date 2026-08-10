@@ -1,0 +1,57 @@
+---
+status: proposed
+---
+
+# Loaf must re-assert the quattro rice without hands
+
+The quattro port was done by hand — five agents, a day, sixty commits. ADR-0028's
+contract is that this never happens twice: after an upstream update, `loaf heal`
+re-asserts the rice. The trigger half of that contract survived the upgrade,
+measured: quattro's `omarchy-update` line 79 still runs `omarchy-hook post-update`,
+the hook directory convention is unchanged, and `10-loaf-heal` is installed. Heal
+will run.
+
+Heal *running* is no longer heal *sufficing*. The quattro rice contains things a
+symlink pass cannot re-assert, and each is a way the next `omarchy update` breaks
+the desktop while doctor stays green. In order of blast radius:
+
+1. **The launcher fork drifts silently.** `shokupan.launcher` is 655 lines copied
+   from upstream's `Launcher.qml` and re-ordered (ADR-0027). Upstream fixes never
+   reach it, and nothing detects the divergence. `weather-icon --check-icons` is
+   the existing pattern for exactly this — a fork that must track its upstream —
+   and it caught real drift the day it was needed. Wanted: a doctor `forks` check
+   that compares each recorded fork against the upstream file it shadows, so an
+   omarchy update that touches `Launcher.qml` turns the board red instead of
+   leaving a stale launcher.
+
+2. **Hosted widgets reference upstream QML by absolute path.** The bar modules
+   host upstream's real widgets (`Panel.qml` and friends) and re-point
+   `activePopout` ownership (the Hosted-widget contract, CONTEXT.md). An upstream
+   rename breaks them with no error anywhere, because quickshell's stdout and
+   stderr both point at `/dev/null` — measured, it cost three silent failures
+   during the port. Wanted: doctor asserts every upstream path our QML references
+   still exists.
+
+3. **New bar modules render nothing until the shell restarts.** The shell
+   registers files in `bar/modules/` only at startup, so a heal that placed a new
+   module symlink has silently not finished. Wanted: heal restarts the shell (or
+   says it must be restarted) when its stow pass touched `bar/modules/`.
+
+4. **Heal loses to foreign real files, all or nothing.** One untracked real file
+   at a tracked path aborts the entire restow, and heal's reporting then misleads
+   ("1 change(s)" for an aborted run; "Nothing to heal" immediately after placing
+   links). The port needed the manual fix twice: `cmp` the conflict, remove the
+   identical live copy, restow. Wanted: heal adopts identical real files itself
+   and reports truthfully — under the hard constraint, learned live, that a real
+   file is only cleared if the restow replacing it succeeds in the same breath
+   (the running shell lost camera/globe/power on 2026-08-09 when it did not).
+
+Working as designed, listed so nobody "fixes" them: `packages/omarchy.pin` is
+updated by hand per verified upgrade — that is the version-lag contract
+(ADR-0034), not a gap. And the generated launcher entries
+(`shokupan-launcher-cmds`) regenerate on demand rather than on heal, which is
+acceptable until upstream churn proves otherwise.
+
+This ADR is the work list for making loaf quattro-complete. It stays proposed
+until the four wants above exist and a real `omarchy update` has been survived
+without hands.

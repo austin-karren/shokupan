@@ -298,10 +298,16 @@ are the to-do list.
 | [0039](./docs/adr/0039-claude-usage-belongs-in-the-launcher-not-on-the-bar.md) | Claude usage belongs in the launcher, not on the bar | accepted |
 | [0040](./docs/adr/0040-the-wallpaper-picker-shows-names-and-moves-the-pin.md) | Wallpaper picker shows names and moves the pin | accepted |
 | [0041](./docs/adr/0041-rice-files-out-of-the-omarchy-namespace.md) | Rice files leave the omarchy namespace where upstream's contract allows | proposed |
+| [0042](./docs/adr/0042-loaf-must-reassert-the-quattro-rice-without-hands.md) | Loaf must re-assert the quattro rice without hands | proposed |
 
 ## To do
 
-- Work through the proposed ADRs above
+- **Make loaf quattro-complete (ADR-0042)** — the port was done by hand; the four
+  gaps that would make the next `omarchy update` need hands again are listed
+  there: launcher-fork drift detection, hosted-widget path assertions, heal
+  restarting the shell after module changes, and heal adopting identical foreign
+  real files with truthful reporting
+- Work through the other proposed ADRs above (0017, 0018, 0035, 0041)
 - Teach `loaf doctor` to check that the pinned wallpaper survived the last theme
   change — an ADR'd behaviour with no assertion behind it. The watchdog half of
   this item died with Waybar (ADR-0005, ADR-0033)
@@ -311,24 +317,5 @@ are the to-do list.
   the switch in the Toggle Menu. Until then it is the flag file itself:
   `~/.local/state/omarchy/toggles/window-resize-clamp` (present = clamp) —
   `window-resize --toggle-mode` went with the script in the quattro port
-- Put Tailscale in the right-hand group of the bar. `omarchy install tailscale`
-  already exists and installs the service plus an admin-console web app, so the
-  work is the module, not the install. Placement follows ADR-0029 — the question
-  it answers, not where there is room — and it joins the existing box rule for
-  Pitch rather than getting margins of its own
-- Make the Flatpaks reproducible. A fresh clone installs the Ref handler
-  (ADR-0032) but no Flatpaks: `packages/chosen.packages` is pacman-only, so an
-  app like Dawn appears in neither the manifest nor the record. Wants a second
-  manifest and a `loaf` command that installs and diffs it. Install order for
-  anything new is `omarchy install <thing>` when Omarchy ships an installer,
-  then `omarchy pkg add <packages...>`, and Flatpak only for what neither
-  covers — note `omarchy pkg install` is a fuzzy-finder TUI that ignores
-  arguments, so it is never the scripted form
-- Execute the quattro migration (ADR-0033). The Hyprland layer is the work, not
-  the bar; the bar modules already emit Waybar-style JSON, which quattro's command
-  module type consumes directly
-- Audit the per-application tweaks and track the ones worth keeping. Slack's
-  Electron menu bar is hidden, Helium's profiles were made themable, and Helium
-  got the Chrome DRM component — none of them are in the repo today, and
-  `~/.config/chromium-flags.conf` is untracked but still stock. Expect more of
-  these than the three named
+- Play one DRM stream in Helium to close ADR-0038's owed verification, then
+  delete the leftover `~/.config/google-chrome/` profile
