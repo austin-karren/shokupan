@@ -282,6 +282,7 @@ tesseract
 tesseract-data-eng
 texinfo
 tldr
+tmux
 tobi-try
 tree-sitter-cli
 ttf-bitstream-vera
