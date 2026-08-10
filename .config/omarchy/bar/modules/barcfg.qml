@@ -51,10 +51,14 @@ Item {
     && bar.centerSectionRevealHeld === true
     && bar.centerHoverRevealSuppressed !== true)
 
-  // Collapse entirely at rest so no hole sits in the centre cluster.
+  // Collapse entirely at rest so no hole sits in the centre cluster. NO
+  // `visible: implicitWidth > 0` here: QML visibility is effective down the
+  // tree, so hiding root would also hide configControlProxy below — and
+  // openConfigPanel() skips invisible controls, which would break
+  // omarchy-launch-bar-settings exactly while the gear is at rest. Zero
+  // width already removes it from layout and hit-testing.
   implicitWidth: revealed ? btn.implicitWidth : 0
   implicitHeight: bar ? bar.barSize : 26
-  visible: implicitWidth > 0
 
   // WidgetButton so the revealed gear carries the same hover highlight,
   // pressed state and tooltip chrome as every clickable built-in.
@@ -86,6 +90,18 @@ Item {
     onLoaded: {
       item.anchorItem = btn
       if (root.bar) item.bar = root.bar
+      // Re-point the panel's popout registration at this wrapper, so the
+      // bar's `activePopout === slot.activeItem` identity check — which is
+      // what shows the open-panel underline — holds under hosting (same as
+      // audio.qml). The KeyboardPanel is a layer-shell WINDOW, not a visual
+      // child, so it lives in `data` rather than `children`.
+      for (var i = 0; i < item.data.length; i++) {
+        var p = item.data[i]
+        if (p && "owner" in p && "anchorItem" in p && "open" in p) {
+          p.owner = root
+          break
+        }
+      }
     }
   }
 
