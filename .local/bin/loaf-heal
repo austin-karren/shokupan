@@ -28,6 +28,14 @@ STATE_DIR="${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/loaf"
 # they need the same injectable root — otherwise a test migration would edit the
 # real $HOME.
 export LOAF_HOME LOAF_ROOT
+# Sibling loaf-* commands resolve relative to this script, not to a PATH that
+# may not contain ~/.local/bin yet — on a fresh machine the symlinks only land
+# after the first stow pass. Measured in the lab: heal silently skipped debloat.
+PATH="$(dirname "$(realpath "$0")"):$PATH"
+# Sibling loaf-* commands resolve relative to this script, not to a PATH that
+# may not contain ~/.local/bin yet — on a fresh machine the symlinks only land
+# after the first stow pass. Measured in the lab: heal silently skipped debloat.
+PATH="$(dirname "$(realpath "$0")"):$PATH"
 APPLIED="$STATE_DIR/applied"
 
 # Must match loaf-doctor's list and .stow-local-ignore — see the note there.

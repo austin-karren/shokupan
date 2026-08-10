@@ -22,6 +22,14 @@ set -uo pipefail
 LOAF_HOME="${LOAF_HOME:-$HOME}"
 LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
 export LOAF_HOME LOAF_ROOT
+# Sibling loaf-* commands resolve relative to this script, not to a PATH that
+# may not contain ~/.local/bin yet — on a fresh machine the symlinks only land
+# after the first stow pass. Measured in the lab: heal silently skipped debloat.
+PATH="$(dirname "$(realpath "$0")"):$PATH"
+# Sibling loaf-* commands resolve relative to this script, not to a PATH that
+# may not contain ~/.local/bin yet — on a fresh machine the symlinks only land
+# after the first stow pass. Measured in the lab: heal silently skipped debloat.
+PATH="$(dirname "$(realpath "$0")"):$PATH"
 PACMAN_CONF="${PACMAN_CONF:-/etc/pacman.conf}"
 
 force=false
