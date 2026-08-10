@@ -93,9 +93,8 @@
           "id": "omarchy.bluetooth"
         },
         {
-          "id": "omarchy.network",
-          "type": "qml",
-          "source": "~/.config/omarchy/bar/modules/network.qml"
+          "id": "network",
+          "type": "qml"
         },
         {
           "id": "omarchy.audio",

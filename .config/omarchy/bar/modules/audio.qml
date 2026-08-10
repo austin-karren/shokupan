@@ -49,18 +49,6 @@ Item {
   function open() { if (inner.item && typeof inner.item.open === "function") inner.item.open() }
   function close() { if (inner.item && typeof inner.item.close === "function") inner.item.close() }
 
-  // The popout coordinator prefers closeForPopoutSwitch() over close() when
-  // the user moves straight from one open panel to another — it is the fast
-  // path that skips the close animation and hands off immediately. Without
-  // these two forwards, every menu switch involving audio takes the slow
-  // full-close route, which reads as the whole bar feeling laggy.
-  readonly property bool popoutSwitchClosing: inner.item ? inner.item.popoutSwitchClosing === true : false
-  function closeForPopoutSwitch() {
-    if (!inner.item) return
-    if (typeof inner.item.closeForPopoutSwitch === "function") inner.item.closeForPopoutSwitch()
-    else if (typeof inner.item.close === "function") inner.item.close()
-  }
-
   // Read by Bar.qml's openPanelIndicator: shift the underline to the ink's
   // centre. Horizontal bars only — on a vertical bar the glyph box is square
   // and the indicator runs along the other axis.
@@ -75,44 +63,6 @@ Item {
     id: metrics
     // text / font are bound to the live chip in inject(), so the offset
     // re-computes whenever the volume ladder swaps the glyph.
-  }
-
-  // Tab / Shift+Tab inside a panel cycles to the neighbouring panel via
-  // bar.switchPanelFrom(root, dir) — but the inner panel passes ITS root, and
-  // the bar resolves the current slot by `slot.activeItem === owner`, which is
-  // this wrapper. So the inner handler silently no-ops under hosting. Re-route
-  // the key catcher's signal at the wrapper, passing ourselves; the inner
-  // handler still runs first and still no-ops, harmlessly.
-  property var keyCatcher: null
-
-  function findKeyCatcher(obj, depth) {
-    if (!obj || depth > 7) return null
-    if ("tabRequested" in obj && "closeRequested" in obj) return obj
-    var kids = obj.children || []
-    for (var i = 0; i < kids.length; i++) {
-      var hit = findKeyCatcher(kids[i], depth + 1)
-      if (hit) return hit
-    }
-    return null
-  }
-
-  // The catcher lives inside the KeyboardPanel window's content, which may not
-  // be built until the panel first opens — so look again on each open until
-  // found, rather than only at inject time.
-  onOpenedChanged: {
-    if (opened && !keyCatcher && innerPanelWindow)
-      keyCatcher = findKeyCatcher(innerPanelWindow.contentItem, 0)
-  }
-
-  property var innerPanelWindow: null
-
-  Connections {
-    target: root.keyCatcher
-    enabled: root.keyCatcher !== null
-    function onTabRequested(direction) {
-      if (root.bar && typeof root.bar.switchPanelFrom === "function")
-        root.bar.switchPanelFrom(root, direction)
-    }
   }
 
   function inject() {
@@ -142,13 +92,9 @@ Item {
       var p = w.data[j]
       if (p && "owner" in p && "anchorItem" in p && "open" in p) {
         p.owner = root
-        root.innerPanelWindow = p
         break
       }
     }
-
-    if (!root.keyCatcher && root.innerPanelWindow)
-      root.keyCatcher = findKeyCatcher(root.innerPanelWindow.contentItem, 0)
   }
 
   onBarChanged: inject()
