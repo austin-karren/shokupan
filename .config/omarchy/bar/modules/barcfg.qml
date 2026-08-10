@@ -1,28 +1,27 @@
-// The bar-config button, moved out of the centre to sit after the workspaces.
+// The bar-config button, in the centre cluster to the left of the calendar.
 //
-// Quattro puts this button to the left of the centred clock and reveals it when
-// the centre of the bar is hovered. Wanted here instead: same hidden-until-hover
-// behaviour, but positioned after the workspaces so it slides right on its own as
-// workspaces are added.
+// Quattro's built-in gear sits to the left of the clock — exactly where it
+// crowded our calendar icon — and it cannot be relocated: `BarConfigControl`
+// is instantiated inside Bar.qml at `anchors.right: centerAnchorModule.left`,
+// guarded by `centerAnchorModule.moduleName === "omarchy.clock"` — neither is
+// reachable from shell.json, so moving it would mean owning the bar engine.
+// Hence this module; the built-in stays hidden because it only renders when
+// the clock is the centre anchor, and our shell.json sets centerAnchor: "".
 //
-// It cannot be the built-in one relocated. `BarConfigControl` is instantiated
-// inside Bar.qml at `anchors.right: centerAnchorModule.left`, guarded by
-// `centerAnchorModule.moduleName === "omarchy.clock"` — neither is reachable from
-// shell.json, so moving it would mean owning the bar engine.
+// An earlier revision lived in the LEFT section after the workspaces and
+// owned its own reveal: a 14px always-present strip that painted the glyph
+// only under its own pointer. Undiscoverable in practice — it read as
+// removed. Now it lives in the centre list, so it participates in the centre
+// hover group and reveals with the indicators and everything else via
+// `bar.centerSectionRevealHeld` — one large, discoverable hover target, the
+// way the stock gear behaved.
 //
-// It also cannot borrow the reveal signal. `bar.centerSectionRevealHeld` is set
-// only by HoverHandlers on the *centre* module list; there is no left- or
-// right-section equivalent, so hovering the left of the bar tells us nothing.
+// No width animation of our own: width snaps and the WidgetButton's 140ms
+// opacity fade carries the reveal, matching the native indicators (the same
+// lesson as the ratio indicator's late-appearance fix).
 //
-// So this module owns its own reveal: it always occupies a narrow strip, which is
-// what makes it hoverable at all, and paints the glyph only while that strip is
-// under the pointer. The strip reads as a gap in the bar rather than as a
-// control, which is the intended resting state.
-//
-// The one behavioural difference from the built-in group worth knowing: the
-// indicators and the stock config button reveal together when you hover anywhere
-// in the centre, so the clock acts as a large, discoverable target. This one has
-// only its own strip. Widen `hiddenWidth` if it turns out to be fiddly to hit.
+// NOTE: module FILES are read at startup only — adding or editing one needs
+// omarchy-restart-shell; only shell.json hot-reloads.
 
 import QtQuick
 import qs.Ui
@@ -34,15 +33,14 @@ Item {
   property string moduleName
   property var settings
 
-  readonly property int hiddenWidth: 14
-  readonly property bool revealed: hover.hovered
+  readonly property bool revealed: bar
+    && bar.centerSectionRevealHeld === true
+    && bar.centerHoverRevealSuppressed !== true
 
-  implicitWidth: revealed ? btn.implicitWidth : hiddenWidth
+  // Collapse entirely at rest so no hole sits in the centre cluster.
+  implicitWidth: revealed ? btn.implicitWidth : 0
   implicitHeight: bar ? bar.barSize : 26
-
-  Behavior on implicitWidth { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-
-  HoverHandler { id: hover }
+  visible: implicitWidth > 0
 
   // WidgetButton so the revealed gear carries the same hover highlight,
   // pressed state and tooltip chrome as every clickable built-in.
@@ -50,8 +48,12 @@ Item {
     id: btn
     anchors.verticalCenter: parent.verticalCenter
     bar: root.bar
-    text: ""
+    // U+F013 gear as an escape, not a literal: a pasted private-use glyph was
+    // lost in an edit once, and an empty text renders the button at opacity 0
+    // with no error anywhere (same lesson as ratio-toggle's header).
+    text: "\uf013"
     tooltipText: "Bar settings"
+    dimmed: true
     concealed: !root.revealed
     interactive: root.revealed
     onPressed: function(b) {

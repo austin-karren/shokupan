@@ -16,15 +16,15 @@
         },
         {
           "id": "omarchy.workspaces"
-        },
-        {
-          "id": "barcfg",
-          "type": "qml"
         }
       ],
       "center": [
         {
           "id": "omarchy.media"
+        },
+        {
+          "id": "barcfg",
+          "type": "qml"
         },
         {
           "id": "calendar",
