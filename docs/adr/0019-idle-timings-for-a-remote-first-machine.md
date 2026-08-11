@@ -63,10 +63,12 @@ actual remote path: Tailscale SSH is enabled (ADR-0016).
 ## Decision, 2026-08-11
 
 `screensaver: 300, lock: 900` — double the old screensaver delay, lock at 15
-minutes. Set in `shell.json` and verified live via `omarchy-shell idle status`
-(hot-reload picked it up without a shell restart). Display-off still follows
-the lock by 5 seconds, so the effective chain is 5 min screensaver → 15 min
-lock → screen off.
+minutes. Set in `shell.json`. Trap discovered while verifying: hot-reload updates what
+`omarchy-shell idle status` *reports*, but the IdleMonitor keeps its stale
+Wayland idle registration and the chain silently never fires — changing these
+keys requires `omarchy-restart-shell`. Display-off still follows the lock by
+5 seconds, so the effective chain is 5 min screensaver → 15 min lock →
+screen off.
 
 ## Still to settle
 - **Whether to lock on idle at all**, given the remote goal. A machine you SSH

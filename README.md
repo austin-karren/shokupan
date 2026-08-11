@@ -117,7 +117,7 @@ it can also override anything the tracked `.bashrc` set.
 | `.config/zed/` | Editor + agent settings |
 | `.config/git/config` | Aliases, delta pager, zdiff3, rerere |
 | `.config/uwsm/` | Session env (incl. making snap apps visible to the launcher) |
-| `.config/omarchy/shell.json` | The quickshell bar: layout, module settings, idle timings. Hot-reloaded — the shell watches this file, so edits apply without a restart |
+| `.config/omarchy/shell.json` | The quickshell bar: layout, module settings, idle timings. Hot-reloaded for bar/layout edits — but the **idle timings need `omarchy-restart-shell`**: hot-reload updates the reported values while the IdleMonitor keeps its old timer, so the chain silently never fires (observed 2026-08-11) |
 | `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express: the static calendar, the two-faced zen-ratio toggle in the centre, and the bar-settings gear after the workspaces. New files here need `omarchy-restart-shell`; edits hot-reload |
 | `.config/omarchy/themed/shell.toml.tpl` | Theme template override that pins the bar dark in every theme (ADR-0009). User templates outrank Omarchy's, so this replaces the built-in wholesale — re-diff it after an upgrade |
 | `.config/omarchy/extensions/omarchy-menu.jsonc` | Our rows in the Omarchy Menu, and the System Palette's only home since quattro (ADR-0027) — the sanctioned extension point, not a patched Omarchy file. Hot-reloaded. Replaced `menu.sh`, whose bash extension point quattro removed |
