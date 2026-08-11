@@ -3,9 +3,6 @@
 # Include fast emoji access
 include "/usr/share/omarchy/default/xcompose"
 
-# Identity expansions (name, email) live machine-side, never committed — the
-# ADR-0003 pattern. A missing file here is FATAL to the whole table, measured:
-# xkbcommon aborts the parse, so every compose sequence above dies too, not just
-# the identity binds. ~/.XCompose.local is therefore in the README's Required
-# section next to ~/.gitconfig.local. Even an empty file makes the parse succeed.
-include "%H/.XCompose.local"
+# Identification
+<Multi_key> <space> <n> : ""
+<Multi_key> <space> <e> : ""

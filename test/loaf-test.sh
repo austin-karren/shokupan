@@ -188,6 +188,16 @@ esac
 STUB
 chmod +x "$BUILD/stub/pacman"
 
+# Stubbed hyprctl, so doctor's emergency-mode check answers to the test rather
+# than to whatever compositor the machine running the suite has. $STUB_HYPR_ERRORS
+# is what `configerrors` reports; empty means a clean config.
+cat >"$BUILD/stub/hyprctl" <<'STUB'
+#!/bin/bash
+[[ $1 == configerrors ]] || exit 1
+printf '%s' "${STUB_HYPR_ERRORS:-}"
+STUB
+chmod +x "$BUILD/stub/hyprctl"
+
 # Stubbed sudo: loaf-install prefixes its pacman calls with it when not root.
 # Exec the command as-is, so the stubbed pacman is still what runs.
 printf '#!/bin/bash\nexec "$@"\n' >"$BUILD/stub/sudo"
@@ -210,6 +220,8 @@ loaf_run() {
     STUB_LOG="${STUB_LOG:-}" \
     XDG_STATE_HOME="$home/.local/state" \
     WAYLAND_DISPLAY='' \
+    HYPR_RUNTIME_DIR="$home/hypr-runtime" \
+    STUB_HYPR_ERRORS="${STUB_HYPR_ERRORS:-}" \
     PATH="$BUILD/stub:$ROOT/.local/bin:$PATH" \
     "loaf-$cmd" "$@" 2>&1
 }
@@ -546,6 +558,36 @@ status=$?
 assert_contains "doctor: detects a broken upstream QML reference" \
   "$out" "referenced upstream path(s) missing"
 assert_equals "doctor: a broken upstream reference is a failure" "$status" "1"
+
+# ---------------------------------------------------------
+# hyprland emergency mode
+# ---------------------------------------------------------
+
+# Emergency mode outlives its cause (a restow window left hyprland.lua absent
+# for a minute; the banner stayed after the file returned), so doctor asks the
+# compositor rather than the filesystem.
+home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
+mkdir -p "$home/hypr-runtime/some-instance-signature"
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: reports a clean hyprland config" "$out" "no config errors"
+assert_equals "doctor: a clean compositor is not a problem" "$status" "0"
+
+out=$(STUB_HYPR_ERRORS='cannot open /home/x/.config/hypr/hyprland.lua: No such file or directory' \
+  loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: surfaces hyprland config errors" "$out" "emergency mode is likely active"
+assert_contains "doctor: says how to recover" "$out" "hyprctl reload"
+assert_equals "doctor: a wedged compositor is a failure" "$status" "1"
+
+# No runtime dir means no compositor — a TTY or SSH session, not a problem.
+home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_not_contains "doctor: says nothing about hyprland without a compositor" "$out" "hyprland"
+assert_equals "doctor: no compositor is not a problem" "$status" "0"
 
 # ---------------------------------------------------------
 # heal reporting honesty (ADR-0042 want 4, and want 3's restart)

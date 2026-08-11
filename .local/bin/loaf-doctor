@@ -191,6 +191,40 @@ else
     "the desktop layer is gone — reinstall omarchy (or omarchy-dev) from the [omarchy] repo"
 fi
 
+# Emergency mode outlives its cause. A config file missing for even a moment —
+# measured 2026-08-10, when a restow window left hyprland.lua absent exactly as
+# Hyprland reloaded — registers no binds and trips emergency mode, and the
+# banner then stays up after the file is back: nothing re-reads the config
+# until an explicit `hyprctl reload`. Doctor at that moment showed all green,
+# because the symlinks WERE healthy. So ask the compositor itself.
+#
+# The newest socket directory is the live instance: a compositor restart mints
+# a new signature and the stale directories linger, so the environment's
+# $HYPRLAND_INSTANCE_SIGNATURE (inherited from before the restart) cannot be
+# trusted — also measured. Skipped entirely when no runtime dir exists: a TTY,
+# an SSH session on a headless box, and the test fixtures all have none, and
+# "no compositor" is not a config error.
+HYPR_RUNTIME_DIR="${HYPR_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr}"
+if command -v hyprctl &>/dev/null && [[ -d $HYPR_RUNTIME_DIR ]]; then
+  # shellcheck disable=SC2012  # signatures are plain dir names; mtime order is the point
+  hypr_sig=$(ls -t "$HYPR_RUNTIME_DIR" 2>/dev/null | head -1)
+  if [[ -n $hypr_sig ]]; then
+    if hypr_errors=$(HYPRLAND_INSTANCE_SIGNATURE="$hypr_sig" hyprctl configerrors 2>/dev/null); then
+      # "no errors" is what some hyprctl versions print for a clean config.
+      if [[ -z $hypr_errors || $hypr_errors == "no errors" ]]; then
+        ok "hyprland" "no config errors"
+      else
+        mapfile -t hypr_error_lines <<<"$hypr_errors"
+        bad "hyprland" "config errors — emergency mode is likely active" \
+          "${hypr_error_lines[@]}" \
+          "fix the config, then: hyprctl reload"
+      fi
+    fi
+    # A failing hyprctl (socket gone mid-check, ancient version without
+    # configerrors) is silence, not a verdict — it cannot tell either way.
+  fi
+fi
+
 # `omarchy dev link` repoints $OMARCHY_PATH at a source checkout, which is a
 # legitimate state but means the version reported above is not what is running.
 # Worth saying out loud rather than silently comparing the pin against something
