@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Retune the idle chain, and keep the machine reachable
@@ -60,12 +60,15 @@ question — so no change may introduce an idle suspend. Verified to hold under
 quattro (no suspend listener anywhere in the idle plugin), and now backed by an
 actual remote path: Tailscale SSH is enabled (ADR-0016).
 
-## Still to settle
+## Decision, 2026-08-11
 
-- **The two numbers.** "Slightly too fast" and "much longer" still need actual
-  values; under the new semantics they are trivially expressible — e.g.
-  `screensaver: 300, lock: 1800` reads exactly as it behaves. They live in
-  `shell.json`, which is hot-reloaded, so trying values costs nothing.
+`screensaver: 300, lock: 900` — double the old screensaver delay, lock at 15
+minutes. Set in `shell.json` and verified live via `omarchy-shell idle status`
+(hot-reload picked it up without a shell restart). Display-off still follows
+the lock by 5 seconds, so the effective chain is 5 min screensaver → 15 min
+lock → screen off.
+
+## Still to settle
 - **Whether to lock on idle at all**, given the remote goal. A machine you SSH
   into does not benefit from its local screen locking — but it is a physical
   desktop, so this is a security decision, not a technical one.

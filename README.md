@@ -293,7 +293,7 @@ are the to-do list.
 | [0016](./docs/adr/0016-remote-access-from-the-macbook.md) | Reach this machine from the MacBook over Tailscale | accepted |
 | [0017](./docs/adr/0017-druk-as-the-terminal-editor.md) | Bake off druk, Helix and Neovim as the terminal editor | proposed |
 | [0018](./docs/adr/0018-worktrunk-for-git-worktrees.md) | Manage worktrees with worktrunk | proposed |
-| [0019](./docs/adr/0019-idle-timings-for-a-remote-first-machine.md) | Retune the idle chain, keep the machine reachable | proposed |
+| [0019](./docs/adr/0019-idle-timings-for-a-remote-first-machine.md) | Retune the idle chain, keep the machine reachable | accepted |
 | [0020](./docs/adr/0020-super-w-closes-the-smallest-surface.md) | `SUPER+W` closes the smallest surface, not the window | accepted |
 | [0021](./docs/adr/0021-floating-mode-as-a-real-mode.md) | Make floating a real mode, toggleable from the bar | rejected — the capability shipped in 0024/0025, the mode is not wanted |
 | [0022](./docs/adr/0022-cycle-split-ratios-with-arrow-keys.md) | Cycle window sizes along a Size ladder | accepted |
