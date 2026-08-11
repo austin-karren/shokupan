@@ -110,6 +110,9 @@
   "plugins": [
     {
       "id": "shokupan.launcher"
+    },
+    {
+      "id": "shokupan.dpms-guard"
     }
   ]
 }

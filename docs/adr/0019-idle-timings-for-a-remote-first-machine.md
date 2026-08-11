@@ -70,6 +70,23 @@ keys requires `omarchy-restart-shell`. Display-off still follows the lock by
 5 seconds, so the effective chain is 5 min screensaver → 15 min lock →
 screen off.
 
+## Addendum, 2026-08-11: the display that would not stay off
+
+Found while verifying: the BenQ (USB-C/DP alt-mode) drops its DP link when it
+deep-sleeps after the post-lock DPMS off. The kernel reports a connector
+hotplug and Hyprland sometimes re-enables the output — the lock screen then
+stays lit indefinitely (a known Hyprland/DP issue: hyprwm/Hyprland#13654,
+#11356; it is a race — reproduced 2 out of 3 tries). The self-wake happens
+inside aquamarine and emits **no Hyprland event**, so no event-driven fix is
+possible.
+
+Countermeasure: `shokupan.dpms-guard`, a third-party shell service plugin
+(`.config/omarchy/plugins/shokupan-dpms-guard/`, registered in `shell.json`).
+While the session is locked it polls every 30 s; if the display is awake and
+the user still idle, it re-asserts display-off. Real input flips idle to
+active, so a returning user is never blanked mid-password. The cleaner fix,
+if the OSD offers it, is disabling the monitor's deep sleep ("USB-C Awake").
+
 ## Still to settle
 - **Whether to lock on idle at all**, given the remote goal. A machine you SSH
   into does not benefit from its local screen locking — but it is a physical

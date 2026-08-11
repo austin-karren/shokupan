@@ -25,7 +25,11 @@
 -- NOTE: GDK_SCALE must be an INTEGER. GTK parses "1.75" as 1, which renders GTK3
 -- apps at 1x. Do not set a fractional GDK_SCALE.
 hl.env("GDK_SCALE", "2")
-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1.666667 })
+-- "highres" = highest resolution at its best refresh rate. On this panel that
+-- is 3840x2560@119.99 (verified) — and unlike a hardcoded mode it adapts to
+-- whatever monitor is plugged in. "preferred" was wrong here: the EDID
+-- preferred mode is the 59.98Hz one, not 120.
+hl.monitor({ output = "", mode = "highres", position = "auto", scale = 1.666667 })
 
 -- Alternative: one rung smaller UI, 2400x1600 logical.
 -- Gives ~48 more CSS px per half-width tile, which is not enough to matter for
