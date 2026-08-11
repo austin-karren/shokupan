@@ -153,7 +153,7 @@ loaf heal         # re-assert the rice on top, apply pending migrations
 loaf packages     # diff the manifest against what is installed
 loaf flatpaks     # same, for the Flatpak manifest
 loaf debloat      # re-remove the Omarchy defaults decided against (ADR-0043)
-loaf forks        # check recorded forks against the upstream files they shadow
+loaf forks        # check recorded forks and watched upstream files for drift
 loaf install      # bootstrap a fresh CachyOS + Omarchy machine, bound to the pin
 ```
 
@@ -173,9 +173,10 @@ for why this exists and why migrations are worth having on a single machine.
 The manifests in `packages/` each record one kind of decision: `chosen.packages`
 and `chosen.flatpaks` (what was added), `removed.webapps` (which Omarchy default
 launchers were removed — re-asserted by `loaf debloat`, ADR-0043), `forks` (which
-upstream files the rice forks, and the SHA-256 each had at verification —
-checked by `loaf forks`, ADR-0042), and `omarchy.pin` (which Omarchy all of it
-was verified against).
+upstream files the rice forks or structurally depends on, and the SHA-256 each
+had at verification — a trailing `watch` marks files referenced rather than
+copied; checked by `loaf forks`, ADR-0042), and `omarchy.pin` (which Omarchy all
+of it was verified against).
 
 Two files, doing different jobs:
 

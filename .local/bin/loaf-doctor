@@ -282,14 +282,15 @@ if command -v weather-icon >/dev/null 2>&1; then
   fi
 fi
 
-# Forks the rice carries must notice upstream moving underneath them
-# (ADR-0042 want 1): quickshell logs to /dev/null, so a stale fork's first
-# symptom is otherwise visual. loaf-forks owns the how.
+# Forks the rice carries and upstream files its hosted widgets structurally
+# depend on must notice upstream moving underneath them (ADR-0042 want 1):
+# quickshell logs to /dev/null, so drift's first symptom is otherwise visual.
+# loaf-forks owns the how, including the fork/watch distinction.
 if command -v loaf-forks &>/dev/null && [[ -f $LOAF_ROOT/packages/forks ]]; then
   if loaf-forks --quiet; then
-    ok "forks" "upstream unchanged under every recorded fork"
+    ok "forks" "upstream unchanged under every recorded fork and watch"
   else
-    bad "forks" "upstream moved under a fork" "run 'loaf forks' for the diff"
+    bad "forks" "upstream moved under a fork or watch" "run 'loaf forks' for what changed"
   fi
 fi
 

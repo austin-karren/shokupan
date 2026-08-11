@@ -530,7 +530,7 @@ assert_contains "forks: detects upstream moving under a fork" "$out" "upstream m
 assert_equals "forks: drift exits non-zero" "$status" "1"
 
 out=$(loaf_run "$home" doctor)
-assert_contains "doctor: surfaces fork drift" "$out" "upstream moved under a fork"
+assert_contains "doctor: surfaces fork drift" "$out" "upstream moved under a fork or watch"
 
 # --record re-stamps and the board goes green again.
 loaf_run "$home" forks --record >/dev/null
@@ -543,6 +543,37 @@ out=$(loaf_run "$home" forks)
 status=$?
 assert_contains "forks: detects a renamed-away upstream file" "$out" "no longer exists"
 assert_equals "forks: a missing upstream is a failure" "$status" "1"
+
+# A `watch` line covers an upstream file the rice references rather than
+# copies (hosted-widget couplings). Drift is still red, but the message asks
+# for a re-verify of the coupling, not a re-diff of a copy.
+home=$(make_home)
+mkdir -p "$home/shokupan/.config/omarchy/bar/modules"
+echo "hosts upstream" >"$home/shokupan/.config/omarchy/bar/modules/hosted.qml"
+echo "upstream v1" >"$home/hosted-upstream.qml"
+printf '.config/omarchy/bar/modules/hosted.qml %s %s watch\n' \
+  "$home/hosted-upstream.qml" \
+  "$(sha256sum "$home/hosted-upstream.qml" | awk '{print $1}')" \
+  >"$home/shokupan/packages/forks"
+out=$(loaf_run "$home" forks)
+status=$?
+assert_contains "forks: unchanged watched upstream is healthy" "$out" "upstream unchanged"
+assert_equals "forks: healthy watch exits 0" "$status" "0"
+
+echo "upstream v2 - restructured" >"$home/hosted-upstream.qml"
+out=$(loaf_run "$home" forks)
+status=$?
+assert_contains "forks: detects a changed watched upstream" "$out" "watched upstream file changed"
+assert_contains "forks: a changed watch asks for re-verify, not re-diff" \
+  "$out" "re-verify the module still applies"
+assert_equals "forks: watch drift exits non-zero" "$status" "1"
+
+# --record keeps the watch marker, so the line stays a watch after re-stamping.
+loaf_run "$home" forks --record >/dev/null
+assert_contains "forks: --record preserves the watch marker" \
+  "$(cat "$home/shokupan/packages/forks")" " watch"
+out=$(loaf_run "$home" forks)
+assert_contains "forks: a re-stamped watch is healthy again" "$out" "upstream unchanged"
 
 # Absolute upstream paths referenced from the rice's QML must exist
 # (ADR-0042 want 2) — hosted widgets fail silently when a rename lands.

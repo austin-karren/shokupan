@@ -1,6 +1,26 @@
-# Forks this rice carries, the upstream file each shadows, and the SHA-256
-# that upstream file had when the fork was last verified against it.
-# Re-stamp after re-verifying: loaf forks --record   (ADR-0042)
+# Upstream files the rice depends on, and the SHA-256 each had when the
+# dependency was last verified. Two kinds of line (ADR-0042):
+#
+#   rice_path upstream_path sha         — a FORK: rice_path is a copy of the
+#                                         upstream file; drift means re-diff
+#                                         and carry upstream's changes across.
+#   rice_path upstream_path sha watch   — a WATCH: rice_path loads or wraps the
+#                                         upstream file in place and depends on
+#                                         its internal structure; drift means
+#                                         re-verify the coupling still holds.
+#
+# Re-stamp after re-verifying: loaf forks --record
 .config/omarchy/plugins/shokupan-launcher/Launcher.qml /usr/share/omarchy/shell/plugins/launcher/Launcher.qml 92105323efcdf0dc60f8529b9adfcdeded1a50ecf0b9c964b94672d6e952b19e
 .config/omarchy/plugins/shokupan-launcher/LauncherSearch.js /usr/share/omarchy/shell/plugins/launcher/LauncherSearch.js bbc4965f7b46932bd7127b5d921b977679f2a892e6bd9672f29049d340821bd7
 .config/omarchy/bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml d0c437c9745ab593fa90d75d7d3754b65cd08e2097632ee7d50ae638dc838216
+# ADR-0009: wholesale template copy with two [bar] lines changed — the template
+# engine has no partial override, so a 2-line change costs a full copy.
+.config/omarchy/themed/shell.toml.tpl /usr/share/omarchy/default/themed/shell.toml.tpl 7126909b18452ff61d0c85bb678f86fd26e142e764e478330bef83205705bc5b
+# Hosted-widget couplings: these modules load upstream QML whole from /usr/share
+# and rebind one property, so they depend on upstream's internal structure
+# (a direct WidgetButton child, a TextMetrics hook, the clock gear guard).
+.config/omarchy/bar/modules/network.qml /usr/share/omarchy/shell/plugins/panels/network/Panel.qml 6d95c60e6b18e2189c982097e37a13210ce7c3c78f38cc2f9b43e91d23689452 watch
+.config/omarchy/bar/modules/audio.qml /usr/share/omarchy/shell/plugins/panels/audio/Panel.qml 9492d0d05f15bfaeceb36eaaed43563de7753f08a27ffa79e39d47fc9008ca6a watch
+.config/omarchy/bar/modules/microphone.qml /usr/share/omarchy/shell/plugins/bar/widgets/Microphone.qml c80da3b44abe67791f57f03430b7f96f99decf552777795faf6fc3c73adc0b7c watch
+.config/omarchy/bar/modules/barcfg.qml /usr/share/omarchy/shell/plugins/bar/BarConfigPanel.qml 9c7d8a8017cae1d0bf63dcf7840387dba947c345d2e1285110a213e61b42884f watch
+.config/omarchy/bar/modules/barcfg.qml /usr/share/omarchy/shell/plugins/bar/Bar.qml 6e18f9b249acf3d64a51f34004907ee77be76c780cba989d8be3869a65bb74e9 watch

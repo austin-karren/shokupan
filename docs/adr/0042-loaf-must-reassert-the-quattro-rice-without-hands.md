@@ -76,3 +76,25 @@ Measured against the suite (`test/loaf-test.sh`, 95 checks green):
 
 Still owed before `accepted`: want 4's adoption pass, and a real
 `omarchy update` survived without hands.
+
+## Addendum, 2026-08-11 — watched upstream files
+
+The upstream-friction audit found two gaps in want 1 as shipped. First, the
+`shell.toml.tpl` template copy (ADR-0009) was never recorded — the one fork
+`loaf forks` didn't cover. Now recorded.
+
+Second, want 2's existence check was too weak for the hosted-widget couplings.
+The bar modules that host upstream QML (`network.qml`, `audio.qml`,
+`microphone.qml`, `barcfg.qml`) depend on upstream's *internal structure* — a
+direct `WidgetButton` child binding `text: root.icon`, a `TextMetrics` hook,
+the hosted-panel pattern, the gear staying render-guarded behind
+`moduleName === "omarchy.clock"` in `Bar.qml`. An upstream refactor keeps every
+referenced path existing while a rebind silently stops applying.
+
+So `packages/forks` grew a second kind of line: a trailing `watch` field marks
+an upstream file the rice *references rather than copies*. Same hash-at-
+verification contract, same `--record` re-stamp, same red board on drift — but
+the failure message asks to re-verify the coupling still holds, not to re-diff
+a copy, because a changed watched file usually still works. The five hosted
+couplings (four panels/widgets plus `Bar.qml`'s gear guard) are recorded as
+watches.

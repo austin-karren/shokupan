@@ -1,18 +1,24 @@
 #!/bin/bash
 
-# loaf:summary=Check recorded forks against the upstream files they shadow
+# loaf:summary=Check recorded forks and watched upstream files for drift
 # loaf:args=[--record] [--quiet]
 
-# The rice carries forks of upstream files it cannot patch in place (ADR-0027,
-# ADR-0042): the launcher plugin and the indicators cluster. Upstream fixes
-# never reach a fork on their own, and nothing else notices when upstream moves
-# — quickshell's output goes to /dev/null, so the first sign of drift is visual.
+# The rice depends on upstream files in two ways it cannot patch in place
+# (ADR-0027, ADR-0042). FORKS are copies — the launcher plugin, the indicators
+# cluster, the shell.toml.tpl template — where upstream fixes never arrive on
+# their own. WATCHES are upstream files loaded whole from /usr/share by hosted
+# widgets that depend on their internal structure; a refactor there makes a
+# rebind silently stop applying. Either way nothing else notices upstream
+# moving — quickshell's output goes to /dev/null, so the first sign of drift
+# is visual.
 #
-# packages/forks records, per fork, the upstream file it shadows and the SHA-256
-# that upstream file had when the fork was last verified against it. This
-# command compares; an omarchy update that touches a shadowed file turns the
-# board red instead of leaving a stale fork. `--record` re-stamps the hashes
-# after a re-verification — the same by-hand contract as packages/omarchy.pin.
+# packages/forks records, per dependency, the upstream file and the SHA-256 it
+# had when last verified (a trailing `watch` field marks the second kind). This
+# command compares; an omarchy update that touches a recorded file turns the
+# board red instead of leaving stale drift. A changed watch is not breakage —
+# the coupling usually survives — so its message says re-verify, not re-diff.
+# `--record` re-stamps the hashes after a re-verification — the same by-hand
+# contract as packages/omarchy.pin.
 
 set -uo pipefail
 
@@ -42,11 +48,11 @@ fi
 problems=0
 out=""
 
-while read -r rice_path upstream_path recorded_sha; do
+while read -r rice_path upstream_path recorded_sha mode; do
   [[ -n ${recorded_sha:-} ]] || continue
   if [[ ! -e $LOAF_ROOT/$rice_path ]]; then
     problems=$((problems + 1))
-    out+="✗ $rice_path — fork file missing from the repo"$'\n'
+    out+="✗ $rice_path — rice file missing from the repo"$'\n'
     continue
   fi
   if [[ ! -e $upstream_path ]]; then
@@ -55,11 +61,13 @@ while read -r rice_path upstream_path recorded_sha; do
     continue
   fi
   current_sha=$(sha256sum "$upstream_path" | awk '{print $1}')
-  if $record; then
-    recorded_sha=$current_sha
-  fi
   if [[ $current_sha == "$recorded_sha" ]]; then
     out+="✓ $rice_path — upstream unchanged since verification"$'\n'
+  elif [[ ${mode:-} == watch ]]; then
+    problems=$((problems + 1))
+    out+="✗ $rice_path — watched upstream file changed"$'\n'
+    out+="    $upstream_path changed since the coupling was verified"$'\n'
+    out+="    re-verify the module still applies, then: loaf forks --record"$'\n'
   else
     problems=$((problems + 1))
     out+="✗ $rice_path — upstream moved under the fork"$'\n'
@@ -69,15 +77,21 @@ while read -r rice_path upstream_path recorded_sha; do
 done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$MANIFEST")
 
 if $record; then
-  # Rewrite the manifest with fresh hashes, preserving comments is not worth the
-  # sed acrobatics: regenerate the data lines under the original header.
+  # Rewrite the manifest line by line, re-stamping only the hash field, so
+  # comments and blank lines stay exactly where they were written.
   tmp=$(mktemp)
-  grep '^#' "$MANIFEST" >"$tmp" || true
-  while read -r rice_path upstream_path _; do
+  while IFS= read -r line; do
+    stripped=${line%%#*}
+    if [[ -z ${stripped// /} ]]; then
+      printf '%s\n' "$line" >>"$tmp"
+      continue
+    fi
+    read -r rice_path upstream_path _ mode <<<"$stripped"
     [[ -n ${upstream_path:-} && -e $upstream_path ]] || continue
-    printf '%s %s %s\n' "$rice_path" "$upstream_path" \
-      "$(sha256sum "$upstream_path" | awk '{print $1}')" >>"$tmp"
-  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$MANIFEST")
+    printf '%s %s %s%s\n' "$rice_path" "$upstream_path" \
+      "$(sha256sum "$upstream_path" | awk '{print $1}')" \
+      "${mode:+ $mode}" >>"$tmp"
+  done <"$MANIFEST"
   mv "$tmp" "$MANIFEST"
   $quiet || echo "recorded — commit packages/forks with the re-verification"
   exit 0
