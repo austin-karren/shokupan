@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "shokupan.calendar",
+  "name": "Calendar",
+  "version": "1.0.0",
+  "author": "shokupan",
+  "description": "Static calendar button beside the clock; left-click toggles the calendar app, right-click opens online accounts",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Calendar",
+    "description": "Static calendar button beside the clock; left-click toggles the calendar app, right-click opens online accounts",
+    "category": "Time",
+    "allowMultiple": false
+  }
+}

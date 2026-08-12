@@ -19,8 +19,9 @@
 // WidgetButton, not a raw Text+MouseArea, so it carries the same hover
 // highlight, pressed state and shared tooltip every clickable built-in has.
 //
-// NOTE: the shell registers new files in bar/modules/ only at startup. Editing
-// this file hot-reloads; *adding* a module file needs omarchy-restart-shell.
+// NOTE: third-party plugin (ADR-0044) — enabled by `shokupan.calendar`
+// appearing in bar.layout; a new/changed plugin dir needs omarchy-restart-shell
+// to register. Plugin hot-reload differs from the old bar/modules mechanism.
 
 import QtQuick
 import qs.Ui

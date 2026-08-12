@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "shokupan.apexshot",
+  "name": "ApexShot",
+  "version": "1.0.0",
+  "author": "shokupan",
+  "description": "Screenshot button for ApexShot: left captures an area, middle records the screen, right captures the full screen",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "ApexShot",
+    "description": "Screenshot button for ApexShot: left captures an area, middle records the screen, right captures the full screen",
+    "category": "System",
+    "allowMultiple": false
+  }
+}

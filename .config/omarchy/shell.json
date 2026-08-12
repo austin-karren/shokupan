@@ -11,8 +11,7 @@
     "layout": {
       "left": [
         {
-          "id": "omenu",
-          "type": "qml"
+          "id": "shokupan.omenu"
         },
         {
           "id": "omarchy.workspaces"
@@ -27,8 +26,7 @@
           "type": "qml"
         },
         {
-          "id": "calendar",
-          "type": "qml"
+          "id": "shokupan.calendar"
         },
         {
           "id": "omarchy.clock",
@@ -64,8 +62,7 @@
           "id": "omarchy.notifications"
         },
         {
-          "id": "apexshot",
-          "type": "qml"
+          "id": "shokupan.apexshot"
         },
         {
           "id": "omarchy.spacer",
