@@ -326,8 +326,22 @@ itself, animate, read live bar state, or host an upstream widget. `omenu`,
 `barcfg`, `calendar` and `ratio`/`ratio-on` (one control, two faces) are the
 five files. New files here
 register only at shell startup: `omarchy-restart-shell` after adding one, plain
-edits hot-reload.
-_Avoid_: plugin (a plugin is upstream's packaging unit, with a manifest)
+edits hot-reload. Since ADR-0044 this is the legacy form: new bar work is born
+a Plugin, and the existing modules convert wave by wave.
+_Avoid_: plugin (a Plugin has a manifest; a QML module is the manifest-less
+older form)
+
+**Plugin**:
+Quattro's packaging unit for shell code — a directory holding a
+`manifest.json` that declares an id, a kind (`bar-widget`, `service`,
+`overlay`, `panel`, `menu`, `bar`) and entry points. Upstream's own widgets
+and panels are first-party plugins; ours are third-party, live one directory
+deep in `.config/omarchy/plugins/<name>/`, and take ids under `shokupan.*`
+(the `omarchy.` namespace is reserved). No longer only upstream's word: since
+ADR-0044 this rice authors plugins as its default shape for new shell work,
+written portable so they can be published.
+_Avoid_: extension, addon, QML module (the manifest is the difference),
+provider (Elephant's dead vocabulary)
 
 **Hosted widget**:
 A QML module whose body is upstream's own widget, loaded by absolute path and
