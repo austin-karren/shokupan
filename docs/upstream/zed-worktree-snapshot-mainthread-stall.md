@@ -1,61 +1,89 @@
 # Draft upstream issue — zed-industries/zed
 
-Status: DRAFT — not posted. Needs Austin's review and explicit go (ADR-0044
-decision 5). Target: new GitHub issue; reference #39269, #32686, #57705 and
-discussion #53626 as adjacent reports.
+Status: DRAFT — not posted. Austin reviews, edits, and posts from his own
+account (ADR-0044 decision 5; Zed's CONTRIBUTING.md expects the human in the
+loop to own the report, so the submit click is his).
 
----
+Structured to match Zed's bug template (`10_bug_report.yml`). Before posting:
+run `zed: copy system specs into clipboard` in Zed's command palette and
+paste into the specs section, and optionally paste the tail of Zed.log.
 
 Title: **Worktree snapshot application blocks the main thread for 20s+ on
 large node_modules trees (worktree.rs:1363), causing compositor ANR dialogs**
 
-## Summary
+---
 
-On a project with ~1.1M files (13 GB pnpm monorepo; only ~4,200 git-tracked,
-~1.06M under 38 `node_modules` trees), Zed's foreground worktree-snapshot
-applier (`worktree.rs:1363` in v1.14.2 — the `set_snapshot` task inside
-`start_background_scanner`) blocks the main thread for 20–25 seconds at a
-time. While blocked, Zed cannot answer Wayland pings, so Hyprland shows its
-"application is not responding" dialog. The editor feels laggy the rest of
-the time.
+## Reproduction steps
 
-Zed's own hang telemetry identifies the site: hang density **1.4** at
-`worktree.rs:1363` (next-worst site: 0.0006), mean main-thread hang **4.7s**,
-p95 **13.7s**. Hang traces were auto-saved to
-`~/.local/share/zed/hang_traces/`.
+1. Open a large pnpm monorepo in Zed with default settings. Mine is 13 GB,
+   ~1.1M files — ~4,200 git-tracked, ~1.06M under 38 `node_modules` trees.
+   (vtsls registers auto-import file watchers over `node_modules`, so the
+   scanner walks those trees.)
+2. Work normally, or just open a few dozen files.
+3. Within minutes the window stops responding for long stretches; on
+   Wayland/Hyprland the compositor shows its "application is not responding"
+   dialog because Zed can't answer pings while the main thread is blocked.
 
-## Environment
-
-- Zed 1.14.2, Wayland, Hyprland (Omarchy), CachyOS (Arch), kernel 7.1.6
-- AMD Radeon 8060S (Strix Halo iGPU), Mesa 26.1.6, RADV only — GPU ruled out:
-  clean wgpu adapter selection every launch, zero GPU errors in any log
-- vtsls (TypeScript) registers auto-import file watchers over `node_modules`,
-  which forces the scanner over those trees
-
-## Reproduction / A-B measurement
-
-150-second monitored runs, same project, opening 30 files via CLI:
+Measured A/B on the same project, 150-second monitored runs, 30 files opened
+via the CLI:
 
 | Config | Result |
 |---|---|
-| defaults | one continuous **25s** main-thread stall at worktree.rs:1363; **4** hang traces |
-| `file_scan_exclusions` += `**/node_modules`, `**/.turbo`, `**/.next`, `**/.sst` (scanned tree drops 1.1M → ~54k files) | **zero** hang traces, no hang log lines |
+| defaults | one continuous **25s** main-thread stall; **4** hang traces saved |
+| `file_scan_exclusions` = defaults + `**/node_modules`, `**/.turbo`, `**/.next`, `**/.sst` (scanned tree drops to ~54k files) | **zero** hang traces, no hang log lines |
 
-## Why report it despite the workaround
+Zed's own hang telemetry points at a single site: hang density **1.4** at
+`worktree.rs:1363` (next-worst site: 0.0006), mean main-thread hang **4.7s**,
+p95 **13.7s**. That line is the foreground task that applies each background
+scan snapshot (`set_snapshot` inside `start_background_scanner`). Traces were
+auto-saved to `~/.local/share/zed/hang_traces/`.
 
-- Applying scan snapshots on the foreground thread means UI responsiveness
-  degrades linearly with tree size — the workaround just shrinks the input.
-- The stock `file_scan_exclusions` default does not include `node_modules`,
-  so any large JS/TS monorepo hits this out of the box, and the setting
-  REPLACES rather than merges defaults, making the workaround easy to get
-  wrong (see also #21018).
-- Several existing reports look like undiagnosed instances of this
-  (#39269 was closed for lack of a repro; this one has telemetry + A/B data).
+## Current vs. Expected behavior
 
-## Suggested directions (upstream's call)
+**Current:** applying worktree-scan snapshots happens on the main thread, so
+UI responsiveness degrades with tree size — on a tree this large the window
+freezes for 20–25s at a time and the compositor declares the app hung. The
+editor feels laggy even between the big stalls.
 
-- Chunk or debounce foreground snapshot application so no single apply
-  exceeds a frame budget.
-- Consider excluding `node_modules` from the scan by default (or auto-suggest
-  exclusions for pathological trees, as discussion #53626 proposes), while
-  keeping LSP go-to-definition working as it does today with exclusions.
+**Expected:** scanning a large tree may take as long as it takes, but the UI
+thread should never be blocked past a frame budget — snapshot application
+chunked/debounced, or `node_modules` excluded from the scan by default (or
+auto-suggested for pathological trees, as discussion #53626 proposes).
+
+The `file_scan_exclusions` workaround is effective but is a workaround: it
+shrinks the scanner's input rather than fixing the blocking apply, it hides
+excluded dirs from the project panel/file finder/search, and the setting
+REPLACES the defaults rather than merging (see #21018), so it's easy to get
+wrong. Possibly related undiagnosed reports: #39269, #32686, #57705.
+
+## Zed version and system specs
+
+<!-- TODO(austin): run `zed: copy system specs into clipboard` and paste here -->
+Zed: v1.14.2
+OS: CachyOS (Arch), kernel 7.1.6, Wayland (Hyprland)
+GPU: AMD Radeon 8060S (Strix Halo iGPU), Mesa 26.1.6, RADV via wgpu/Vulkan —
+GPU ruled out: clean adapter selection every launch, no GPU errors in logs
+
+## Attach Zed log file
+
+<details><summary>Zed.log</summary>
+
+```log
+<!-- TODO(austin, optional): paste relevant tail of ~/.local/share/zed/logs/Zed.log -->
+```
+
+</details>
+
+## Relevant Zed settings
+
+<details><summary>settings.json (workaround applied)</summary>
+
+```json
+"file_scan_exclusions": [
+  "**/.git", "**/.svn", "**/.hg", "**/.jj", "**/CVS",
+  "**/.DS_Store", "**/Thumbs.db", "**/.classpath", "**/.settings",
+  "**/node_modules", "**/.turbo", "**/.next", "**/.sst"
+]
+```
+
+</details>
