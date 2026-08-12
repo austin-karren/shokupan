@@ -316,18 +316,21 @@ _Avoid_: tray, overflow, drawer (the tray drawer is a different thing on the rig
 **Command module**:
 A bar entry that shells out on an interval and reads plain text or Waybar-style
 JSON back — `{"id":…, "type":"command", "exec":…}`. Always visible; it has no
-way to hide. `apexshot` is one.
+way to hide. No current members: `apexshot` was the last, before it became a
+QML module and then the `shokupan.apexshot` Plugin (ADR-0044 wave 1).
 _Avoid_: custom module (ambiguous with the QML kind), script module
 
 **QML module**:
 A bar entry backed by a `.qml` file in `.config/omarchy/bar/modules/`, which
 receives the bar root and can therefore do what a Command module cannot — hide
-itself, animate, read live bar state, or host an upstream widget. `omenu`,
-`barcfg`, `calendar` and `ratio`/`ratio-on` (one control, two faces) are the
-five files. New files here
+itself, animate, read live bar state, or host an upstream widget. `barcfg`
+remains, as do the `indicators` fork (which carries the zen-ratio toggle the
+retired `ratio`/`ratio-on` pair used to fake, one control with two faces) and
+the Hosted widgets; ADR-0044's wave 1 converted `calendar`, `omenu` and
+`apexshot` into `shokupan.*` Plugins. New files here
 register only at shell startup: `omarchy-restart-shell` after adding one, plain
 edits hot-reload. Since ADR-0044 this is the legacy form: new bar work is born
-a Plugin, and the existing modules convert wave by wave.
+a Plugin, and the remaining modules convert wave by wave.
 _Avoid_: plugin (a Plugin has a manifest; a QML module is the manifest-less
 older form)
 

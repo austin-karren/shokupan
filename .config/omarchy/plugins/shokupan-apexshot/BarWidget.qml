@@ -10,8 +10,10 @@
 //
 // Same three actions as the Waybar module and the command entry it replaces.
 //
-// NOTE: the shell registers new files in bar/modules/ only at startup. Editing
-// this file hot-reloads; *adding* a module file needs omarchy-restart-shell.
+// NOTE: third-party plugin (ADR-0044) — enabled by `shokupan.apexshot`
+// appearing in bar.layout; a new/changed plugin dir needs omarchy-restart-shell
+// to register. Kept minimal: quattro's full release is expected to ship a
+// screenshot tool that replaces this widget outright.
 
 import QtQuick
 import qs.Commons

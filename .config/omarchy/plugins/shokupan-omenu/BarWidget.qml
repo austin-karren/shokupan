@@ -7,8 +7,9 @@
 // Interactions are upstream's own, verbatim: left opens the Omarchy Menu via
 // shell IPC, right opens a terminal. Static, like the built-in.
 //
-// NOTE: the shell registers new files in bar/modules/ only at startup. Editing
-// this file hot-reloads; *adding* a module file needs omarchy-restart-shell.
+// NOTE: third-party plugin (ADR-0044) — enabled by `shokupan.omenu`
+// appearing in bar.layout; a new/changed plugin dir needs omarchy-restart-shell
+// to register. Plugin hot-reload differs from the old bar/modules mechanism.
 
 import QtQuick
 import qs.Ui
