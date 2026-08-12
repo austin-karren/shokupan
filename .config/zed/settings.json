@@ -84,6 +84,33 @@
   "format_on_save": "on",
 
   /*
+    🗒️ note: shiptrac-platform is ~1.1M files (1.06M of them under node_modules).
+    Zed's foreground worktree-snapshot applier (worktree.rs:1363 in 1.14.2) blocked
+    the main thread 20-25s applying scans of that tree — the source of the lag and
+    Hyprland's "not responding" dialogs (hang traces: ~/.local/share/zed/hang_traces).
+    Excluding the dirs drops the scanned tree to ~54k files; hangs go away.
+    ⚠️ warning: this key REPLACES Zed's defaults rather than merging, so the stock
+    entries (.git through .settings) have to be restated here.
+    ⚠️ warning: excluded dirs vanish from the project panel, file finder, and search;
+    go-to-definition into node_modules still opens the file.
+  */
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/.jj",
+    "**/CVS",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/.classpath",
+    "**/.settings",
+    "**/node_modules",
+    "**/.turbo",
+    "**/.next",
+    "**/.sst"
+  ],
+
+  /*
     Extensions 🧩
     ⚠️ warning: this key REPLACES the default of { "html": true } rather than merging,
     so everything wanted has to be listed. Setting one to false uninstalls it.
