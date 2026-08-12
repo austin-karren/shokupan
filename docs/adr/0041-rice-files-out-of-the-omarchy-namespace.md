@@ -103,3 +103,7 @@ upstream's own state (`bar.json`, `branding/`, upgrade `.bak` droppings).
   after adding one — hot-reload covers edits, not additions), and a panel-type
   module hosted this way must keep its upstream id as the entry `id`
   (`findPanelWidget` matches `slot.moduleName`, or IPC summon breaks).
+  *(Note 2026-08-12: `audio.qml` no longer exists — the wrapper reverted to
+  stock `omarchy.audio` per ADR-0044 after the 2026-08-09 update broke its
+  rebind. The `source`-expansion proof above stands as recorded, but no
+  module currently uses a `source` entry.)*

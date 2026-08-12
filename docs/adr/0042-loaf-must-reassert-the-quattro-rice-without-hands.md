@@ -102,3 +102,8 @@ the failure message asks to re-verify the coupling still holds, not to re-diff
 a copy, because a changed watched file usually still works. The five hosted
 couplings (four panels/widgets plus `Bar.qml`'s gear guard) are recorded as
 watches.
+
+*(Note 2026-08-12: `audio.qml` and its watch are gone — the wrapper reverted
+to stock `omarchy.audio` per ADR-0044 after the 2026-08-09 update broke its
+rebind. Four watched couplings remain: `network.qml`, `microphone.qml`, and
+`barcfg.qml`'s two.)*

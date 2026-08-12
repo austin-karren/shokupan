@@ -86,9 +86,7 @@
           "type": "qml"
         },
         {
-          "id": "omarchy.audio",
-          "type": "qml",
-          "source": "~/.config/omarchy/bar/modules/audio.qml"
+          "id": "omarchy.audio"
         },
         {
           "id": "omarchy.spacer",
