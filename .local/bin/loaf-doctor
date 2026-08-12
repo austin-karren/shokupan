@@ -294,21 +294,34 @@ if command -v loaf-forks &>/dev/null && [[ -f $LOAF_ROOT/packages/forks ]]; then
   fi
 fi
 
-# Every upstream file the rice's QML references by absolute path must still
-# exist (ADR-0042 want 2): hosted widgets load Panel.qml and friends from
-# /usr/share, and an upstream rename breaks them with no error anywhere.
-if [[ -d $LOAF_ROOT/.config/omarchy ]]; then
+# Every upstream file the rice references by absolute path must still exist
+# (ADR-0042 want 2), and not only from QML: hosted widgets load Panel.qml and
+# friends from /usr/share, claude-usage execs an upstream-internal script, the
+# shokupan-cmd-*.desktop launchers pin Exec= to /usr/share/omarchy/bin
+# commands, and shokupan-launcher-cmds hardcodes that bin dir. An upstream
+# rename breaks each of them silently or with a cryptic error, so every file
+# in the dirs that reach upstream is scanned. Existence is the whole claim —
+# whether a still-present file kept its shape is the forks check's job.
+#
+# A match stops at the first character that cannot appear in these paths and
+# the sed drops sentence-ending dots, so prose comments — including this
+# script's own regex — cannot manufacture paths that never existed.
+ref_dirs=()
+for d in .config/omarchy .local/bin .local/share/applications; do
+  [[ -d $LOAF_ROOT/$d ]] && ref_dirs+=("$LOAF_ROOT/$d")
+done
+if ((${#ref_dirs[@]})); then
   broken_refs=()
   checked_refs=0
   while IFS= read -r ref; do
     path=${ref#file://}
     checked_refs=$((checked_refs + 1))
     [[ -e $path ]] || broken_refs+=("$path")
-  done < <(grep -rhoE '(file://)?/usr/share/omarchy[^"'\''  ]*' \
-    "$LOAF_ROOT/.config/omarchy" --include='*.qml' --include='*.js' 2>/dev/null | sort -u)
+  done < <(grep -rhoIE '(file://)?/usr/share/omarchy[A-Za-z0-9._/@+-]*' \
+    "${ref_dirs[@]}" 2>/dev/null | sed 's/\.*$//' | sort -u)
   if ((${#broken_refs[@]})); then
     bad "upstream refs" "${#broken_refs[@]} referenced upstream path(s) missing" \
-      "${broken_refs[@]}" "an omarchy update renamed them — the widgets fail silently"
+      "${broken_refs[@]}" "an omarchy update renamed them — these break silently"
   elif ((checked_refs)); then
     ok "upstream refs" "$checked_refs referenced upstream path(s) all present"
   fi

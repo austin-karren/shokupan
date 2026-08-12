@@ -64,8 +64,12 @@ Measured against the suite (`test/loaf-test.sh`, 95 checks green):
    and that file's SHA-256 at verification. `loaf forks` compares (re-stamp
    with `--record`), and doctor carries a `forks` check. Same by-hand
    re-verification contract as `omarchy.pin`.
-2. **Done.** Doctor's `upstream refs` check greps the rice's QML/JS for
-   absolute `/usr/share/omarchy/...` references and fails when one is missing.
+2. **Done.** Doctor's `upstream refs` check greps the rice for absolute
+   `/usr/share/omarchy/...` references and fails when one is missing. Widened
+   2026-08-11 from QML/JS only to every file under `.config/omarchy`,
+   `.local/bin`, and `.local/share/applications` — the non-QML couplings
+   (claude-usage's upstream scanner, the shokupan-cmd-*.desktop Exec= lines,
+   shokupan-launcher-cmds' hardcoded bin dir) broke just as silently.
 3. **Done.** Heal tracks whether its restore or stow pass touched
    `bar/modules/` and restarts the shell (or says it must be restarted when no
    session is reachable).
