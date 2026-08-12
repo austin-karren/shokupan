@@ -4,9 +4,11 @@ Status: DRAFT — not posted. Austin reviews, edits, and posts from his own
 account (ADR-0044 decision 5; Zed's CONTRIBUTING.md expects the human in the
 loop to own the report, so the submit click is his).
 
-Structured to match Zed's bug template (`10_bug_report.yml`). Before posting:
-run `zed: copy system specs into clipboard` in Zed's command palette and
-paste into the specs section, and optionally paste the tail of Zed.log.
+Structured to match Zed's bug template (`10_bug_report.yml`). Specs and log
+excerpts are filled in from the real machine. Provenance note: the 25s-stall
+and hang-density figures in the table came from the 2026-08-12 monitored
+stress runs (A/B, 150s each); the log excerpts are verbatim from Zed.log with
+the project path redacted.
 
 Title: **Worktree snapshot application blocks the main thread for 20s+ on
 large node_modules trees (worktree.rs:1363), causing compositor ANR dialogs**
@@ -58,19 +60,37 @@ wrong. Possibly related undiagnosed reports: #39269, #32686, #57705.
 
 ## Zed version and system specs
 
-<!-- TODO(austin): run `zed: copy system specs into clipboard` and paste here -->
-Zed: v1.14.2
-OS: CachyOS (Arch), kernel 7.1.6, Wayland (Hyprland)
-GPU: AMD Radeon 8060S (Strix Halo iGPU), Mesa 26.1.6, RADV via wgpu/Vulkan —
-GPU ruled out: clean adapter selection every launch, no GPU errors in logs
+Zed: v1.14.2+stable (Zed)
+OS: Linux Wayland omarchy 4.0.0.r1046.gd570d99
+Memory: 62.1 GiB
+Architecture: x86_64
+GPU: AMD Radeon 8060S Graphics (RADV STRIX_HALO) || radv || Mesa 26.1.6-arch3.1
+
+(GPU ruled out as a cause: clean wgpu adapter selection every launch, no GPU
+errors anywhere in the logs.)
 
 ## Attach Zed log file
 
-<details><summary>Zed.log</summary>
+<details><summary>Zed.log (representative excerpts)</summary>
 
 ```log
-<!-- TODO(austin, optional): paste relevant tail of ~/.local/share/zed/logs/Zed.log -->
+2026-08-12T12:24:47-06:00 INFO  [zed::reliability::hang_detection::logging] New foreground hang detected:
+Tasks(s) that ran too long
+612.435945ms         - crates/worktree/src/worktree.rs:1363:37
+
+2026-08-12T12:24:47-06:00 INFO  [zed::reliability::hang_detection] Task trace has been saved to: ~/.local/share/zed/hang_traces/hang-2026-08-12_12-24-47.miniprof.json
+
+2026-08-12T12:26:52-06:00 INFO  [zed::reliability::hang_detection::logging] New foreground hang detected:
+Tasks(s) that ran too long
+405.941409ms         - crates/project_panel/src/project_panel.rs:4280:39
+
+2026-08-12T12:26:56-06:00 INFO  [zed::reliability] memory usage: resident 4784 MiB (+481 MiB), virtual 167300 MiB
+2026-08-12T12:26:56-06:00 INFO  [zed::reliability] worktree diagnostics: stores 1, slots 1, live 1, visible 1, strong 1, dead weak 0, loading 0, entries 5794865, visible entries 5103, largest ~/workspaces/<project> (5794865 entries, 5103 visible)
 ```
+
+Note the worktree diagnostics line: **5,794,865 entries of which 5,103 are
+visible** — the scanner maintains a snapshot three orders of magnitude larger
+than what the project actually uses.
 
 </details>
 
