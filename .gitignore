@@ -8,3 +8,4 @@
 
 # Secrets / local env
 .env
+docs/upstream/evidence-*/
