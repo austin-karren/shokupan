@@ -165,3 +165,44 @@ here (not mSBC/CVSD); whether SWB coexistence contributes is unresolved — a
 codec-exclusion test (`bluez5.codecs` without `lc3_swb`) was defeated by the
 loop itself (card recreation resets the profile within one cycle) and needs a
 quiet system to run.
+
+## Addendum 2, 2026-08-13 — the adapter did it: LC3-SWB on the MT7925
+
+The form-factor revision above also failed Austin's live test (Meet detected
+the devices, but the voice link carried nothing either way), which forced the
+codec experiment the first addendum deferred. A simulated mic grab
+(`pw-record` against the buds' HFP source triggers the autoswitch in <2s — a
+faithful WebRTC stand-in) made the failure reproducible without calls, and
+the A/B matrix was unambiguous:
+
+- **LC3-SWB (default):** SCO established, carried 95% digital silence, died
+  at the ~21s timeout — with **no A2DP reconnect in play at all**.
+- **mSBC (lc3_swb excluded):** link held 110s+ with continuous audio, zero
+  transport failures — and survived a *forced* `ConnectProfile(A2DP Sink)`,
+  the exact operation the first addendum blamed.
+
+Root cause: the Framework Desktop's MediaTek MT7925 (USB 0e8d:0717) cannot
+run LC3-SWB's transparent eSCO — kernel: `HCI Enhanced Setup Synchronous
+Connection command is advertised, but not supported`. PipeWire's quirk table
+already disables LC3-A127 on this adapter family (pipewire#5213) but not
+standard `lc3_swb`, which the WF-1000XM6 happily negotiates.
+
+Corrections owed by this ADR: (1) the original chime-flip loop and the first
+addendum's "A2DP acquire arms a 21s firmware kill" story were both artifacts
+of the same underlying SCO death — A2DP re-acquire and SCO re-establishment
+happen ~2s apart every cycle, so the correlation was real and the causation
+was not. (2) Omarchy's auto-connect fragment is thereby **exonerated** as the
+root cause; the planned upstream report against it is withdrawn. The
+worthwhile upstream report is against **PipeWire**: `bluez-hardware.conf`
+should add `lc3-swb` to the MT7925 no-features entry alongside `lc3-a127`.
+
+Final shape of the fix (the tracked drop-in): `bluez5.codecs` whitelist
+omitting `lc3_swb` (calls run 16 kHz mSBC instead of 32 kHz SWB — the right
+trade until MT7925 firmware fixes eSCO or LE Audio makes it moot), plus the
+four-profile auto-connect list restored (the form-factor revision is
+reverted; it only cost the fast first A2DP attach). Whitelist caveat: absent
+property = all codecs; present = only those listed — future codecs must be
+added by hand.
+
+Proven by the combined test: 70s grab clean and continuous, autoswitch back
+to A2DP (AAC) within 15s of mic release. Sign-off is a real Meet call.
