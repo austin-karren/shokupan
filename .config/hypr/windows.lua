@@ -37,3 +37,47 @@ o.window("org.gnome.Settings", { size = { 1500, 1000 } })
 -- own pass. Matching the tag as well puts this rule in the same pass, where
 -- loading later is what makes it win.
 o.window({ tag = "floating-window", class = "org.omarchy.bash" }, { size = { 1200, 740 } })
+
+-- Google Meet: the call popup is Meet's, the main window keeps its border ------
+--
+-- Omarchy's Meet PiP rule (default/hypr/apps/pip.lua) matches
+-- { tag = chromium-based-browser, title = "^Meet - .+" }. During a call TWO
+-- windows wear that title: the popup Meet spawns, and the main browser window,
+-- whose title becomes "Meet - <code> - Helium" while the call tab is focused.
+-- Dynamic effects re-evaluate on every title change, so the main window loses
+-- its border (border_size 0) and browser opacity mid-call. Its static effects
+-- (float/pin/size/move) never hit the main window, because statics match
+-- against initial_title - which is why only decorations broke.
+--
+-- initial_title is therefore also the discriminator: the popup maps already
+-- titled "Meet - ..." (observed - upstream's static float/size do land on it),
+-- while the main window maps as "New Tab - Helium". Both rules below match the
+-- tag as well, for the same reason the About rule above does.
+
+-- Main window: re-assert the standard chromium-based-browser look that pip.lua
+-- strips during a call. border_size reads the value looknfeel has set by this
+-- point rather than repeating it (snapshot at load: the no-gaps toggle changes
+-- the global afterwards, and this rule lags it until the next reload - the
+-- toggle's own reload included). opacity mirrors default/hypr/apps/browser.lua.
+-- Over-matching is harmless by construction: the effects ARE the default look.
+o.window({ tag = "chromium-based-browser", title = "^Meet - .+", initial_title = "negative:^Meet - .+" }, {
+  border_size = hl.get_config("general.border_size"),
+  opacity = "1.0 0.97",
+})
+
+-- The popup: let Meet pick its own geometry. `size` is static and has no
+-- unset, but its expressions evaluate against the window's own size, which
+-- Hyprland warps to the client's DESIRED geometry just before computing them
+-- (DefaultFloatingAlgorithm.cpp, v0.56.2: "set this here so that expressions
+-- can use it") - so { window_w, window_h } is an identity override that
+-- cancels pip.lua's 600x338 while keeping whatever Meet asks for. The forced
+-- horizontal frame was the wallpaper bleed: Meet prefers a vertical
+-- document-PiP aspect and left the rest of the 600x338 frame undrawn.
+-- keep_aspect_ratio would freeze that shape against Meet-driven resizes, so it
+-- goes too. pip.lua's float/pin/move/border 0/opacity survive on purpose:
+-- they are the useful part (opaque borderless popup, follows across
+-- workspaces, parked bottom-right - move computes from the real size).
+o.window({ tag = "chromium-based-browser", initial_title = "^Meet - .+" }, {
+  size = { "window_w", "window_h" },
+  keep_aspect_ratio = false,
+})
