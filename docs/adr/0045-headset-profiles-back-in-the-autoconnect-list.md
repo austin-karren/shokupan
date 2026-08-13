@@ -129,3 +129,39 @@ Connect app — which on some models is exclusive with classic BT. A follow-up
 experiment, deliberately not part of this fix.
 ([LE Audio in PipeWire](https://www.bluez.org/le-audio-support-in-pipewire/),
 [Collabora, 2025-11](https://www.collabora.com/news-and-blog/blog/2025/11/24/implementing-bluetooth-le-audio-and-auracast-on-linux-systems/).)
+
+## Addendum, 2026-08-13 — the fix above was insufficient; A2DP had to go
+
+The live dry-run (buds connected, mic held open by Helium) failed: the new
+four-profile list loaded correctly, and the loop continued unchanged. The
+measured shape, across ~15 cycles: the card *holds* the headset profile now
+(the original chime-flip is gone), but the HFP transport is killed every
+~23–33s — the card object itself destroyed and recreated each cycle, audio
+ping-ponging between the buds and the fallback devices, and the buds' DSP
+resetting audibly (per-ear ANC stutter, uncomfortable enough to force casing
+them mid-incident).
+
+The corrected root cause: the WF-1000XM6 firmware cannot sustain an *active*
+A2DP stream concurrently with an active SCO/eSCO mic link. Every cycle, the
+auto-connect timer re-ConnectProfile()s `a2dp_sink` ~2s after HFP recovers,
+Sony auto-starts the AVDTP stream on connect, PipeWire acquires it — and
+21±1s later (20.6–22.4s across every observed cycle: a firmware timeout, not
+radio flakiness) the buds kill the HFP link. Adding `hfp_hf` to the list
+changed nothing because `a2dp_sink` stayed on it, and A2DP was the side doing
+the killing.
+
+So the decision inverts: on mic-bearing devices (headset icon/form-factor)
+the auto-connect list now holds **only** `[ hfp_hf hsp_hs ]` — nothing forces
+A2DP back during a call. Mic-less speakers keep Omarchy's A2DP nudge. The
+original section's rejection of form-factor scoping is hereby wrong: the
+scoping is load-bearing, just inverted — the win was never adding HFP, it was
+removing A2DP.
+
+Open questions carried forward: (1) BlueZ's own policy plugin
+(`policy.c:reconnect_timeout`, `ReconnectUUIDs` in /etc/bluetooth/main.conf)
+is a second, independent A2DP reconnector observed in the logs — next suspect
+if the loop survives this revision. (2) Classic HFP negotiated **LC3-SWB**
+here (not mSBC/CVSD); whether SWB coexistence contributes is unresolved — a
+codec-exclusion test (`bluez5.codecs` without `lc3_swb`) was defeated by the
+loop itself (card recreation resets the profile within one cycle) and needs a
+quiet system to run.
