@@ -323,6 +323,7 @@ are the to-do list.
 | [0042](./docs/adr/0042-loaf-must-reassert-the-quattro-rice-without-hands.md) | Loaf must re-assert the quattro rice without hands | proposed |
 | [0043](./docs/adr/0043-loaf-installs-and-debloats-bound-to-the-pin.md) | Loaf installs and debloats, bound to the Omarchy pin | accepted |
 | [0044](./docs/adr/0044-plugins-are-the-default-shape-for-new-shell-work.md) | Plugins are the default shape for new shell work | accepted |
+| [0045](./docs/adr/0045-meet-controls-its-own-pip-popup.md) | Meet controls its own PiP popup, and the main window keeps its border | accepted |
 
 ## To do
 
