@@ -2,14 +2,20 @@
 -- Ported from bindings.conf at the quattro migration (ADR-0033). Unbind a
 -- default before replacing it; hl.unbind of a key that is not bound is an error.
 
--- ADR-0027: the merged app+command list is BACK - shokupan.launcher wraps the
--- stock launcher and feeds it the rice's commands as entries. Both old reflexes
--- land on it: SUPER+SPACE (upstream's chord, retargeted from omarchy.launcher,
--- so unbind first) and bare ALT+SPACE (ours since before the merge).
--- SUPER+ALT+SPACE stays upstream's Omarchy Menu, untouched.
+-- ADR-0027 (fork regressed at r1744): shokupan.launcher was dropped when
+-- upstream deleted the launcher plugin it forked. The merged list survives —
+-- the shokupan-cmd-*.desktop entries are ordinary applications, so the stock
+-- apps menu lists them — but the commands-first ordering is gone until a fork
+-- durable to upstream breaking changes exists. Both old reflexes land on the
+-- apps menu: SUPER+SPACE (upstream's chord, now the root menu there, so unbind
+-- first) and bare ALT+SPACE (ours since before the merge). SUPER+ALT+SPACE
+-- keeps its old meaning here — the Omarchy Menu — though upstream moved that
+-- to SUPER+SPACE and put apps on SUPER+ALT+SPACE.
 hl.unbind("SUPER + SPACE")
-o.bind("SUPER + SPACE", "Launch apps and commands", "omarchy-shell shell toggle shokupan.launcher \"{}\"")
-o.bind("ALT + SPACE", "Launch apps and commands", "omarchy-shell shell toggle shokupan.launcher \"{}\"")
+hl.unbind("SUPER + ALT + SPACE")
+o.bind("SUPER + SPACE", "Launch apps and commands", "omarchy-menu toggle apps")
+o.bind("ALT + SPACE", "Launch apps and commands", "omarchy-menu toggle apps")
+o.bind("SUPER + ALT + SPACE", "Omarchy menu", "omarchy-menu toggle")
 
 -- Herdr replaced tmux (ADR-0015), but quattro's default still binds this chord
 -- to omarchy-launch-terminal-tmux, which now opens nothing: tmux is uninstalled.

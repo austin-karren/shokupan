@@ -1,8 +1,21 @@
 ---
-status: accepted
+status: partially regressed
 ---
 
 # One list for applications and system commands
+
+> **Fork dropped 2026-08-14 (upstream r1046 → r1744) — partially regressed, not
+> implemented in full.** Upstream deleted the launcher plugin
+> (`shell/plugins/launcher/`) that `shokupan.launcher` forked, folding it into
+> `shell/services/AppLibrary.qml` / `AppSearch.js` and moving app launching to
+> `omarchy-menu toggle apps`. Rather than re-port a 655-line copy, the fork was
+> deleted and both reflexes (`SUPER+SPACE`, `ALT+SPACE`) retargeted to the stock
+> apps menu. **What survives**: the merged list itself — the
+> `shokupan-cmd-*.desktop` entries are ordinary applications, so commands still
+> appear alongside apps. **What regressed**: the commands-first ordering
+> contract. Lesson for any future re-port: a fork of the menu must be durable to
+> Omarchy breaking changes — a thin patch over upstream internals, never a
+> wholesale copy that dies with the file it was copied from.
 
 > **Rebuilt under quattro 2026-08-09 — accepted, with a changed mechanism.** The
 > first quattro addendum below declared the merge withdrawn; the user rejected

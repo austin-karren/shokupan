@@ -158,10 +158,14 @@ modifier of each other, and two of them are named "toggle".
 > about a window.
 
 **Launcher**:
-Quattro's quickshell overlay, `SUPER+SPACE` and `ALT+SPACE`. Searches
-applications, and only applications — it reads `DesktopEntries` and has no way to
-be given anything else. The thing you type into when you know what you want.
-_Avoid_: walker (uninstalled), app menu, spotlight
+The apps view of quattro's menu (`omarchy-menu toggle apps` since r1744, when
+upstream folded its standalone launcher plugin into the menu), `SUPER+SPACE` and
+`ALT+SPACE`. Searches applications, and only applications — it reads
+`DesktopEntries` and has no way to be given anything else, which is also how the
+rice's command entries appear in it (they are `.desktop` files, ADR-0027). The
+thing you type into when you know what you want.
+_Avoid_: walker (uninstalled), shokupan.launcher (the dropped fork), app menu,
+spotlight
 
 **System Palette**:
 Our own system commands — the entries, not a window. Ten rows contributed to the
