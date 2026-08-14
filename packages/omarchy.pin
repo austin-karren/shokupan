@@ -4,4 +4,4 @@
 # `loaf doctor` compares it to what is installed and warns when they differ.
 # Update it only after walking the inventory and finding the rice actually works,
 # which is the same rule the release tags follow. See the README.
-4.0.0.r1046.gd570d99-1
+4.0.0.r1744.gf002044-1

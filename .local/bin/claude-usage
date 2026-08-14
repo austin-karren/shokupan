@@ -3,33 +3,29 @@
 # The Claude usage Reading, as a notification (ADR-0039, option 1).
 #
 # The bar chip is gone; this is what the launcher's "Claude Usage" entry runs.
-# It reuses the model-usage plugin's OWN scanner - the same numbers the old
-# popup's local tab showed, from the same cache - and renders them with
-# notify-send. Deliberately option 1 of ADR-0039's three: option 2 (summon the
-# existing popup) is dead, measured - the plugin is kinds:["bar-widget"] only,
-# so without a bar anchor `shell toggle` is a silent no-op. And the plan-limit
-# percentages the popup's other tab showed came from the OAuth side in QML;
-# re-implementing token refresh in bash is not worth a notification.
+# Since r1744 it reuses upstream's collector — omarchy-agent-usage-claude, the
+# same record the omarchy.agents bar widget reads (a widget this rice does not
+# mount, per ADR-0039) — and renders it with notify-send. The old model-usage
+# scanner this wrapped was deleted in the r1744 rename to "agents".
 #
-# So this shows the LOCAL reading: today's tokens by model, sessions, prompts,
-# and a seven-day sparkline. The scanner keeps its own cache and lock, so
-# invoking this repeatedly is cheap.
+# The collector's record is a superset of the old scanner's: today's tokens by
+# model, sessions, prompts, the seven-day history, AND the plan-limit
+# percentages from the OAuth side — the part ADR-0039 wrote off as not worth
+# reimplementing in bash. Upstream did it, so the notification shows it.
 
 set -uo pipefail
 
-SCANNER=/usr/share/omarchy/shell/plugins/model-usage/scripts/claude_usage_scanner.py
+COLLECTOR=/usr/share/omarchy/bin/omarchy-agent-usage-claude
 
-[[ -f $SCANNER ]] || { notify-send -u critical "Claude Usage" "scanner missing: $SCANNER"; exit 1; }
+[[ -x $COLLECTOR ]] || { notify-send -u critical "Claude Usage" "collector missing: $COLLECTOR"; exit 1; }
 
-python3 - "$SCANNER" <<'PY'
+python3 - "$COLLECTOR" <<'PY'
 import json, subprocess, sys
 
-out = subprocess.run(
-    [sys.executable, sys.argv[1], f"{__import__('os').environ['HOME']}/.claude/projects"],
-    capture_output=True, text=True, timeout=120)
+out = subprocess.run([sys.argv[1]], capture_output=True, text=True, timeout=120)
 if out.returncode != 0:
     subprocess.run(["notify-send", "-u", "critical", "Claude Usage",
-                    f"scanner failed: {out.stderr.strip()[:120]}"])
+                    f"collector failed: {out.stderr.strip()[:120]}"])
     sys.exit(1)
 
 d = json.loads(out.stdout)
@@ -48,10 +44,15 @@ peak = max((day.get("messageCount", 0) for day in days), default=0) or 1
 blocks = "▁▂▃▄▅▆▇█"
 spark = "".join(blocks[min(7, int(day.get("messageCount", 0) / peak * 7))] for day in days)
 
+limits = "  ".join(f"{l['label']} {round(l.get('percent', 0) * 100)}%"
+                   for l in d.get("limits", [])) or None
+
 body = (f"Today: {human(d.get('todayTotalTokens', 0))} tokens - "
         f"{d.get('todaySessions', 0)} sessions, {d.get('todayPrompts', 0)} prompts\n"
         f"{per_model}\n"
         f"7 days: {spark}")
+if limits:
+    body += f"\nLimits: {limits}"
 
 subprocess.run(["notify-send", "-u", "low", "-i", "utilities-system-monitor",
                 "Claude Usage", body])

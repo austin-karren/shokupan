@@ -118,7 +118,7 @@ it can also override anything the tracked `.bashrc` set.
 | `.config/git/config` | Aliases, delta pager, zdiff3, rerere |
 | `.config/uwsm/` | Session env (incl. making snap apps visible to the launcher) |
 | `.config/omarchy/shell.json` | The quickshell bar: layout, module settings, idle timings. Hot-reloaded for bar/layout edits — but the **idle timings need `omarchy-restart-shell`**: hot-reload updates the reported values while the IdleMonitor keeps its old timer, so the chain silently never fires (observed 2026-08-11) |
-| `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express: the bar-settings gear after the workspaces, the indicators fork carrying the zen-ratio toggle, and the hosted widgets. The legacy form since ADR-0044 — wave 1 moved the calendar, menu and ApexShot buttons out to plugins. New files here need `omarchy-restart-shell`; edits hot-reload |
+| `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express. Since the r1744 upgrade only one remains: the indicators fork carrying the zen-ratio toggle (the hosted network/microphone widgets and the bar-settings gear were deleted — absorbed or regressed to stock, see ADR-0044's addendum). New files here need `omarchy-restart-shell`; edits hot-reload |
 | `.config/omarchy/themed/shell.toml.tpl` | Theme template override that pins the bar dark in every theme (ADR-0009). User templates outrank Omarchy's, so this replaces the built-in wholesale — re-diff it after an upgrade |
 | `.config/omarchy/extensions/omarchy-menu.jsonc` | Our rows in the Omarchy Menu, and the System Palette's only home since quattro (ADR-0027) — the sanctioned extension point, not a patched Omarchy file. Hot-reloaded. Replaced `menu.sh`, whose bash extension point quattro removed |
 | `.config/starship.toml`, `.config/tmux/` | Prompt, and the general-purpose multiplexer. Agent sessions live in herdr instead — a self-updating binary in `~/.local/bin`, deliberately not in the manifest (ADR-0015) |
@@ -306,7 +306,7 @@ are the to-do list.
 | [0026](./docs/adr/0026-zen-ratio-instead-of-a-square.md) | Single-window **zen** aspect ratio, 6:5 not square | accepted |
 | [0027](./docs/adr/0027-one-list-for-apps-and-commands.md) | One list for applications and system commands | partially regressed — launcher fork dropped at r1744; cmd entries survive in the stock apps menu, ordering lost |
 | [0028](./docs/adr/0028-the-rice-re-asserts-itself-after-upstream-updates.md) | The rice re-asserts itself after upstream updates | accepted |
-| [0029](./docs/adr/0029-the-bar-is-sorted-by-question-not-by-mechanism.md) | The bar is sorted by the question each module answers | accepted |
+| [0029](./docs/adr/0029-the-bar-is-sorted-by-question-not-by-mechanism.md) | The bar is sorted by the question each module answers | accepted — wired-globe section regressed at r1744 (socket is back, stock network widget) |
 | [0030](./docs/adr/0030-the-audio-tui-opens-on-output.md) | The audio TUI opens on Output Devices | superseded — quattro's `omarchy.audio` opens on Output natively |
 | [0031](./docs/adr/0031-the-bar-remembers-the-weather.md) | The bar remembers the weather, so a failed fetch cannot blank it | accepted |
 | [0032](./docs/adr/0032-flathub-on-the-web-with-a-ref-handler.md) | Flathub on the web, with a ref handler | accepted |

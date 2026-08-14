@@ -312,9 +312,9 @@ switch glyph; ADR-0039 removed the one text-bearing member for exactly that
 reason. The calendar is deliberately *not* a member: it is
 static, being half of ADR-0029's bracket around the date. A module joins the
 group by binding to the bar's `centerSectionRevealHeld`, which is why joining it
-requires a QML module rather than a Command module. The bar-settings gear after
-the workspaces has the same behaviour but its own hover target, since only the
-centre section publishes a reveal signal.
+requires a QML module rather than a Command module. (The bar-settings gear that
+used to sit after the workspaces had the same behaviour with its own hover
+target; it went with `barcfg` at r1744.)
 _Avoid_: tray, overflow, drawer (the tray drawer is a different thing on the right)
 
 **Command module**:
@@ -327,11 +327,12 @@ _Avoid_: custom module (ambiguous with the QML kind), script module
 **QML module**:
 A bar entry backed by a `.qml` file in `.config/omarchy/bar/modules/`, which
 receives the bar root and can therefore do what a Command module cannot — hide
-itself, animate, read live bar state, or host an upstream widget. `barcfg`
-remains, as do the `indicators` fork (which carries the zen-ratio toggle the
-retired `ratio`/`ratio-on` pair used to fake, one control with two faces) and
-the Hosted widgets; ADR-0044's wave 1 converted `calendar`, `omenu` and
-`apexshot` into `shokupan.*` Plugins. New files here
+itself, animate, read live bar state, or host an upstream widget. Since the
+r1744 upgrade only the `indicators` fork remains (it carries the zen-ratio
+toggle the retired `ratio`/`ratio-on` pair used to fake, one control with two
+faces); `barcfg` and the Hosted widgets were deleted — absorbed or regressed
+to stock (ADR-0044 addendum). ADR-0044's wave 1 converted `calendar`, `omenu`
+and `apexshot` into `shokupan.*` Plugins. New files here
 register only at shell startup: `omarchy-restart-shell` after adding one, plain
 edits hot-reload. Since ADR-0044 this is the legacy form: new bar work is born
 a Plugin, and the remaining modules convert wave by wave.
@@ -354,8 +355,10 @@ provider (Elephant's dead vocabulary)
 A QML module whose body is upstream's own widget, loaded by absolute path and
 handed the three properties the bar host would inject — the module owns only
 visibility, upstream owns everything else, and upstream's fixes keep arriving.
-`network` and `microphone` are the two mounted; `model-usage` proved the
-pattern before ADR-0039 took it off the bar. A hosted widget with its own
+None are mounted since the r1744 upgrade — `microphone` was absorbed upstream
+and `network` lost its hooks to the panel restructure (ADR-0044 addendum);
+`model-usage` proved the pattern before ADR-0039 took it off the bar. The
+pattern itself stays current for the next deviation. A hosted widget with its own
 panel must also carry the **popout identity block** (see `network.qml`): the
 bar lights a slot's open-panel underline by identity with the slot's item, and
 without the block the underline never lights — the one parity gap the pattern

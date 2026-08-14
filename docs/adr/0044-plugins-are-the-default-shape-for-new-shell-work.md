@@ -14,11 +14,15 @@ same way is following upstream's convention, not deviating from it. Decided:
 2. **The existing bar QML modules convert in staged waves**, each surviving a
    shell restart and a green `loaf doctor` before the next: (1) calendar,
    omenu, apexshot; (2) indicators; (3) network, microphone; (4) barcfg.
-   *Addendum 2026-08-14 (r1744 upgrade): wave 4 is moot — upstream deleted
-   `BarConfigPanel.qml` and moved bar/plugin management into the Setup menu,
-   so `barcfg.qml` was deleted rather than converted. `shokupan-launcher` was
-   also deleted (see ADR-0027's regression note): a wholesale copy of an
-   upstream file is not a durable plugin shape.*
+   *Addendum 2026-08-14 (r1744 upgrade): waves 3 and 4 are moot — upstream
+   deleted `BarConfigPanel.qml` and moved bar/plugin management into the Setup
+   menu, so `barcfg.qml` was deleted rather than converted; the microphone
+   wrapper's fixed-width pin became upstream's own `BarIconButton` behaviour
+   (absorbed) and the network wrapper lost its hooks to the panel restructure
+   (deleted, ADR-0029 globe regressed). `shokupan-launcher` was also deleted
+   (see ADR-0027's regression note): a wholesale copy of an upstream file is
+   not a durable plugin shape. Wave 2 (indicators) remains a hosted fork,
+   re-forked onto the r1744 file — the last bar module standing.*
    The audio wrapper is not converted — it reverts to stock `omarchy.audio`
    instead (quattro's panel made the wrapper's job obsolete, and the Aug 9
    update broke its rebind).

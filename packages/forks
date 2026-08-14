@@ -10,12 +10,12 @@
 #                                         re-verify the coupling still holds.
 #
 # Re-stamp after re-verifying: loaf forks --record
-.config/omarchy/bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml d0c437c9745ab593fa90d75d7d3754b65cd08e2097632ee7d50ae638dc838216
+.config/omarchy/bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml f64fc3a122d71e6cc1f9a8b8284416df29cac070306fa6df55e9f1053fe4cf65
 # ADR-0009: wholesale template copy with two [bar] lines changed — the template
 # engine has no partial override, so a 2-line change costs a full copy.
-.config/omarchy/themed/shell.toml.tpl /usr/share/omarchy/default/themed/shell.toml.tpl 7126909b18452ff61d0c85bb678f86fd26e142e764e478330bef83205705bc5b
-# Hosted-widget couplings: these modules load upstream QML whole from /usr/share
-# and rebind one property, so they depend on upstream's internal structure
-# (a direct WidgetButton child).
-.config/omarchy/bar/modules/network.qml /usr/share/omarchy/shell/plugins/panels/network/Panel.qml 6d95c60e6b18e2189c982097e37a13210ce7c3c78f38cc2f9b43e91d23689452 watch
-.config/omarchy/bar/modules/microphone.qml /usr/share/omarchy/shell/plugins/bar/widgets/Microphone.qml c80da3b44abe67791f57f03430b7f96f99decf552777795faf6fc3c73adc0b7c watch
+.config/omarchy/themed/shell.toml.tpl /usr/share/omarchy/default/themed/shell.toml.tpl bdc8e76a5a9a700adaca0d2fa44a2a340584892fd507e3fcbd4f9a4843765242
+# No hosted-widget couplings remain. The r1744 upgrade removed both: the
+# microphone wrapper's fixed-width pin became upstream's own BarIconButton
+# behaviour (deviation absorbed), and the network wrapper's globe remap lost
+# its hooks when the panel was restructured (ADR-0029 globe regressed — a
+# future re-port must be durable to upstream breaking changes).

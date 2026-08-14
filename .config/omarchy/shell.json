@@ -75,8 +75,7 @@
           "id": "omarchy.bluetooth"
         },
         {
-          "id": "network",
-          "type": "qml"
+          "id": "omarchy.network"
         },
         {
           "id": "omarchy.audio"
@@ -86,8 +85,7 @@
           "size": 4
         },
         {
-          "id": "microphone",
-          "type": "qml"
+          "id": "omarchy.microphone"
         },
         {
           "id": "omarchy.monitor"

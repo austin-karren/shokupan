@@ -279,6 +279,15 @@ text binding re-pointed through a one-glyph map (U+F0200 → U+F059F). Wi-Fi
 glyphs pass through untouched. If an upgrade restructures the panel, the map
 silently stops applying and the socket comes back — visible, not broken.
 
+> **Regressed 2026-08-14 (r1744): the socket is back.** Exactly the predicted
+> failure, one step further: upstream restructured the panel (Panel base +
+> controller, `Model.qml` → `Model.js`), which removed the wrapper's hooks
+> entirely, so the wrapper was deleted rather than left silently inert and the
+> bar runs stock `omarchy.network`. Upstream still hardcodes 󰈀 for wired. A
+> re-port must be durable to upstream breaking changes (the ADR-0027 lesson);
+> the better move is upstream's own suggestion box — a glyph setting on the
+> network widget would end this fork war permanently.
+
 **The hidden list is ordered, and the ratio sits second.** The indicators
 widget allows multiple instances with `items` subsets, so the cluster is split
 around the ratio's off-face: `[Dnd] · ratio · [Reminder, NightLight, StayAwake,
