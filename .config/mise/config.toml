@@ -3,6 +3,7 @@ claude = "latest"
 codex = "latest"
 node = "latest"
 pnpm = "latest"
+"ubi:max-sixty/worktrunk" = { version = "latest", exe = "wt" }
 
 [settings]
 idiomatic_version_file_enable_tools = ["node"]
