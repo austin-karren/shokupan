@@ -50,3 +50,4 @@ x-scheme-handler/claude-cli=claude-code-url-handler.desktop
 x-scheme-handler/slack=slack_slack.desktop
 application/vnd.flatpak.ref=flatpakref-install.desktop
 x-scheme-handler/flatpak+https=flatpakref-install.desktop
+x-scheme-handler/aether=li.oever.aether.url-handler.desktop
