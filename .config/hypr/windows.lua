@@ -13,12 +13,26 @@
 -- first. The cost is that calendar-toggle's cold branch must reveal the
 -- special workspace itself after launch, which it does.
 --
--- Size is monitor-relative, not hand-measured: the .conf era used 1500x1000 on
--- the 2304x1536 logical desktop, which is 65.1% of BOTH dimensions — so 65%
--- derives the same popup on any monitor instead of hardcoding its pixels.
+-- Size is monitor-relative via rule EXPRESSIONS, not percent strings. In the
+-- lua config provider a size string feeds Hyprland's math-expression parser
+-- (variables monitor_w/monitor_h/window_w/... — see the Meet popup rule below
+-- and upstream's default/hypr/apps/webcam-overlay.lua, the sanctioned idiom
+-- for monitor-relative geometry). That grammar has NO percent syntax: the
+-- earlier `"72%"` hit "failed to parse expression" and the size effect was
+-- dropped SILENTLY — float/center/workspace still applied (separate rules),
+-- `hyprctl configerrors` stayed empty, and the window kept gnome-calendar's
+-- own remembered size (gsettings org.gnome.calendar window-size, 768x600).
+--
+-- 18/25 and 31/50 are 72% and 62% of the LOGICAL monitor: wider than tall to
+-- fit a month grid (1658x952 on the 2304x1536 desktop), written as fractions
+-- because the expression grammar is plain arithmetic. Expressions evaluate at
+-- map time against the window's monitor, so no pixels are hardcoded and the
+-- rule beats the client's remembered size: DefaultFloatingAlgorithm warps the
+-- floating window to its DESIRED geometry first, then applies the size rule
+-- on top (same v0.56.2 order the Meet rule below relies on).
 o.window("org.gnome.Calendar", { float = true })
 o.window("org.gnome.Calendar", { center = true })
-o.window("org.gnome.Calendar", { size = { "72%", "72%" } })
+o.window("org.gnome.Calendar", { size = { "(monitor_w*18/25)", "(monitor_h*31/50)" } })
 o.window("org.gnome.Calendar", { workspace = "special:calendar silent" })
 
 -- GNOME Settings (gnome-control-center) -------------------------------------

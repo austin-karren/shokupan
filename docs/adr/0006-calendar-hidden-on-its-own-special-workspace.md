@@ -15,9 +15,14 @@ status: accepted
 > still the engine and still parks GNOME Calendar on `special:calendar`.
 >
 > Three companion pieces landed with it. The `windows.lua` rules the quattro
-> port dropped are restored (float, center, size `65%` — the .conf era's
-> 1500x1000 was 65.1% of both logical dimensions — and
-> `workspace special:calendar silent`). Silent is new: `autostart.lua` now
+> port dropped are restored (float, center, size, and
+> `workspace special:calendar silent`). The size rule needed a second pass:
+> percent strings (`"72%"`) are not part of the lua provider's size grammar —
+> size strings are math EXPRESSIONS (`monitor_w`, `monitor_h`, ...), so the
+> percent form failed to parse and dropped silently, leaving gnome-calendar's
+> remembered 768x600. It is now `(monitor_w*18/25)` x `(monitor_h*31/50)` —
+> 72% x 62% of the logical monitor, wider than tall for the month grid,
+> evaluated at map time so nothing is hardcoded to one monitor. Silent is new: `autostart.lua` now
 > preloads gnome-calendar at login so the first click is an instant popup, and
 > a non-silent rule would flash it over boot — `calendar-toggle`'s cold branch
 > therefore reveals the special workspace itself after the window maps. And
