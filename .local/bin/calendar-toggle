@@ -1,12 +1,14 @@
 #!/bin/bash
-# Show/hide GNOME Calendar as a centered popup, driven by the waybar calendar icon.
+# Show/hide GNOME Calendar as a centered popup — the engine behind the clock
+# clone's date clicks (austinkarren.clock) and the SUPER+SHIFT+C binding.
 #
 # Uses a dedicated Hyprland SPECIAL workspace rather than closing and relaunching
 # the app. Two reasons:
 #
 #   1. Speed. gnome-calendar talks to evolution-data-server on startup, so a cold
 #      launch is seconds, not milliseconds. Hiding keeps it warm, so every toggle
-#      after the first is instant.
+#      after the first is instant. autostart.lua preloads it at login for the
+#      same reason, which is also why the window rule is SILENT (below).
 #   2. State. Hiding preserves the month you had scrolled to and any open event.
 #      Closing resets to today every time.
 #
@@ -14,16 +16,21 @@
 # that SUPER+S toggles -- sharing it would mean SUPER+S also summoned the calendar
 # and that stashing a window with SUPER+ALT+S dumped it next to the calendar.
 #
-# Omarchy's looknfeel (default/hypr/looknfeel.lua on quattro) sets
-# hide_special_on_workspace_change = true, so switching workspaces dismisses the
-# popup on its own. That is the behaviour we want and the reason no extra
-# focus-tracking logic is needed here.
+# Dismissal is two mechanisms: Omarchy's hide_special_on_workspace_change = true
+# (default/hypr/looknfeel.lua) dismisses on workspace switch, and
+# calendar-autohide dismisses on click-outside (focus moving to another window).
 #
-# Companion pieces: the calendar bar module (.config/omarchy/bar/modules/
-# calendar.qml) and, once the Hyprland port lands, the window rule that maps a
-# fresh gnome-calendar straight onto special:calendar. Until that rule exists a
-# cold launch lands on the current workspace and the recapture branch below
-# collects it on the next toggle.
+# --date YYYY-MM-DD opens the calendar on that day. gnome-calendar takes
+# `-d, --date` (verified against its --help). Cold, the flag rides the launch.
+# Warm, we re-invoke `gnome-calendar --date`, which GApplication forwards to
+# the running instance; if a gnome-calendar version ignores the forwarded date,
+# the popup still shows and the date applies on the next cold launch — the
+# reveal never depends on the navigation working.
+#
+# The windows.lua rule maps org.gnome.Calendar onto special:calendar WITH
+# `silent` (unlike the .conf era): the login preload must not flash the popup
+# over whatever boots first. Silent means a cold launch here has to do the
+# reveal itself, hence the wait-for-map loop below.
 #
 # Dispatch syntax: with configProvider = lua (quattro), `hyprctl dispatch` takes
 # an hl.dsp.* Lua call, not the classic "name args" form. The old syntax fails
@@ -35,6 +42,25 @@ set -u
 CLASS="org.gnome.Calendar"
 WS="calendar"
 
+DATE=""
+while (($#)); do
+  case "$1" in
+  --date)
+    shift
+    DATE="${1:-}"
+    [[ $DATE =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || {
+      echo "calendar-toggle: --date wants YYYY-MM-DD" >&2
+      exit 2
+    }
+    ;;
+  *)
+    echo "calendar-toggle: unknown argument: $1" >&2
+    exit 2
+    ;;
+  esac
+  shift
+done
+
 window_address() {
   hyprctl clients -j | jq -r --arg c "$CLASS" '.[] | select(.class == $c) | .address' | head -n1
 }
@@ -43,22 +69,57 @@ window_workspace() {
   hyprctl clients -j | jq -r --arg c "$CLASS" '.[] | select(.class == $c) | .workspace.name' | head -n1
 }
 
+special_visible() {
+  hyprctl monitors -j | jq -e --arg ws "special:$WS" 'any(.[]; .specialWorkspace.name == $ws)' >/dev/null
+}
+
+toggle_special() {
+  hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
+}
+
+# Reveal without ever hiding: a date click means "show me that day", and
+# toggling a workspace that is already up would do the opposite.
+show_special() {
+  special_visible || toggle_special
+}
+
 ADDR="$(window_address)"
 
 if [[ -z $ADDR ]]; then
-  # Not running. The windowrule sends it to special:calendar WITHOUT `silent`,
-  # so Hyprland reveals that workspace as the window maps. Nothing to toggle.
-  exec uwsm-app -- gnome-calendar
-fi
-
-# Running, but parked on a normal workspace -- most likely dragged out by hand,
-# launched before the window rule existed, or (post-quattro, pre-Hyprland-port)
-# launched while no rule is installed at all. Recapture it instead of toggling
-# an empty special workspace, which would look like a no-op.
-if [[ "$(window_workspace)" != "special:$WS" ]]; then
-  hyprctl dispatch "hl.dsp.window.move({ workspace = \"special:$WS\", window = \"address:$ADDR\", silent = true })" >/dev/null
-  hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
+  # Not running (the login preload failed or the app was quit). The SILENT
+  # window rule parks the fresh window on special:calendar without revealing
+  # it, so wait for the map and reveal explicitly.
+  cmd=(gnome-calendar)
+  [[ -n $DATE ]] && cmd+=(--date "$DATE")
+  uwsm-app -- "${cmd[@]}" &
+  for _ in $(seq 1 80); do
+    ADDR="$(window_address)"
+    [[ -n $ADDR ]] && break
+    sleep 0.1
+  done
+  # evolution-data-server cold starts can outlast the wait; the next click
+  # finds the window and reveals instantly.
+  [[ -n $ADDR ]] || exit 1
+  show_special
   exit 0
 fi
 
-hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
+# Warm navigation: forward the date to the running instance (see header).
+if [[ -n $DATE ]]; then
+  gnome-calendar --date "$DATE" >/dev/null 2>&1 || true
+fi
+
+# Running, but parked on a normal workspace -- most likely dragged out by hand
+# or launched while no window rule was installed. Recapture it instead of
+# toggling an empty special workspace, which would look like a no-op.
+if [[ "$(window_workspace)" != "special:$WS" ]]; then
+  hyprctl dispatch "hl.dsp.window.move({ workspace = \"special:$WS\", window = \"address:$ADDR\", silent = true })" >/dev/null
+  show_special
+  exit 0
+fi
+
+if [[ -n $DATE ]]; then
+  show_special
+else
+  toggle_special
+fi

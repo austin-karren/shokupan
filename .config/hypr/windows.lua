@@ -2,9 +2,24 @@
 -- Ported from windows.conf at the quattro migration (ADR-0033). Quattro's stock
 -- config has no user windows file - hyprland.lua requires this one explicitly.
 --
--- The calendar-popup rules that used to live here (ADR-0006) are deliberately
--- absent: quattro's clock popup ships a month grid, so whether that special
--- workspace still exists is ADR-0006's call, and that ADR is not this file's.
+-- GNOME Calendar as the clock popup's engine (ADR-0006) ----------------------
+--
+-- Restored with the r1744 calendar-clone work: the quattro port dropped these
+-- rules on the (wrong) assumption the clock's month grid replaced the app, and
+-- without them a cold gnome-calendar opened as a normal tiled window.
+--
+-- `silent`, UNLIKE the .conf era: autostart.lua now preloads gnome-calendar at
+-- login, and a non-silent rule would reveal the popup over whatever boots
+-- first. The cost is that calendar-toggle's cold branch must reveal the
+-- special workspace itself after launch, which it does.
+--
+-- Size is monitor-relative, not hand-measured: the .conf era used 1500x1000 on
+-- the 2304x1536 logical desktop, which is 65.1% of BOTH dimensions — so 65%
+-- derives the same popup on any monitor instead of hardcoding its pixels.
+o.window("org.gnome.Calendar", { float = true })
+o.window("org.gnome.Calendar", { center = true })
+o.window("org.gnome.Calendar", { size = { "65%", "65%" } })
+o.window("org.gnome.Calendar", { workspace = "special:calendar silent" })
 
 -- GNOME Settings (gnome-control-center) -------------------------------------
 -- Floated because it is a dialog-shaped app that tiles badly, but left on the

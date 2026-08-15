@@ -4,6 +4,31 @@ status: accepted
 
 # The calendar popup gets its own special workspace, not the scratchpad
 
+> **Addendum 2026-08-15 (r1744): the entry point moved into the clock; the
+> engine survives.** The `shokupan.calendar` bracket glyph is deprecated and
+> off the bar. In its place the clock plugin is cloned to
+> `austinkarren.clock` — upstream's sanctioned fork path, which auto-routes
+> the bar entry and `omarchy.clock` IPC to the clone — and its calendar popup
+> made a picker: clicking a day cell, or the hero date while the grid shows
+> the current month, runs `calendar-toggle --date <yyyy-MM-dd>` (browsing
+> away keeps upstream's first-click-returns-to-today). `calendar-toggle` is
+> still the engine and still parks GNOME Calendar on `special:calendar`.
+>
+> Three companion pieces landed with it. The `windows.lua` rules the quattro
+> port dropped are restored (float, center, size `65%` — the .conf era's
+> 1500x1000 was 65.1% of both logical dimensions — and
+> `workspace special:calendar silent`). Silent is new: `autostart.lua` now
+> preloads gnome-calendar at login so the first click is an instant popup, and
+> a non-silent rule would flash it over boot — `calendar-toggle`'s cold branch
+> therefore reveals the special workspace itself after the window maps. And
+> `calendar-autohide` (same autostart) watches socket2 `activewindow` events
+> and hides the popup when focus moves to a non-calendar window, closing the
+> click-outside gap `hide_special_on_workspace_change` never covered.
+>
+> Warm `--date` navigation rides GApplication command-line forwarding to the
+> running instance; if a gnome-calendar version ignores it, the date applies
+> on the next cold launch and the reveal is unaffected.
+
 > **Bar entry point deleted 2026-08-09; the decision stands.** The `custom/calendar`
 > module died with `config.jsonc`. `calendar-toggle` and the workspace rule are
 > unchanged and still work. Old file: tag `omarchy-v3.8.4-prequattro`.

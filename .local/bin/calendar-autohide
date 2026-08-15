@@ -1,0 +1,32 @@
+#!/bin/bash
+# Hide the calendar popup when focus leaves it (ADR-0006 addendum).
+#
+# hide_special_on_workspace_change only dismisses on a workspace SWITCH;
+# clicking another window on the same workspace leaves the popup hanging. This
+# listens on Hyprland's event socket (socket2) for activewindow events and
+# hides special:calendar when focus lands on a non-calendar window.
+#
+# No busy loop: socat blocks on the socket and the shell blocks on read, so the
+# loop wakes once per focus change. The spawned work is at most one visibility
+# check per non-calendar focus event; visible() gates the dispatch so a hidden
+# popup costs a single hyprctl and no dispatch.
+
+set -u
+
+CLASS="org.gnome.Calendar"
+WS="calendar"
+SOCKET="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+
+visible() {
+  hyprctl monitors -j | jq -e --arg ws "special:$WS" 'any(.[]; .specialWorkspace.name == $ws)' >/dev/null
+}
+
+socat -U - "UNIX-CONNECT:$SOCKET" | while IFS= read -r line; do
+  case "$line" in
+  "activewindow>>$CLASS,"*) ;; # focus went to the calendar itself: keep it
+  "activewindow>>,"*) ;;       # no focused window (fires as specials hide): ignore
+  "activewindow>>"*)
+    visible && hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
+    ;;
+  esac
+done
