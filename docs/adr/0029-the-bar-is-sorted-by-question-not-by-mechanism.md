@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: partially superseded
 ---
 
 # The bar is sorted by the question each module answers
@@ -9,6 +9,14 @@ status: accepted
 > `.config/omarchy/shell.json`; the whole *Spacing* section is void, because
 > quattro lays the bar out natively and there is nothing to measure. See the
 > addendum at the foot.
+
+> **Partially superseded 2026-08-15: the stock layout wins.** Every custom
+> layout ordering and every spacer/margin compensation in this ADR — the
+> question-grouping placements, the act-vs-read tiebreak orderings, and both
+> generations of measured spacing tables — is superseded. The bar now runs
+> upstream's default `bar.layout` with a five-item delta (clock clone, capture
+> button, two stock widgets omitted, Ratio added to the indicators). See the
+> final addendum for what happened and why.
 
 Three changes made together, because they are one decision applied three times:
 
@@ -377,3 +385,52 @@ The bell is a popup surface (recent notifications, DND toggle), not just a
 state light — the indicator answers "am I silenced", the bell answers "what did
 I miss", and those are different questions. The microphone module remains the
 one quattro widget deliberately not placed.
+
+## Addendum: superseded by the stock layout, 2026-08-15
+
+The bar "regressed to looking unbalanced again" after r1744. Diagnosis
+confirmed the failure this ADR itself predicted in its regression note above,
+plus its second-order effect: the hosted `bar/modules/network.qml` wrapper
+died with upstream's panel restructure, and it carried **half of a coupled
+tuning** — the speaker's left margin (`rightExtraMargin` on the network
+button, upstream 5.5, ours 2) reverted to stock while the shell.json spacers
+tuned against it (3/2 around tailscale, 4 after audio) survived. Hand numbers
+measured against a partner that no longer exists are worse than no hand
+numbers: the 29/34-style surplus pooled beside the globe again. The other
+suspects were cleared — the r1744 `[bar]` template gained no keys the theme's
+`shell.bar.toml` override is missing (the new `icon-slot`/`icon-canvas`/
+`icon-font`/`status-slot` tokens are Style.qml fallbacks, not template keys),
+and `centerAnchor: ""` merely lost the pinned clock (BarConfigPanel and its
+gear are deleted at r1744, so the suppression it existed for is moot).
+
+The user's ruling, recorded verbatim in intent: the rice's bar layout
+customizations are **waybar-era carryover that causes regressions on every
+upgrade; omarchy defaults are the way to go.** Every measured compensation in
+this ADR was tuned against implementation details upstream is free to change,
+and each upgrade (r1046, r1744) has broken a different one. So the layout is
+rebuilt from upstream's r1744 default with exactly these deltas and nothing
+more:
+
+1. `omarchy.clock` → the `austinkarren.clock` clone (calendar clicks,
+   12-hour format per this ADR: `"dddd h:mm AP"`), and `centerAnchor` follows the
+   swap so the pinned-clock guarantee is stock behaviour again.
+2. `shokupan.capture` added after the tray, where the old button sat.
+3. `omarchy.agents` omitted (ADR-0039's reasoning) and
+   `omarchy.keyboard-layout` omitted (single-layout machine).
+4. The indicators entry stays hosted (upstream still has no user search path
+   for indicators — the fork's one reason) with the stock default set in
+   stock order plus `Ratio` appended, nothing reordered.
+5. `plugins[]` keeps `shokupan.dpms-guard` (a service, not a bar widget).
+
+Dropped outright: all `omarchy.spacer` entries, the `centerAnchor: ""`
+override, `shokupan.omenu` (deprecated; SUPER+SPACE and SUPER+ALT+SPACE cover
+the menu), `omarchy.media`, `omarchy.notifications`, `omarchy.microphone`,
+and `omarchy.tailscale` — stock's default layout does not place them, and
+stock wins.
+
+What survives of this ADR: the *question* framing as history, and the hosted
+indicators fork whose scope is now exactly one file lookup. What is
+superseded: every placement argument and every number in both spacing
+sections. The ink-gap doctrine is not refuted — upstream hand-compensates its
+own glyphs — but maintaining our own copy of that fight across upgrades cost
+more balance than it bought.
