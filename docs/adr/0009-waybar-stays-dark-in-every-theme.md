@@ -9,6 +9,10 @@ superseded-by: 0033
 > fixed Tailwind-950 in every theme — but every part of the mechanism below is
 > obsolete. See the addendum at the end.
 >
+> **Scoped to Tokyo Night 2026-08-15.** "In every theme" no longer holds: the
+> dark bar is now a Tokyo Night property, and other themes get stock bar
+> colors. See the second addendum.
+>
 > An earlier draft of this note claimed the generating hook "no longer exists
 > anywhere on the system". That was wrong: it was looked for at
 > `~/.config/omarchy/theme-set.d/`, and the real path is
@@ -86,3 +90,30 @@ The one cost: a user template **replaces** the built-in wholesale rather than
 merging, so ours will not inherit upstream changes to the other sections. Re-diff
 `.config/omarchy/themed/shell.toml.tpl` against
 `/usr/share/omarchy/default/themed/shell.toml.tpl` after an Omarchy upgrade.
+
+## Addendum: scoped to Tokyo Night, 2026-08-15
+
+The wholesale template fork is retired, and with it the "every theme" scope.
+r1744's `omarchy-theme-set-templates` grew `apply_shell_section_overrides`: a
+theme may ship `shell.<section>.toml` files that are spliced over the matching
+section of the generated shell.toml — stock tokyo-night already ships
+`shell.lock.toml` this way. So the pinned bar now lives in
+`.config/omarchy/themes/tokyo-night/shell.bar.toml`, a user-theme overlay that
+`omarchy-theme-set` copies over the stock theme into its staging directory.
+
+What that changes:
+
+1. **The decision is per-theme now.** Tokyo Night — the theme this rice
+   actually runs — keeps the fixed Tailwind-950 bar. Every other theme,
+   light themes included, gets its stock bar colors, which dissolves the
+   quattro port's light-theme regression (fixed `#c0caf5` text on a dark bar
+   under a light theme) instead of mitigating it.
+2. **The full-template copy is gone.** The override carries one section
+   instead of all of them, so upstream changes to every other section flow
+   through untouched. The fork line leaves `packages/forks`.
+3. **The residual coupling is smaller but not zero.** Section overrides
+   replace the *whole* `[bar]` section, so the file must carry upstream's
+   non-color keys verbatim, and `active` as a literal (overrides are spliced
+   after template substitution, so `{{ red }}` would not resolve). Re-check
+   the file against upstream's `[bar]` section after an upgrade — a one-section
+   diff instead of a whole-template diff.

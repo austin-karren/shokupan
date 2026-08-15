@@ -1,0 +1,31 @@
+# ADR-0009, scoped to Tokyo Night at r1744: the bar is a fixed near-black —
+# Tailwind's 950 level — so it reads as system chrome rather than as part of
+# the theme. Other themes get stock bar colors.
+#
+# Spliced over the generated shell.toml's [bar] section by
+# omarchy-theme-set-templates (apply_shell_section_overrides), the same way
+# stock tokyo-night ships shell.lock.toml. Splicing happens AFTER template
+# substitution, so every value here is a literal: no {{ }} variable resolves
+# in this file, and the template engine has no conditionals anyway.
+#
+# The override REPLACES the whole [bar] section, so the keys below must be the
+# complete section: the non-color keys carry upstream's defaults verbatim, and
+# `active` carries Tokyo Night's own red as a literal. Re-check all of them
+# against /usr/share/omarchy/default/themed/shell.toml.tpl after an upgrade.
+
+# Pinned, not the theme's background/foreground: text is #c0caf5 because a
+# theme's foreground can be dark, and no single variable is readable on a
+# near-black bar in both modes. Transparency is a separate axis and still
+# toggles freely.
+background       = "#0b0c14"
+background-alpha = 1.0
+text             = "#c0caf5"
+# Modules calling attention to themselves (recording, voxtype, alerts, updates).
+# Tokyo Night's red from its colors.toml, as a literal (see above).
+active           = "#f7768e"
+# Cross-axis size at font base-size 12. size-horizontal is the height of
+# top/bottom bars; size-vertical is the width of left/right bars. With
+# scale-with-font enabled, these grow/shrink with [font] base-size.
+scale-with-font  = true
+size-horizontal  = 26
+size-vertical    = 28
