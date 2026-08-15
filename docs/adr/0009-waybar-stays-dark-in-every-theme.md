@@ -1,6 +1,5 @@
 ---
-status: superseded
-superseded-by: 0033
+status: accepted — rescoped to Tokyo Night 2026-08-15
 ---
 
 # The bar stays dark in every theme, at a fixed Tailwind-950

@@ -11,8 +11,9 @@ processes (Claude, Vite dev servers) alive for the remote workflow in ADR-0016.
 ## Re-based onto quattro, 2026-08-09
 
 Everything below the standing requirement was written against hypridle, which the
-upgrade uninstalled (hyprlock too — `~/.config/hypr/hypridle.conf` is still on
-disk and now inert). The idle chain is quattro's quickshell service plugin, and
+upgrade uninstalled (hyprlock too — the inert `hypridle.conf`/`hyprlock.conf`
+sat on disk until the 2026-08-15 stock-first audit deleted them; nothing
+referenced either). The idle chain is quattro's quickshell service plugin, and
 the knobs are two keys in `.config/omarchy/shell.json`:
 
 ```json

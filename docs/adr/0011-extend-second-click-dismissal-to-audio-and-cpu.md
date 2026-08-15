@@ -1,8 +1,12 @@
 ---
-status: proposed
+status: withdrawn
 ---
 
 # Extend second-click dismissal to the audio and CPU modules
+
+> **Withdrawn 2026-08-15.** Nothing is left to convert: the `cpu` module was
+> deleted (ADR-0029), wiremix is uninstalled (ADR-0030), and quattro's bar
+> dismisses natively (ADR-0033) — the behaviour this proposed arrived for free.
 
 > **Mechanism deleted 2026-08-09.** As ADR-0004: the `on-click` entries went with
 > `config.jsonc`, and the audio side lost its target too — `wiremix` is

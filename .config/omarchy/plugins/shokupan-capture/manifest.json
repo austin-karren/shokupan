@@ -4,7 +4,7 @@
   "name": "Capture",
   "version": "1.0.0",
   "author": "shokupan",
-  "description": "Screenshot button on the native omarchy capture tools: left captures an area, middle toggles screen recording, right captures the full screen",
+  "description": "DORMANT — parked until the native omarchy-capture flow improves; apexshot restored at the user's word 2026-08-15. Screenshot button on the native omarchy capture tools: left captures an area, middle toggles screen recording, right captures the full screen",
   "kinds": [
     "bar-widget"
   ],

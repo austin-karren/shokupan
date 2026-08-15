@@ -2,6 +2,11 @@
 
 echo "Let this user drive Tailscale without sudo, so the bar toggle works"
 
+# 2026-08-15: the custom tailscale module and ~/.local/bin/tailscale-icon it
+# references below are retired (stock omarchy.tailscale owns the bar toggle).
+# Already applied on this machine; kept as-is because migrations never change
+# behaviour after the fact — the OperatorUser grant is still wanted.
+
 # The custom/tailscale bar module toggles the tailnet by running `tailscale up` /
 # `tailscale down` directly (see ~/.local/bin/tailscale-icon). Those are privileged
 # operations: the daemon only accepts them from root, or from the account named in

@@ -161,9 +161,10 @@ modifier of each other, and two of them are named "toggle".
 The apps view of quattro's menu (`omarchy-menu toggle apps` since r1744, when
 upstream folded its standalone launcher plugin into the menu), `SUPER+SPACE` and
 `ALT+SPACE`. Searches applications, and only applications — it reads
-`DesktopEntries` and has no way to be given anything else, which is also how the
-rice's command entries appear in it (they are `.desktop` files, ADR-0027). The
-thing you type into when you know what you want.
+`DesktopEntries` and has no way to be given anything else. Since 2026-08-15 it
+really is applications only: the rice's `shokupan-cmd-*` command entries were
+deleted with ADR-0027's supersession, and commands live in the Omarchy Menu.
+The thing you type into when you know what you want.
 _Avoid_: walker (uninstalled), shokupan.launcher (the dropped fork), app menu,
 spotlight
 
@@ -209,14 +210,6 @@ entry is an override of upstream's `trigger.toggle.one-window-ratio` row in
 `show_toggle_menu` bash override when quattro dropped that extension point. It is still
 an override for the same reason as before: upstream's row hardcodes 1:1.
 _Avoid_: Ratio, Zen ratio, single window mode, square mode, 1 window ratio
-
-**Pitch** (bar sense):
-The distance between the *centres* of adjacent bar icons, held constant by giving
-every module an identical box wider than its widest possible glyph. Deliberately
-not the same as the visible gap between two glyphs, which varies as status icons
-change width. The bar is tuned for even Pitch, so a new module joins the existing
-box rule instead of getting margins of its own.
-_Avoid_: spacing, gap, margin
 
 **Size ladder**:
 The fixed set of fractions a tiled window steps through when resized by keyboard —
@@ -306,16 +299,16 @@ The quiet modules at the centre of the bar, which collapse to zero width until
 the centre section is hovered. Upstream's indicators live there, and so does
 the zen-ratio toggle (ADR-0013). Active members jump to the left of the cluster
 and show unprompted; inactive ones sit right and only hover-reveal — the ratio
-mimics that with a two-faced module pair, since the indicators' own blocks are
-closed to outside modules. Everything in the group is a single caption-sized
-switch glyph; ADR-0039 removed the one text-bearing member for exactly that
-reason. (The calendar bracket that used to sit static beside the date — half of
-ADR-0029's bracket — was retired 2026-08-15: date clicks live inside the cloned
-clock's popup now, ADR-0006 addendum.) A module joins the
-group by binding to the bar's `centerSectionRevealHeld`, which is why joining it
-requires a QML module rather than a Command module. (The bar-settings gear that
-used to sit after the workspaces had the same behaviour with its own hover
-target; it went with `barcfg` at r1744.)
+gets that natively now, as `Ratio.qml` inside the indicators fork
+(`bar/indicators/`); the retired `ratio`/`ratio-on` two-faced module pair that
+used to fake membership is gone. Everything in the group is a single
+caption-sized switch glyph; ADR-0039 removed the one text-bearing member for
+exactly that reason. (The calendar bracket that used to sit static beside the
+date — half of ADR-0029's bracket — was retired 2026-08-15: date clicks live
+inside the cloned clock's popup now, ADR-0006 addendum. The bar-settings gear
+that used to sit after the workspaces went with `barcfg` at r1744.) A module
+joins the group by binding to the bar's `centerSectionRevealHeld`, which is why
+joining it requires a QML module rather than a Command module.
 _Avoid_: tray, overflow, drawer (the tray drawer is a different thing on the right)
 
 **Command module**:
@@ -378,29 +371,32 @@ _Avoid_: theme (taken), style (too generic to grep for)
 **Second-click dismissal**:
 Clicking a bar module opens its window; clicking the same module again dismisses
 it. Two separate single clicks, each a complete open-or-dismiss decision — not a
-double-click gesture, which Waybar reports as its own distinct event.
+double-click gesture. Native to quattro's bar; the term survives from the Waybar
+era, when it had to be built by hand (ADR-0004, historical).
 _Avoid_: double click, click toggle
 
 **Toggle wrapper**:
-A script standing between a bar module and the command it launches, added solely
-to give that module Second-click dismissal. Retired under quattro, whose bar
-dismisses natively (ADR-0033) — with one survivor: `calendar-toggle` stayed, not
-as a dismissal wrapper but because showing the calendar means moving a window
-between workspaces, which is a real job (ADR-0006). `window-toggle` and
-`menu-toggle` are gone.
+Historical (Waybar era): a script standing between a bar module and the command
+it launched, added solely to give that module Second-click dismissal. Retired
+under quattro, whose bar dismisses natively (ADR-0033) — with one survivor:
+`calendar-toggle` stayed, not as a dismissal wrapper but because showing the
+calendar means moving a window between workspaces, which is a real job
+(ADR-0006). `window-toggle` and `menu-toggle` are gone.
 _Avoid_: handler, launcher script
 
 **Dismiss**:
 To make a window go away, without specifying whether it was closed or merely
-hidden — a distinction each Toggle wrapper decides for itself based on how
-expensive the window is to restart.
+hidden — a distinction whoever handles the dismissal decides based on how
+expensive the window is to restart (`calendar-toggle` hides; the native bar
+closes its own panels).
 _Avoid_: close, hide, kill (each of those asserts a mechanism)
 
 **Reading**:
 The last known value a bar module drew, kept on disk so the module has something
 to show when its source is unreachable. A Reading is always drawn; what changes
-when a fetch fails is its age, never its presence. Weather is the one we have
-(`weather-icon`, ADR-0031).
+when a fetch fails is its age, never its presence. Weather was the one we had
+(`weather-icon`, ADR-0031 — superseded: stock `omarchy.weather` holds its own
+last reading now, in memory rather than on disk).
 _Avoid_: cache (the file is a cache; the Reading is what the bar draws from it)
 
 **Stale**:

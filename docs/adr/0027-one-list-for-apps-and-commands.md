@@ -1,8 +1,12 @@
 ---
-status: partially regressed
+status: superseded — stock
 ---
 
 # One list for applications and system commands
+
+> **Fully retired 2026-08-15 — superseded, stock.** The surviving
+> `shokupan-cmd-*.desktop` entries the note below credits are deleted too; see
+> the closing addendum. Everything between here and there is history.
 
 > **Fork dropped 2026-08-14 (upstream r1046 → r1744) — partially regressed, not
 > implemented in full.** Upstream deleted the launcher plugin
@@ -333,3 +337,20 @@ alphabetical apps and no interleave; and activation through the launcher's own
   for free. The provenance header says exactly this.
 - The stock launcher and every other picker also list the command entries. In
   the fork they are the block; elsewhere they are alphabetized among the apps.
+
+## Addendum, 2026-08-15: fully retired at r1744, superseded — stock
+
+The merged list is fully retired under the stock-first rule ("omarchy defaults
+are the way to go"). The stock-first audit closed what the r1744 regression had
+left half-standing: the generated `shokupan-cmd-*.desktop` entries, their
+rendered icons, and the `shokupan-launcher-cmds` generator are deleted, and the
+apps menu lists applications only. Commands are reached via the Omarchy Menu
+(`SUPER+ALT+SPACE`), which quattro made searchable from the root — the
+discovery half of the original ask, upstream's to maintain.
+
+The history argued for this: the entries duplicated quattro's own menu (21 of
+27 were already upstream rows when the port landed), and the merge regressed
+twice across upgrades — first when quattro deleted Elephant's provider system,
+then when r1744 deleted the launcher plugin the rebuild forked. A list that
+dies with every upstream restructure is a maintenance contract, not a feature.
+`claude-usage` (the script, ADR-0039) survives; only its launcher entry goes.

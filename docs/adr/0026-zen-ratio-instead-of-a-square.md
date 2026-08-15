@@ -5,8 +5,9 @@ status: accepted
 # The single-window zen aspect ratio: a reading column, not a square
 
 > **Bar surface reborn on quattro 2026-08-09.** The `6 5` value and `ratio-toggle`
-> are untouched; the `custom/ratio` row of the table below is now
-> `.config/omarchy/bar/modules/ratio.qml` (ADR-0013's addendum has the port).
+> are untouched; the `custom/ratio` row of the table below is now the indicators
+> fork's `.config/omarchy/bar/indicators/Ratio.qml` (ADR-0013's addendum has the
+> port; its `ratio.qml`/`ratio-on.qml` pair is dead — corrected 2026-08-15).
 >
 > The menu-override section below is also void: `menu.sh` was deleted with the
 > menu port — quattro's `omarchy-menu` sources no such file, so the

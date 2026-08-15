@@ -55,6 +55,16 @@
           "id": "omarchy.tailscale"
         },
         {
+<<<<<<< HEAD
+||||||| 1537ae9
+          "id": "shokupan.capture"
+        },
+        {
+=======
+          "id": "shokupan.apexshot"
+        },
+        {
+>>>>>>> lane/stock-first-drops
           "id": "omarchy.bluetooth"
         },
         {

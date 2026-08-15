@@ -6,7 +6,8 @@ status: accepted
 
 > **Addendum 2026-08-15 (r1744): the entry point moved into the clock; the
 > engine survives.** The `shokupan.calendar` bracket glyph is deprecated and
-> off the bar. In its place the clock plugin is cloned to
+> off the bar. (Its plugin dir was deleted later the same day in the
+> stock-first audit — git history is the tombstone; the deprecation stands.) In its place the clock plugin is cloned to
 > `austinkarren.clock` — upstream's sanctioned fork path, which auto-routes
 > the bar entry and `omarchy.clock` IPC to the clone — and its calendar popup
 > made a picker: clicking a day cell, or the hero date while the grid shows
