@@ -34,6 +34,12 @@ Measured against quattro's own source, not assumed. Two classes emerged.
 
 ### Movable — the path was a default, not a contract
 
+> **Historical, 2026-08-15.** None of the five files below exist any more —
+> `barcfg`, `calendar`, `omenu` and the `ratio`/`ratio-on` pair were all
+> deleted or absorbed across the ADR-0044 waves and the r1744 upgrade. The
+> `source`-key mechanism this section measured is still real and applies to
+> whatever QML module comes next.
+
 `plugins/bar/BarModel.js` (`customModulePath`) resolves a `type: "qml"` module
 from an explicit **`source`** key first, with `~` expansion, and only falls
 back to `<configDir>/bar/modules/<id>.qml` when none is given. So every custom

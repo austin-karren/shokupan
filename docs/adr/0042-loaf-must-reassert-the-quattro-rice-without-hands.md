@@ -15,7 +15,11 @@ Heal *running* is no longer heal *sufficing*. The quattro rice contains things a
 symlink pass cannot re-assert, and each is a way the next `omarchy update` breaks
 the desktop while doctor stays green. In order of blast radius:
 
-1. **The launcher fork drifts silently.** `shokupan.launcher` is 655 lines copied
+1. **The launcher fork drifts silently.** *(2026-08-15: the fork and the
+   `weather-icon` script cited below are both gone — ADR-0027 is superseded and
+   ADR-0031 is covered by stock. The `forks` check they motivated is what
+   survives, now guarding `indicators.qml` and the clock clone.)*
+   `shokupan.launcher` is 655 lines copied
    from upstream's `Launcher.qml` and re-ordered (ADR-0027). Upstream fixes never
    reach it, and nothing detects the divergence. `weather-icon --check-icons` is
    the existing pattern for exactly this — a fork that must track its upstream —
@@ -50,7 +54,8 @@ Working as designed, listed so nobody "fixes" them: `packages/omarchy.pin` is
 updated by hand per verified upgrade — that is the version-lag contract
 (ADR-0034), not a gap. And the generated launcher entries
 (`shokupan-launcher-cmds`) regenerate on demand rather than on heal, which is
-acceptable until upstream churn proves otherwise.
+acceptable until upstream churn proves otherwise. *(2026-08-15: the generator
+and its entries are deleted with ADR-0027's supersession — no longer a case.)*
 
 This ADR is the work list for making loaf quattro-complete. It stays proposed
 until the four wants above exist and a real `omarchy update` has been survived
@@ -107,3 +112,8 @@ watches.
 to stock `omarchy.audio` per ADR-0044 after the 2026-08-09 update broke its
 rebind. Four watched couplings remain: `network.qml`, `microphone.qml`, and
 `barcfg.qml`'s two.)*
+
+*(Note 2026-08-15: no watched couplings remain at all — the r1744 upgrade
+removed the last hosted widgets, as `packages/forks` records. The watch
+mechanism stays for the next deviation; today the file carries two forks,
+`indicators.qml` and the clock clone's `Panel.qml`.)*

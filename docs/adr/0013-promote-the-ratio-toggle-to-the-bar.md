@@ -8,6 +8,11 @@ status: accepted
 > longer in the right cluster: it joined the centre's indicator cluster, with
 > the indicators' own block behaviour — visible unprompted while on, dimmed and
 > hover-revealed while off. See the addendum at the foot.
+>
+> **Correction 2026-08-15:** the addendum's `ratio.qml`/`ratio-on.qml` pair is
+> dead; the toggle lives in the indicators fork now
+> (`.config/omarchy/bar/indicators/Ratio.qml`, loaded by
+> `bar/modules/indicators.qml`) — one control, no two-faced pair.
 
 The single-window aspect-ratio toggle — constraining a lone window via Hyprland's
 `single_window_aspect_ratio` — is used often enough that living three levels deep

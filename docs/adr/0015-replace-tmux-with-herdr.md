@@ -64,3 +64,14 @@ kept:
   to find this session?" Yes → herdr.
 - The two configs never interact: herdr has its own state, tmux reads
   `~/.config/tmux/tmux.conf`. Nothing here needs to keep them in step.
+
+## Addendum, 2026-08-15: upstream adopted herdr; the rebind retires
+
+Upstream r1744 binds herdr natively — `SUPER+CTRL+RETURN` opens herdr,
+`SUPER+ALT+RETURN` opens tmux (`default/hypr/bindings/applications.lua`). This
+rice's `bindings.lua` rebind, which had pointed `SUPER+ALT+RETURN` at herdr
+while quattro's default still targeted an uninstalled tmux, is deleted as
+superseded-by-upstream: both stock bindings return, and with tmux reinstalled
+(the partial revert above) each chord now opens a multiplexer that exists. The
+user retrains to `SUPER+CTRL+RETURN` for herdr. The split itself — agents in
+herdr, everything else in tmux — is unchanged and remains the standing decision.

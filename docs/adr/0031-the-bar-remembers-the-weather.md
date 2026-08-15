@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded
 ---
 
 # The bar remembers the weather
@@ -198,3 +198,14 @@ package-owned QML file or cloning the plugin to own its popup and forecast too.
 Neither is worth it for a gap that shows up only in the seconds after a shell
 restart. `weather-icon` stays in `.local/bin` — it costs nothing and is the
 thing to reach for if the gap ever matters.
+
+## Addendum, 2026-08-15: superseded — stock `omarchy.weather` covers it
+
+The stock-first audit closed this out: stock `omarchy.weather` holds its last
+reading in memory, which is the behaviour this ADR existed to guarantee, and
+the residual cold-start gap was judged above not worth owning code for.
+`weather-icon` is deleted from `.local/bin` — nothing had called it since
+quattro — and the `loaf doctor` "weather icons" glyph-table check went with it,
+since it guarded that script's copy of upstream's table and nothing else. If
+the cold-start gap ever matters, the design is in this ADR and the script is in
+git history.

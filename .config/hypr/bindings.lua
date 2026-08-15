@@ -2,27 +2,20 @@
 -- Ported from bindings.conf at the quattro migration (ADR-0033). Unbind a
 -- default before replacing it; hl.unbind of a key that is not bound is an error.
 
--- ADR-0027 (fork regressed at r1744): shokupan.launcher was dropped when
--- upstream deleted the launcher plugin it forked. The merged list survives —
--- the shokupan-cmd-*.desktop entries are ordinary applications, so the stock
--- apps menu lists them — but the commands-first ordering is gone until a fork
--- durable to upstream breaking changes exists. Both old reflexes land on the
--- apps menu: SUPER+SPACE (upstream's chord, now the root menu there, so unbind
--- first) and bare ALT+SPACE (ours since before the merge). SUPER+ALT+SPACE
--- keeps its old meaning here — the Omarchy Menu — though upstream moved that
--- to SUPER+SPACE and put apps on SUPER+ALT+SPACE.
+-- ADR-0027 (fully retired at r1744, superseded — stock): the merged
+-- apps+commands list is gone. Upstream deleted the launcher plugin
+-- shokupan.launcher forked, and the generated shokupan-cmd-*.desktop entries
+-- are removed with it — commands are reached via the Omarchy Menu now. What
+-- stays is where the reflexes land: SUPER+SPACE (upstream's chord, now the
+-- root menu there, so unbind first) and bare ALT+SPACE (ours since before the
+-- merge) both open the apps menu. SUPER+ALT+SPACE keeps its old meaning here —
+-- the Omarchy Menu — though upstream moved that to SUPER+SPACE and put apps on
+-- SUPER+ALT+SPACE.
 hl.unbind("SUPER + SPACE")
 hl.unbind("SUPER + ALT + SPACE")
-o.bind("SUPER + SPACE", "Launch apps and commands", "omarchy-menu toggle apps")
-o.bind("ALT + SPACE", "Launch apps and commands", "omarchy-menu toggle apps")
+o.bind("SUPER + SPACE", "Launch apps", "omarchy-menu toggle apps")
+o.bind("ALT + SPACE", "Launch apps", "omarchy-menu toggle apps")
 o.bind("SUPER + ALT + SPACE", "Omarchy menu", "omarchy-menu toggle")
-
--- Herdr replaced tmux (ADR-0015), but quattro's default still binds this chord
--- to omarchy-launch-terminal-tmux, which now opens nothing: tmux is uninstalled.
--- Same chord, same meaning - the ALT variant of the terminal key opens the
--- terminal with the multiplexer in it.
-hl.unbind("SUPER + ALT + RETURN")
-o.bind("SUPER + ALT + RETURN", "Herdr", 'uwsm-app -- xdg-terminal-exec --dir="$(omarchy-cmd-terminal-cwd)" herdr')
 
 -- The Close ladder (ADR-0020) ------------------------------------------------
 --
@@ -471,9 +464,12 @@ shokupan.usable_area = usable_area
 -- the quattro port they lived in apexshot.conf sourced from exactly there — a
 -- file the Lua config manager never reads, which silently killed all six
 -- shortcuts. The .conf pair is retired; these are the same chords verbatim.
+-- Kept through the 2026-08-15 stock-first audit at the user's word: apexshot
+-- is back over the native capture flow until that flow improves (ADR-0044).
 o.bind("SUPER + SHIFT + 4", "Screenshot area", "/usr/bin/apexshot capture area")
 o.bind("CTRL + ALT + X", "Screenshot crosshair", "/usr/bin/apexshot capture crosshair")
 o.bind("SUPER + CTRL + ALT + S", "Screenshot screen", "/usr/bin/apexshot capture screen")
 o.bind("CTRL + ALT + P", "Show last screenshot", "/usr/bin/apexshot show-last-preview")
 o.bind("CTRL + ALT + R", "Record screen", "/usr/bin/apexshot record ui")
 o.bind("CTRL + ALT + SHIFT + S", "Stop recording", "/usr/bin/apexshot record stop")
+
