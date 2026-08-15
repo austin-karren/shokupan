@@ -180,7 +180,25 @@ step "Rice"
 loaf-heal || die "heal failed"
 
 # ---------------------------------------------------------
-# 6. Verdict
+# 6. Widevine donation for Helium (ADR-0038)
+# ---------------------------------------------------------
+
+step "Widevine (ADR-0038)"
+
+# Helium ships without the Widevine CDM, so DRM playback depends on a one-time
+# donation from a Chrome-sourced copy; loaf-widevine owns the how and is
+# idempotent. A refusal here is surfaced but does NOT stop the install: DRM is
+# severable from a working rice, and a fresh machine may simply not have a
+# donor CDM on disk yet. Doctor stays quiet about it until Helium has run once.
+if loaf-widevine; then
+  say "widevine donation reconciled"
+else
+  say "widevine donation not made — DRM will not play in Helium until it is"
+  say "install google-chrome once, run 'loaf widevine', then remove it (ADR-0038)"
+fi
+
+# ---------------------------------------------------------
+# 7. Verdict
 # ---------------------------------------------------------
 
 step "Verifying with loaf doctor"

@@ -158,6 +158,7 @@ loaf flatpaks     # same, for the Flatpak manifest
 loaf debloat      # re-remove the Omarchy defaults decided against (ADR-0043)
 loaf forks        # check recorded forks and watched upstream files for drift
 loaf wallpapers   # assemble the full Omarchy wallpaper pool under Tokyo Night (ADR-0048)
+loaf widevine     # donate a Widevine CDM into Helium's profile for DRM playback (ADR-0038)
 loaf install      # bootstrap a fresh CachyOS + Omarchy machine, bound to the pin
 ```
 
@@ -349,4 +350,7 @@ are the to-do list.
   `~/.local/state/omarchy/toggles/window-resize-clamp` (present = clamp) —
   `window-resize --toggle-mode` went with the script in the quattro port
 - Play one DRM stream in Helium to close ADR-0038's owed verification, then
-  delete the leftover `~/.config/google-chrome/` profile
+  delete the leftover `~/.config/google-chrome/` profile. The presence half is
+  covered — `loaf doctor`'s widevine check asserts the donation is there and
+  version-consistent, and `loaf widevine` reproduces it — but presence says the
+  CDM exists, not that EME negotiates

@@ -761,6 +761,73 @@ else
 fi
 
 # ---------------------------------------------------------
+# widevine
+# ---------------------------------------------------------
+#
+# The donation is machine-side bytes claimed by ADR-0038, like the wallpaper
+# pool: loaf-widevine copies a Chrome-sourced CDM layout into Helium's profile
+# and writes the pointer file Helium reads. HELIUM_BIN=bash stands in for the
+# browser (the check is command presence, not behaviour); CHROME_BUNDLED_CDM is
+# pointed away from /opt so a machine that happens to have Chrome installed
+# does not donate into the refusal test.
+
+home=$(make_home)
+mkdir -p "$home/.config/net.imput.helium"
+src="$home/cdm-source"
+mkdir -p "$src/_platform_specific/linux_x64"
+printf '{"name":"WidevineCdm","version":"4.10.9999.0"}\n' >"$src/manifest.json"
+printf 'stub library\n' >"$src/_platform_specific/linux_x64/libwidevinecdm.so"
+
+out=$(HELIUM_BIN=bash CHROME_BUNDLED_CDM="$home/nope" WIDEVINE_SOURCE="$src" \
+  loaf_run "$home" widevine)
+status=$?
+assert_equals "widevine: donates from a source CDM" "$status" "0"
+donated="$home/.config/net.imput.helium/WidevineCdm/4.10.9999.0"
+assert_file_exists "widevine: library copied into a versioned dir" \
+  "$donated/_platform_specific/linux_x64/libwidevinecdm.so"
+pointer="$home/.config/net.imput.helium/WidevineCdm/latest-component-updated-widevine-cdm"
+assert_contains "widevine: pointer names the donated dir" \
+  "$(cat "$pointer" 2>/dev/null)" "\"Path\":\"$donated\""
+
+# A present donation is never touched — after the first copy Helium's component
+# updater owns currency — so a second run must succeed without a source at all.
+out=$(HELIUM_BIN=bash CHROME_BUNDLED_CDM="$home/nope" loaf_run "$home" widevine)
+status=$?
+assert_contains "widevine: a present donation is left alone" "$out" "nothing to do"
+assert_equals "widevine: idempotent run exits 0" "$status" "0"
+
+out=$(HELIUM_BIN=bash CHROME_BUNDLED_CDM="$home/nope" loaf_run "$home" doctor)
+assert_contains "doctor: reports the donation version-consistent" "$out" \
+  "CDM 4.10.9999.0 donated and version-consistent"
+
+# Gut the donation but leave the pointer: the exact state a half-finished copy
+# or an overzealous cleanup produces.
+rm "$donated/_platform_specific/linux_x64/libwidevinecdm.so"
+out=$(HELIUM_BIN=bash CHROME_BUNDLED_CDM="$home/nope" loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: detects a broken donation" "$out" "CDM files are not there"
+assert_equals "doctor: a broken donation is a failure" "$status" "1"
+
+home=$(make_home)
+mkdir -p "$home/.config/net.imput.helium"
+out=$(HELIUM_BIN=bash CHROME_BUNDLED_CDM="$home/nope" loaf_run "$home" widevine)
+status=$?
+assert_contains "widevine: refuses when no source CDM exists" "$out" \
+  "no source Widevine CDM"
+assert_equals "widevine: refusal exits non-zero" "$status" "1"
+
+out=$(HELIUM_BIN=surely-not-a-command CHROME_BUNDLED_CDM="$home/nope" \
+  loaf_run "$home" widevine)
+status=$?
+assert_contains "widevine: refuses when helium is absent" "$out" "helium is not installed"
+assert_equals "widevine: helium absence exits non-zero" "$status" "1"
+
+# No profile dir means Helium has never run here — doctor makes no claim.
+home=$(make_home)
+out=$(HELIUM_BIN=bash CHROME_BUNDLED_CDM="$home/nope" loaf_run "$home" doctor)
+assert_not_contains "doctor: silent about widevine when helium never ran" "$out" "widevine"
+
+# ---------------------------------------------------------
 # menu extension
 # ---------------------------------------------------------
 #

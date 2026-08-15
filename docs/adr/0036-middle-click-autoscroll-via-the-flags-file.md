@@ -173,3 +173,16 @@ default on Linux.
   That is the intent, but it is a wider blast radius than the browser binds —
   OAuth hand-offs from Online Accounts and any application opening a URL are
   included.
+
+*Addendum 2026-08-15: the menu path now exists too.* The default set here via
+`mimeapps.list` was fine, but Setup > Default Browser could not express it:
+`omarchy-default-browser` hardcodes seven browsers with no helium case, and a
+PATH shim cannot override it (Omarchy's bin outranks `~/.local/bin`). Two
+things record the fix: a `setup.default.browser.helium` row in
+`.config/omarchy/extensions/omarchy-menu.jsonc` that inlines the upstream
+script's two effects — the `env -u BROWSER xdg-settings set` and the
+notification — against `helium.desktop`, and a draft upstream issue at
+`docs/upstream/omarchy-default-browser-helium.md` (issue-first, ADR-0044 rule
+5, not posted) proposing helium in the script's own list. If upstream takes
+it, the menu row becomes a duplicate id silently overriding their row
+(mechanism 1 in the jsonc) and should then be deleted.
