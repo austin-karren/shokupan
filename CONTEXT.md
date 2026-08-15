@@ -309,8 +309,9 @@ and show unprompted; inactive ones sit right and only hover-reveal — the ratio
 mimics that with a two-faced module pair, since the indicators' own blocks are
 closed to outside modules. Everything in the group is a single caption-sized
 switch glyph; ADR-0039 removed the one text-bearing member for exactly that
-reason. The calendar is deliberately *not* a member: it is
-static, being half of ADR-0029's bracket around the date. A module joins the
+reason. (The calendar bracket that used to sit static beside the date — half of
+ADR-0029's bracket — was retired 2026-08-15: date clicks live inside the cloned
+clock's popup now, ADR-0006 addendum.) A module joins the
 group by binding to the bar's `centerSectionRevealHeld`, which is why joining it
 requires a QML module rather than a Command module. (The bar-settings gear that
 used to sit after the workspaces had the same behaviour with its own hover

@@ -4,7 +4,7 @@
   "name": "Calendar",
   "version": "1.0.0",
   "author": "shokupan",
-  "description": "Static calendar button beside the clock; left-click toggles the calendar app, right-click opens online accounts",
+  "description": "DEPRECATED — replaced by the austinkarren.clock clone (calendar clicks) at r1744. Static calendar button beside the clock; left-click toggles the calendar app, right-click opens online accounts",
   "kinds": [
     "bar-widget"
   ],
@@ -13,7 +13,7 @@
   },
   "barWidget": {
     "displayName": "Calendar",
-    "description": "Static calendar button beside the clock; left-click toggles the calendar app, right-click opens online accounts",
+    "description": "DEPRECATED — replaced by the austinkarren.clock clone (calendar clicks) at r1744. Static calendar button beside the clock; left-click toggles the calendar app, right-click opens online accounts",
     "category": "Time",
     "allowMultiple": false
   }

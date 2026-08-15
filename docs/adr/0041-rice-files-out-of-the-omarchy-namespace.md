@@ -68,6 +68,15 @@ upstream file we edited. Nothing of ours patches an Omarchy-owned file today;
 the problem is purely that our sanctioned entries share a namespace with
 upstream's own state (`bar.json`, `branding/`, upgrade `.bak` droppings).
 
+> **Note 2026-08-15: `austinkarren.clock` is the sanctioned-clone exception to
+> the `shokupan.*` id rule.** `omarchy-plugin-clone` derives the clone id as
+> `$USER.<source-id>` — the prefix is upstream's own collision guard, and the
+> shell routes the built-in's bar entry and IPC to the clone by exactly that
+> id shape (`clonedFrom` + enabled). Renaming it into `shokupan.*` would buy
+> namespace purity at the cost of leaving the sanctioned path, so clones keep
+> the tool's name. The directory (`plugins/austinkarren.clock/`) is still a
+> symlink into the repo, which remains the machine-readable "ours" marker.
+
 ## What the separation would look like
 
 1. **A rice-named directory** — `~/.config/shokupan/` — stowed from the repo
