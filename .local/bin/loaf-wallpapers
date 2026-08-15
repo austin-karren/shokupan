@@ -1,0 +1,147 @@
+#!/bin/bash
+
+# loaf:summary=Assemble the full Omarchy wallpaper pool under Tokyo Night
+# loaf:args=[--offline] [--dry-run]
+
+# Omarchy merges ~/.config/omarchy/backgrounds/<theme>/ into the current
+# theme's wallpaper set at runtime (omarchy-theme-set choose_theme_background,
+# omarchy-theme-bg-next), and wallpaper-menu scans the same two dirs — so a
+# per-theme user dir is the sanctioned place to widen the pool without touching
+# upstream. This fills tokyo-night's with every wallpaper Omarchy has ever
+# shipped (ADR-0048): the currently-installed themes' images as symlinks into
+# /usr/share/omarchy, and the ones upstream deleted as downloads recorded in
+# packages/wallpapers. The repo tracks the decision; the machine holds the
+# bytes — the same manifest-vs-record posture as packages (README).
+#
+# Idempotent, and offline unless a manifest entry's file is missing from disk.
+# `loaf heal` runs it with --offline, which skips downloads entirely so a
+# post-update heal never touches the network — present history files are still
+# re-linked, so the pool re-asserts fully from what is already on disk.
+
+set -uo pipefail
+
+# $LOAF_HOME is $HOME everywhere except the test suite, which points it at a
+# fixture tree. Every path below derives from it, so nothing reaches the real
+# home directory unless it was asked to.
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
+MANIFEST="$LOAF_ROOT/packages/wallpapers"
+
+# Injectable for the same reason doctor's /etc paths are: so the suite asserts
+# against a fixture rather than whatever themes this machine has installed.
+THEMES_DIR="${OMARCHY_THEMES_DIR:-/usr/share/omarchy/themes}"
+
+# The pool lives under the theme it widens. Tokyo Night only: the picker under
+# any other theme stays stock.
+POOL_THEME=tokyo-night
+POOL="$LOAF_HOME/.config/omarchy/backgrounds/$POOL_THEME"
+HISTORY_DIR="$LOAF_HOME/.local/share/wallpapers/omarchy-history"
+RAW_BASE="https://raw.githubusercontent.com/basecamp/omarchy"
+
+offline=false
+dry_run=false
+for arg in "$@"; do
+  case $arg in
+  --offline) offline=true ;;
+  --dry-run) dry_run=true ;;
+  *)
+    echo "usage: loaf wallpapers [--offline] [--dry-run]" >&2
+    exit 64
+    ;;
+  esac
+done
+
+if [[ ! -f $MANIFEST ]]; then
+  # No manifest means no claim — a repo that predates the pool has decided
+  # nothing, and the test fixtures must not grow one from the real machine.
+  exit 0
+fi
+
+failed=0
+
+# ---------------------------------------------------------
+# 1. Symlink the installed themes' wallpapers into the pool
+# ---------------------------------------------------------
+
+$dry_run || mkdir -p "$POOL"
+
+for theme_dir in "$THEMES_DIR"/*/backgrounds; do
+  [[ -d $theme_dir ]] || continue
+  theme=$(basename "$(dirname "$theme_dir")")
+  # Tokyo Night's own backgrounds are already in the theme's native set —
+  # linking them here would double them up in the picker.
+  [[ $theme == "$POOL_THEME" ]] && continue
+  for img in "$theme_dir"/*; do
+    [[ -f $img ]] || continue
+    # <theme>- prefix: several themes ship the same basename (omarchy.png),
+    # and a flat pool dir would collapse them.
+    link="$POOL/$theme-$(basename "$img")"
+    [[ -L $link && $(readlink "$link") == "$img" ]] && continue
+    if $dry_run; then
+      printf 'would link %s\n' "$(basename "$link")"
+    else
+      ln -sfn "$img" "$link"
+      printf 'linked %s\n' "$(basename "$link")"
+    fi
+  done
+done
+
+# ---------------------------------------------------------
+# 2. Restore the wallpapers upstream deleted
+# ---------------------------------------------------------
+
+while read -r file sha path; do
+  [[ -n $file ]] || continue
+  dest="$HISTORY_DIR/$file"
+  if [[ ! -f $dest ]]; then
+    # --offline is heal's post-update path: never the network, only re-assert
+    # from what is on disk. A missing file waits for a manual run.
+    $offline && continue
+    url="$RAW_BASE/$sha/$path"
+    if $dry_run; then
+      printf 'would fetch %s\n' "$file"
+      continue
+    fi
+    mkdir -p "$HISTORY_DIR"
+    # Download beside the destination and move into place, so an interrupted
+    # curl never leaves a truncated file that later runs treat as present.
+    if curl -fsSL -o "$dest.part" "$url"; then
+      mv "$dest.part" "$dest"
+      printf 'fetched %s\n' "$file"
+    else
+      rm -f "$dest.part"
+      printf '✗ fetch failed: %s\n' "$url" >&2
+      failed=$((failed + 1))
+      continue
+    fi
+  fi
+  link="$POOL/history-$file"
+  [[ -L $link && $(readlink "$link") == "$dest" ]] && continue
+  if $dry_run; then
+    printf 'would link history-%s\n' "$file"
+  else
+    ln -sfn "$dest" "$link"
+    printf 'linked history-%s\n' "$file"
+  fi
+done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$MANIFEST")
+
+# ---------------------------------------------------------
+# 3. Prune pool symlinks whose targets vanished
+# ---------------------------------------------------------
+
+# An upstream update that removes a wallpaper leaves its pool symlink dangling
+# — the picker would show a broken entry. Pruned last, so a link whose target
+# the passes above just (re)created is never touched. The deleted image itself
+# comes back through the manifest once its deletion is recorded there.
+for link in "$POOL"/*; do
+  [[ -L $link && ! -e $link ]] || continue
+  if $dry_run; then
+    printf 'would prune %s (target vanished)\n' "$(basename "$link")"
+  else
+    rm "$link"
+    printf 'pruned %s (target vanished)\n' "$(basename "$link")"
+  fi
+done
+
+((failed)) && exit 1
+exit 0

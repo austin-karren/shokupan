@@ -138,7 +138,29 @@ if command -v loaf-debloat &>/dev/null; then
 fi
 
 # ---------------------------------------------------------
-# 4. Apply pending migrations
+# 4. Re-assert the wallpaper pool
+# ---------------------------------------------------------
+
+# An upstream update can add, rename or delete theme wallpapers, which grows
+# stale or dangling symlinks in the Tokyo Night pool. loaf-wallpapers owns the
+# how; the manifest at packages/wallpapers owns the deleted-history half.
+# --offline keeps heal off the network: present files re-link, missing ones
+# wait for a manual `loaf wallpapers`.
+if command -v loaf-wallpapers &>/dev/null; then
+  if $dry_run; then
+    wallpapers_out=$(loaf-wallpapers --offline --dry-run)
+  else
+    wallpapers_out=$(loaf-wallpapers --offline)
+  fi
+  if [[ -n $wallpapers_out ]]; then
+    while IFS= read -r line; do act "wallpapers: $line"; done <<<"$wallpapers_out"
+  else
+    say "wallpapers: nothing to do"
+  fi
+fi
+
+# ---------------------------------------------------------
+# 5. Apply pending migrations
 # ---------------------------------------------------------
 
 # Migrations exist because this machine cannot be rebuilt to get a fix — it is
