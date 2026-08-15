@@ -35,10 +35,13 @@
           "id": "austinkarren.clock",
           "format": "dddd h:mm AP",
           "formatAlt": "d MMMM 'W'ww yyyy",
-          "verticalFormat": "h\n\u2014\nmm"
+          "verticalFormat": "h\n—\nmm"
         },
         {
           "id": "omarchy.weather"
+        },
+        {
+          "id": "shokupan.apexshot"
         },
         {
           "id": "omarchy.system-update"
@@ -50,9 +53,6 @@
         },
         {
           "id": "omarchy.tailscale"
-        },
-        {
-          "id": "shokupan.capture"
         },
         {
           "id": "omarchy.bluetooth"
