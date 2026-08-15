@@ -4,7 +4,7 @@
   "name": "ApexShot",
   "version": "1.0.0",
   "author": "shokupan",
-  "description": "Screenshot button for ApexShot: left captures an area, middle records the screen, right captures the full screen",
+  "description": "DEPRECATED — unsupported since 2026-08-15; replaced by shokupan.capture over the native omarchy-capture-* tools. Screenshot button for ApexShot: left captures an area, middle records the screen, right captures the full screen",
   "kinds": [
     "bar-widget"
   ],
