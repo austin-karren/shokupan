@@ -106,7 +106,43 @@ else
 fi
 
 # ---------------------------------------------------------
-# 3. Chosen packages and flatpaks
+# 3. Boot contract: LUKS cmdline vs Omarchy's initramfs hooks (ADR-0047)
+# ---------------------------------------------------------
+
+step "Boot contract"
+
+# Omarchy's omarchy_hooks.conf REPLACES the HOOKS array with the busybox
+# `encrypt` flavour; a CachyOS install boots with the sd-encrypt-style
+# rd.luks.uuid=, which that hook ignores. Without cryptdevice= on the cmdline,
+# the FIRST initramfs rebuild after this install leaves root un-unlockable
+# (measured: the r1744 upgrade needed a live-USB recovery). Emit the drop-in
+# before any kernel work can rebuild an image.
+hooks_conf=/etc/mkinitcpio.conf.d/omarchy_hooks.conf
+crypt_dropin=/etc/limine-entry-tool.d/luks-cryptdevice.conf
+if grep -qE '^HOOKS=.*[( ]encrypt[ )]' "$hooks_conf" 2>/dev/null &&
+  grep -qE 'rd\.luks\.uuid=|root=/dev/mapper/' /proc/cmdline; then
+  luks_uuid=$(sed -n 's/.*rd\.luks\.uuid=\([0-9a-fA-F-]*\).*/\1/p' /proc/cmdline)
+  # The mapper name after the colon must match root=/resume=; read it from the
+  # running cmdline rather than assuming the luks-<uuid> convention.
+  mapper=$(sed -n 's|.*root=/dev/mapper/\([^ ]*\).*|\1|p' /proc/cmdline)
+  if [[ -z $luks_uuid ]]; then
+    say "cmdline has no rd.luks.uuid= — it already speaks the encrypt hook's language"
+  elif [[ -f $crypt_dropin ]] && grep -q "cryptdevice=UUID=$luks_uuid" "$crypt_dropin"; then
+    say "cryptdevice drop-in present"
+  else
+    say "writing $crypt_dropin for LUKS root $luks_uuid"
+    printf 'KERNEL_CMDLINE[default]+=" cryptdevice=UUID=%s:%s"\n' \
+      "$luks_uuid" "${mapper:-luks-$luks_uuid}" |
+      $SUDO tee "$crypt_dropin" >/dev/null || die "could not write $crypt_dropin"
+    # Make the parameter live in the rendered menu now, not at the next rebuild.
+    command -v limine-update &>/dev/null && $SUDO limine-update
+  fi
+else
+  say "not applicable — no encrypt hook or no LUKS root"
+fi
+
+# ---------------------------------------------------------
+# 4. Chosen packages and flatpaks
 # ---------------------------------------------------------
 
 step "Packages"
@@ -133,7 +169,7 @@ if command -v flatpak &>/dev/null && [[ -f $LOAF_ROOT/packages/chosen.flatpaks ]
 fi
 
 # ---------------------------------------------------------
-# 4. The rice itself: stow, debloat, migrations
+# 5. The rice itself: stow, debloat, migrations
 # ---------------------------------------------------------
 
 step "Rice"
@@ -144,7 +180,7 @@ step "Rice"
 loaf-heal || die "heal failed"
 
 # ---------------------------------------------------------
-# 5. Verdict
+# 6. Verdict
 # ---------------------------------------------------------
 
 step "Verifying with loaf doctor"

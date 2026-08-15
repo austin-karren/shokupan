@@ -61,6 +61,26 @@ step "Update system packages"
 # rather than a precaution — without it, every step below is unreachable.
 if sudo env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -Syu; then :; else failed+=("pacman"); fi
 
+# Boot contract (ADR-0047): when omarchy's hooks file selects the busybox
+# `encrypt` flavour, every cmdline in the rendered boot menu must carry
+# cryptdevice= or the next boot cannot unlock root — the r1744 upgrade proved
+# it with a live-USB recovery. The menu is root-only, so this deep half of
+# `loaf doctor`'s no-sudo check lives here, where sudo is already warm and a
+# kernel/initramfs rebuild may just have happened.
+if grep -qE '^HOOKS=.*[( ]encrypt[ )]' /etc/mkinitcpio.conf.d/omarchy_hooks.conf 2>/dev/null &&
+  grep -qE 'rd\.luks\.uuid=|root=/dev/mapper/' /proc/cmdline; then
+  step "Verify the boot menu can unlock LUKS"
+  cmdlines_total=$(sudo grep -c '^\s*cmdline:' /boot/limine.conf 2>/dev/null || echo 0)
+  cmdlines_ok=$(sudo grep '^\s*cmdline:' /boot/limine.conf 2>/dev/null | grep -c 'cryptdevice=' || true)
+  if ((cmdlines_total > 0 && cmdlines_ok == cmdlines_total)); then
+    echo "all $cmdlines_total menu cmdline(s) carry cryptdevice="
+  else
+    failed+=("boot-contract")
+    printf '\e[31m%s of %s boot menu cmdlines lack cryptdevice= — do NOT reboot until fixed (ADR-0047)\e[0m\n' \
+      "$((cmdlines_total - cmdlines_ok))" "$cmdlines_total"
+  fi
+fi
+
 if command -v yay &>/dev/null; then
   step "Update AUR packages"
   # --devel would also rebuild -git packages against their upstream HEAD, which

@@ -157,10 +157,49 @@ if [[ -f $NM_CONF ]]; then
   fi
 fi
 
-if [[ $(uname -r) == *cachyos* ]]; then
-  ok "kernel" "$(uname -r)"
+# "A CachyOS kernel" is not enough: after the r1744 boot failure this machine
+# came back up on the LTS fallback and this check kept saying ✓ — true, but not
+# the kernel anyone thought was running. Booted-on-fallback while the primary
+# is installed is exactly the state worth surfacing.
+kernel_running=$(uname -r)
+if [[ $kernel_running == *cachyos-lts* ]] && pacman -Q linux-cachyos &>/dev/null; then
+  warn "kernel" "on the LTS fallback ($kernel_running) — linux-cachyos $(pacman -Q linux-cachyos | awk '{print $2}') is installed; reboot onto the primary"
+elif [[ $kernel_running == *cachyos* ]]; then
+  ok "kernel" "$kernel_running"
 else
-  warn "kernel" "running $(uname -r) — not a CachyOS kernel"
+  warn "kernel" "running $kernel_running — not a CachyOS kernel"
+fi
+
+# The measured root cause of the r1744 boot failure (ADR-0047; recovery runbook
+# linked there). Omarchy's omarchy_hooks.conf REPLACES the HOOKS array with the
+# udev/busybox flavour, whose `encrypt` hook ignores the sd-encrypt-style
+# rd.luks.uuid= parameter this CachyOS install boots with — so root never
+# unlocks. The trap detonates at the NEXT initramfs rebuild (usually a kernel
+# bump), not when the hooks file changes; this check fires in the window
+# between the two. /proc/cmdline is the running boot's truth and needs no sudo;
+# the real subject (/boot/limine.conf) is root-only, so system-update verifies
+# the rendered menu where sudo is already in play.
+OMARCHY_HOOKS_CONF="${OMARCHY_HOOKS_CONF:-/etc/mkinitcpio.conf.d/omarchy_hooks.conf}"
+CRYPT_DROPIN="${CRYPT_DROPIN:-/etc/limine-entry-tool.d/luks-cryptdevice.conf}"
+luks_root=false
+grep -qE 'rd\.luks\.uuid=|root=/dev/mapper/' /proc/cmdline && luks_root=true
+if [[ ! -f $OMARCHY_HOOKS_CONF ]] || ! grep -qE '^HOOKS=.*[( ]encrypt[ )]' "$OMARCHY_HOOKS_CONF"; then
+  ok "boot contract" "initramfs hooks do not use the busybox encrypt flavour"
+elif ! $luks_root; then
+  ok "boot contract" "encrypt hook present, root is not on LUKS"
+elif ! grep -q 'cryptdevice=' /proc/cmdline; then
+  bad "boot contract" "encrypt hook active but the running cmdline has no cryptdevice=" \
+    "the next initramfs rebuild will produce an image that cannot unlock root — the machine will not boot" \
+    "write $CRYPT_DROPIN (see ADR-0047), then rebuild: echo all | sudo /usr/share/libalpm/scripts/limine-mkinitcpio-install && sudo limine-update"
+else
+  luks_uuid=$(sed -n 's/.*rd\.luks\.uuid=\([0-9a-fA-F-]*\).*/\1/p' /proc/cmdline)
+  if [[ -f $CRYPT_DROPIN ]] && { [[ -z $luks_uuid ]] || grep -q "cryptdevice=UUID=$luks_uuid" "$CRYPT_DROPIN"; }; then
+    ok "boot contract" "encrypt hook + cryptdevice= cmdline + drop-in agree"
+  else
+    bad "boot contract" "cmdline carries cryptdevice= but $CRYPT_DROPIN is missing or names a different UUID" \
+      "the next limine menu regeneration drops cryptdevice= and the boot after that cannot unlock root" \
+      "restore the drop-in with the root LUKS UUID (see ADR-0047)"
+  fi
 fi
 
 # ---------------------------------------------------------

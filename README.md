@@ -324,6 +324,7 @@ are the to-do list.
 | [0044](./docs/adr/0044-plugins-are-the-default-shape-for-new-shell-work.md) | Plugins are the default shape for new shell work | accepted |
 | [0045](./docs/adr/0045-headset-profiles-back-in-the-autoconnect-list.md) | Headset profiles go back in the Bluetooth auto-connect list | accepted |
 | [0046](./docs/adr/0046-meet-controls-its-own-pip-popup.md) | Meet controls its own PiP popup, and the main window keeps its border | accepted |
+| [0047](./docs/adr/0047-the-boot-contract-is-guarded-not-assumed.md) | The boot contract is guarded, not assumed | accepted |
 
 ## To do
 
