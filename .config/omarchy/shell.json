@@ -7,31 +7,25 @@
   "bar": {
     "position": "top",
     "transparent": false,
-    "centerAnchor": "",
+    "centerAnchor": "austinkarren.clock",
     "layout": {
       "left": [
-        {
-          "id": "shokupan.omenu"
-        },
         {
           "id": "omarchy.workspaces"
         }
       ],
       "center": [
         {
-          "id": "omarchy.media"
-        },
-        {
           "id": "indicators",
           "type": "qml",
           "items": [
-            "Dnd",
-            "Ratio",
+            "Dictation",
+            "ScreenRecording",
             "Reminder",
             "NightLight",
+            "Dnd",
             "StayAwake",
-            "ScreenRecording",
-            "Dictation"
+            "Ratio"
           ]
         },
         {
@@ -52,21 +46,7 @@
           "id": "omarchy.tray"
         },
         {
-          "id": "omarchy.notifications"
-        },
-        {
           "id": "shokupan.capture"
-        },
-        {
-          "id": "omarchy.spacer",
-          "size": 3
-        },
-        {
-          "id": "omarchy.tailscale"
-        },
-        {
-          "id": "omarchy.spacer",
-          "size": 2
         },
         {
           "id": "omarchy.bluetooth"
@@ -76,13 +56,6 @@
         },
         {
           "id": "omarchy.audio"
-        },
-        {
-          "id": "omarchy.spacer",
-          "size": 4
-        },
-        {
-          "id": "omarchy.microphone"
         },
         {
           "id": "omarchy.monitor"
