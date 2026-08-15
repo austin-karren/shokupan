@@ -1,0 +1,32 @@
+# Wallpapers Omarchy has deleted from its themes, kept available in the Tokyo
+# Night pool (ADR-0048). One line per image:
+#
+#   <file> <commit> <path>
+#
+# <file>    name on disk under ~/.local/share/wallpapers/omarchy-history/,
+#           prefixed <theme>- to match the pool's naming convention
+# <commit>  full sha of the PARENT of the commit that deleted the image —
+#           the last commit where the bytes exist in the omarchy repo
+# <path>    the image's path in the omarchy repo at that commit
+#
+# Download URL: https://raw.githubusercontent.com/basecamp/omarchy/<commit>/<path>
+#
+# `loaf wallpapers` downloads what is missing and symlinks each file into the
+# pool as history-<file>. Re-run the deletion sweep after an upstream update:
+#   git log --diff-filter=D --name-only -- 'themes/*/backgrounds/*'
+
+tokyo-night-2-pawel-czerwinski.jpg 3da9eaf61cf54aa6c238b5f35b8345df589f34df themes/tokyo-night/backgrounds/2-pawel-czerwinski.jpg
+tokyo-night-3-milad-fakurian.jpg 3da9eaf61cf54aa6c238b5f35b8345df589f34df themes/tokyo-night/backgrounds/3-milad-fakurian.jpg
+lupine-06-omarchy.jpg 09e387a84674faf35cf6efbef3e539c5392cc31b themes/lupine/backgrounds/06-omarchy.jpg
+lupine-02-city.png 003a60b55fe7e11b1db97069e45600f71052420c themes/lupine/backgrounds/02-city.png
+lupine-06-lavender-bloom.jpg 003a60b55fe7e11b1db97069e45600f71052420c themes/lupine/backgrounds/06-lavender-bloom.jpg
+lupine-07-dusk-horizon.jpg 003a60b55fe7e11b1db97069e45600f71052420c themes/lupine/backgrounds/07-dusk-horizon.jpg
+lupine-10-purple-mountains.jpg 003a60b55fe7e11b1db97069e45600f71052420c themes/lupine/backgrounds/10-purple-mountains.jpg
+lupine-11-lake-dawn.jpg 003a60b55fe7e11b1db97069e45600f71052420c themes/lupine/backgrounds/11-lake-dawn.jpg
+lupine-12-snowy-dawn.jpg 003a60b55fe7e11b1db97069e45600f71052420c themes/lupine/backgrounds/12-snowy-dawn.jpg
+lupine-12-cherry-blossom-branch.jpg 4a2a228de03602b222c0063ebbcbbe64acc77bf7 themes/lupine/backgrounds/12-cherry-blossom-branch.jpg
+lupine-6-pastel-geometric-peach.jpg 4a2a228de03602b222c0063ebbcbbe64acc77bf7 themes/lupine/backgrounds/6-pastel-geometric-peach.jpg
+lupine-7-pastel-geometric-yellow.jpg 4a2a228de03602b222c0063ebbcbbe64acc77bf7 themes/lupine/backgrounds/7-pastel-geometric-yellow.jpg
+lupine-9-cherry-blossom-sky.jpg 4a2a228de03602b222c0063ebbcbbe64acc77bf7 themes/lupine/backgrounds/9-cherry-blossom-sky.jpg
+lupine-6-twilight-sky.jpg c828149045e94ff0fd9dd8fe571416d08deab9b4 themes/lupine/backgrounds/6-twilight-sky.jpg
+catppuccin-latte-1-catppuccin.png 525299039680a677a6c0d00cbc693966d5dbd835 themes/catppuccin-latte/backgrounds/1-catppuccin.png

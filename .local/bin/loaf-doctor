@@ -442,6 +442,38 @@ else
   ok "leaks" "no repo-only paths in \$LOAF_HOME"
 fi
 
+# The wallpaper pool (ADR-0048) is machine-side bytes claimed by a tracked
+# manifest, so drift has three shapes: the pool dir never built, a manifest
+# entry whose downloaded file is gone, and a pool symlink whose target
+# vanished under an upstream update. Guarded on the manifest existing: a repo
+# without one has made no claim. Read-only — `loaf wallpapers` is the fix.
+WALLPAPER_MANIFEST="$LOAF_ROOT/packages/wallpapers"
+if [[ -f $WALLPAPER_MANIFEST ]]; then
+  pool="$LOAF_HOME/.config/omarchy/backgrounds/tokyo-night"
+  history_dir="$LOAF_HOME/.local/share/wallpapers/omarchy-history"
+  if [[ ! -d $pool ]]; then
+    bad "wallpapers" "pool dir missing: ${pool/#$LOAF_HOME/\~}" \
+      "the manifest claims a pool that was never built — run 'loaf wallpapers'"
+  else
+    lost_history=()
+    while read -r file _; do
+      [[ -n $file && ! -f $history_dir/$file ]] && lost_history+=("$file")
+    done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$WALLPAPER_MANIFEST")
+    dangling=()
+    for link in "$pool"/*; do
+      [[ -L $link && ! -e $link ]] && dangling+=("$(basename "$link")")
+    done
+    ((${#lost_history[@]})) &&
+      bad "wallpapers" "${#lost_history[@]} manifest entry file(s) missing from disk" \
+        "${lost_history[@]}" "run 'loaf wallpapers' to download them"
+    ((${#dangling[@]})) &&
+      bad "wallpapers" "${#dangling[@]} dangling symlink(s) in the pool" \
+        "${dangling[@]}" "an update removed their targets — run 'loaf heal'"
+    ((${#lost_history[@]} == 0 && ${#dangling[@]} == 0)) &&
+      ok "wallpapers" "pool intact, all history files on disk"
+  fi
+fi
+
 if [[ -n $(git -C "$LOAF_ROOT" status --porcelain) ]]; then
   # One array element per line: bad() indents each detail, so passing the whole
   # status as a single argument would leave every line after the first flush left.

@@ -132,6 +132,7 @@ it can also override anything the tracked `.bashrc` set.
 | `.config/mimeapps.list` | Which application handles what. Load-bearing, not incidental: it is the half of ADR-0032 that actually activates the Flatpak ref handler, and the half of ADR-0036 that decides which browser every web app and browser bind opens |
 | `.config/chromium-flags.conf`, `.config/helium-browser-flags.conf` | Browser flags. Read by each browser's launcher wrapper, which is the only place a flag reaches web-app windows — `.desktop` `Exec=` lines are truncated to their first token (ADR-0036) |
 | `packages/`, `migrations/` | Repo-only: the package manifests (pacman and Flatpak), and one-shot fixes for state that lives outside the repo |
+| `packages/wallpapers` | The deleted-wallpaper manifest: every image Omarchy has removed from its themes, pinned to the last upstream commit carrying its bytes. `loaf wallpapers` downloads what is missing and assembles the full pool under Tokyo Night (ADR-0048) |
 
 ### Deliberately not tracked
 
@@ -155,6 +156,7 @@ loaf packages     # diff the manifest against what is installed
 loaf flatpaks     # same, for the Flatpak manifest
 loaf debloat      # re-remove the Omarchy defaults decided against (ADR-0043)
 loaf forks        # check recorded forks and watched upstream files for drift
+loaf wallpapers   # assemble the full Omarchy wallpaper pool under Tokyo Night (ADR-0048)
 loaf install      # bootstrap a fresh CachyOS + Omarchy machine, bound to the pin
 ```
 
@@ -325,6 +327,7 @@ are the to-do list.
 | [0045](./docs/adr/0045-headset-profiles-back-in-the-autoconnect-list.md) | Headset profiles go back in the Bluetooth auto-connect list | accepted |
 | [0046](./docs/adr/0046-meet-controls-its-own-pip-popup.md) | Meet controls its own PiP popup, and the main window keeps its border | accepted |
 | [0047](./docs/adr/0047-the-boot-contract-is-guarded-not-assumed.md) | The boot contract is guarded, not assumed | accepted |
+| [0048](./docs/adr/0048-the-wallpaper-pool-is-a-manifest-not-a-payload.md) | The wallpaper pool is a manifest, not a payload | accepted |
 
 ## To do
 
