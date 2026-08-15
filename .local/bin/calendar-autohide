@@ -21,12 +21,19 @@ visible() {
   hyprctl monitors -j | jq -e --arg ws "special:$WS" 'any(.[]; .specialWorkspace.name == $ws)' >/dev/null
 }
 
-socat -U - "UNIX-CONNECT:$SOCKET" | while IFS= read -r line; do
-  case "$line" in
-  "activewindow>>$CLASS,"*) ;; # focus went to the calendar itself: keep it
-  "activewindow>>,"*) ;;       # no focused window (fires as specials hide): ignore
-  "activewindow>>"*)
-    visible && hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
-    ;;
-  esac
+# Supervised: socat exits if the socket hiccups (compositor reload, event
+# storm disconnect), and an unsupervised exit turns click-outside-to-close
+# off silently until the next login. Respawn with a backoff; give up only
+# when Hyprland itself is gone.
+while [[ -S $SOCKET ]]; do
+  socat -U - "UNIX-CONNECT:$SOCKET" | while IFS= read -r line; do
+    case "$line" in
+    "activewindow>>$CLASS,"*) ;; # focus went to the calendar itself: keep it
+    "activewindow>>,"*) ;;       # no focused window (fires as specials hide): ignore
+    "activewindow>>"*)
+      visible && hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
+      ;;
+    esac
+  done
+  sleep 2
 done

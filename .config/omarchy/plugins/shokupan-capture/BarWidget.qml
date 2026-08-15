@@ -1,47 +1,37 @@
-// The capture button on the bar, wearing the native right-cluster convention.
+// The capture button on the bar — muscle-memory clone of the deprecated
+// shokupan.apexshot button (same glyph, same slot, same three clicks) on
+// omarchy's native capture tools. `omarchy-capture-screenshot` is the
+// user-facing entry; a bare `omarchy-capture-screenrecording` toggles.
 //
-// Every upstream panel widget in the right cluster pins the same box —
-// `fixedWidth: Style.space(27)` (audio Panel.qml:531, network:715,
-// bluetooth:477, monitor:346, power:257) — and the bar row itself has
-// spacing: 0, so that shared box IS upstream's spacing mechanism.
+// BarIconButton, not a hand-sized WidgetButton: since r1744 upstream's icon
+// widgets all ride BarIconButton, which owns the slot width and optical glyph
+// centering — pinning fixedWidth here would fight the bar's own spacing
+// (measured: the first cut did, and the right cluster went ragged).
 //
-// Muscle-memory clone of shokupan.apexshot (now deprecated): same glyph, same
-// slot, same three clicks — but on omarchy's native capture tools instead of
-// the apexshot binary. `omarchy-capture-screenshot` is the user-facing entry
-// (`omarchy-capture-region` is its hidden geometry picker, not a screenshotter),
-// and a bare `omarchy-capture-screenrecording` toggles: stops a running
-// recording, otherwise starts one with the region picker.
+// The glyph is an escaped codepoint, never a literal: a literal Nerd Font
+// glyph silently becomes "" in editors that can't render it — the same
+// editor-loss trap palette.lua and shokupan-launcher-cmds document. An empty
+// glyph is worse than a missing button: the slot stays clickable while
+// showing nothing.
 //
 // NOTE: third-party plugin (ADR-0044) — enabled by `shokupan.capture`
 // appearing in bar.layout; a new/changed plugin dir needs omarchy-restart-shell
 // to register.
 
 import QtQuick
-import qs.Commons
 import qs.Ui
 
-Item {
+BarIconButton {
   id: root
+  moduleName: "shokupan.capture"
 
-  property var bar
-  property string moduleName
-  property var settings
+  text: "\uf030"
+  tooltipText: "Capture\n\nLeft: capture area\nMiddle: record screen\nRight: capture full screen"
 
-  implicitWidth: btn.implicitWidth
-  implicitHeight: bar ? bar.barSize : 26
-
-  WidgetButton {
-    id: btn
-    anchors.verticalCenter: parent.verticalCenter
-    bar: root.bar
-    text: ""
-    tooltipText: "Capture\n\nLeft: capture area\nMiddle: record screen\nRight: capture full screen"
-    fixedWidth: root.bar && root.bar.vertical ? -1 : Style.space(27)
-    onPressed: function(b) {
-      if (!root.bar) return
-      if (b === Qt.RightButton) root.bar.run("omarchy-capture-screenshot fullscreen")
-      else if (b === Qt.MiddleButton) root.bar.run("omarchy-capture-screenrecording")
-      else root.bar.run("omarchy-capture-screenshot region")
-    }
+  onPressed: function(b) {
+    if (!root.bar) return
+    if (b === Qt.RightButton) root.bar.run("omarchy-capture-screenshot fullscreen")
+    else if (b === Qt.MiddleButton) root.bar.run("omarchy-capture-screenrecording")
+    else root.bar.run("omarchy-capture-screenshot region")
   }
 }

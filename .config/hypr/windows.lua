@@ -18,7 +18,7 @@
 -- derives the same popup on any monitor instead of hardcoding its pixels.
 o.window("org.gnome.Calendar", { float = true })
 o.window("org.gnome.Calendar", { center = true })
-o.window("org.gnome.Calendar", { size = { "65%", "65%" } })
+o.window("org.gnome.Calendar", { size = { "72%", "72%" } })
 o.window("org.gnome.Calendar", { workspace = "special:calendar silent" })
 
 -- GNOME Settings (gnome-control-center) -------------------------------------
