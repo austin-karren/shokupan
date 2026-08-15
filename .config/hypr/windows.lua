@@ -62,7 +62,7 @@ o.window({ tag = "floating-window", class = "org.omarchy.bash" }, { size = { 120
 -- Over-matching is harmless by construction: the effects ARE the default look.
 o.window({ tag = "chromium-based-browser", title = "^Meet - .+", initial_title = "negative:^Meet - .+" }, {
   border_size = hl.get_config("general.border_size"),
-  opacity = "1.0 0.97",
+  opacity = "1.0 0.985",
 })
 
 -- The popup: let Meet pick its own geometry. `size` is static and has no

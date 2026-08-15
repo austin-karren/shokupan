@@ -11,9 +11,6 @@
 #
 # Re-stamp after re-verifying: loaf forks --record
 .config/omarchy/bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml f64fc3a122d71e6cc1f9a8b8284416df29cac070306fa6df55e9f1053fe4cf65
-# ADR-0009: wholesale template copy with two [bar] lines changed — the template
-# engine has no partial override, so a 2-line change costs a full copy.
-.config/omarchy/themed/shell.toml.tpl /usr/share/omarchy/default/themed/shell.toml.tpl bdc8e76a5a9a700adaca0d2fa44a2a340584892fd507e3fcbd4f9a4843765242
 # No hosted-widget couplings remain. The r1744 upgrade removed both: the
 # microphone wrapper's fixed-width pin became upstream's own BarIconButton
 # behaviour (deviation absorbed), and the network wrapper's globe remap lost

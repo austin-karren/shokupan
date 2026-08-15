@@ -119,7 +119,7 @@ it can also override anything the tracked `.bashrc` set.
 | `.config/uwsm/` | Session env (incl. making snap apps visible to the launcher) |
 | `.config/omarchy/shell.json` | The quickshell bar: layout, module settings, idle timings. Hot-reloaded for bar/layout edits — but the **idle timings need `omarchy-restart-shell`**: hot-reload updates the reported values while the IdleMonitor keeps its old timer, so the chain silently never fires (observed 2026-08-11) |
 | `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express. Since the r1744 upgrade only one remains: the indicators fork carrying the zen-ratio toggle (the hosted network/microphone widgets and the bar-settings gear were deleted — absorbed or regressed to stock, see ADR-0044's addendum). New files here need `omarchy-restart-shell`; edits hot-reload |
-| `.config/omarchy/themed/shell.toml.tpl` | Theme template override that pins the bar dark in every theme (ADR-0009). User templates outrank Omarchy's, so this replaces the built-in wholesale — re-diff it after an upgrade |
+| `.config/omarchy/themes/tokyo-night/shell.bar.toml` | Pins the Tokyo Night bar near-black as system chrome (ADR-0009, scoped to that theme at r1744). A `[bar]` section override spliced into the generated shell.toml, the same mechanism as stock tokyo-night's `shell.lock.toml` — it replaces the whole section, so re-check its keys against upstream's template after an upgrade. Other themes get stock bar colors |
 | `.config/omarchy/extensions/omarchy-menu.jsonc` | Our rows in the Omarchy Menu, and the System Palette's only home since quattro (ADR-0027) — the sanctioned extension point, not a patched Omarchy file. Hot-reloaded. Replaced `menu.sh`, whose bash extension point quattro removed |
 | `.config/starship.toml`, `.config/tmux/` | Prompt, and the general-purpose multiplexer. Agent sessions live in herdr instead — a self-updating binary in `~/.local/bin`, deliberately not in the manifest (ADR-0015) |
 | `.bashrc` | Thin — sources Omarchy's `default/bash/rc` |
@@ -286,7 +286,7 @@ are the to-do list.
 | [0006](./docs/adr/0006-calendar-hidden-on-its-own-special-workspace.md) | Calendar on its own special workspace | accepted |
 | [0007](./docs/adr/0007-wallpaper-pinned-independently-of-the-theme.md) | Wallpaper pinned independently of the theme | accepted |
 | [0008](./docs/adr/0008-aether-confined-to-generated-named-themes.md) | Aether may generate themes, not apply them | accepted |
-| [0009](./docs/adr/0009-waybar-stays-dark-in-every-theme.md) | The bar stays dark in every theme | superseded by 0033 |
+| [0009](./docs/adr/0009-waybar-stays-dark-in-every-theme.md) | The bar stays dark — scoped to Tokyo Night at r1744 | superseded by 0033 |
 | [0010](./docs/adr/0010-split-xcompose-to-track-it.md) | Split `~/.XCompose` so it can be tracked | accepted |
 | [0011](./docs/adr/0011-extend-second-click-dismissal-to-audio-and-cpu.md) | Second-click dismissal for audio and CPU | proposed |
 | [0012](./docs/adr/0012-unify-launcher-and-palette-on-elephant-menus.md) | Unify Launcher and System Palette | superseded by 0027 |

@@ -48,12 +48,23 @@ hl.config({
 })
 
 -- https://wiki.hypr.land/Configuring/Basics/Variables/#decoration
-hl.config({
-  decoration = {
-    -- Slightly round window corners (Omarchy's default is 0).
-    rounding = 6,
-  },
-})
+--
+-- Slightly rounded corners are a Tokyo Night choice, not a global one: every
+-- other theme keeps Omarchy's default of 0. The theme is read from the
+-- theme.name state file omarchy-theme-set writes; a load-time read is correct
+-- because Hyprland reloads its config on every theme change, so this file
+-- re-runs and re-decides with the new name.
+do
+  local paths = require("default.hypr.paths")
+  local f = io.open(paths.state_home .. "/omarchy/current/theme.name", "r")
+  if f then
+    local theme = f:read("*l")
+    f:close()
+    if theme == "tokyo-night" then
+      hl.config({ decoration = { rounding = 6 } })
+    end
+  end
+end
 
 -- The shadow block that used to live here is gone, and that is the intended
 -- outcome rather than an omission. It disabled shadows because Omarchy set
