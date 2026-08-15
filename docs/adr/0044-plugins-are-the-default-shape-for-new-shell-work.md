@@ -46,3 +46,8 @@ a screenshot tool that replaces apexshot — and may obsolete more of the rice.
 That is fine and expected (ADR-0034's lag-and-adopt posture): we keep shipping
 compatibly so any piece upstream obsoletes can be deleted, and only what
 upstream doesn't cover stays ours.
+
+*Addendum 2026-08-15: apexshot is deprecated — `shokupan.capture` replaces it
+in the bar, same three clicks on the native `omarchy-capture-*` tools
+underneath; the `shokupan-apexshot` plugin dir stays as a marked-deprecated
+tombstone.*
