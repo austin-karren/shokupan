@@ -34,6 +34,13 @@ status: accepted
 > Warm `--date` navigation rides GApplication command-line forwarding to the
 > running instance; if a gnome-calendar version ignores it, the date applies
 > on the next cold launch and the reveal is unaffected.
+>
+> **Correction 2026-08-15.** Forwarding was briefly removed the same day,
+> blamed for the SIGSEGVs; a symbolized core disproved that — the real bug is
+> a use-after-free in Calendar 50.0's weather feature
+> (`on_gclue_client_stopped_cb`), so forwarding is restored, weather disabled
+> by migration `1786837959`, and the issue drafted at
+> `docs/upstream/gnome-calendar-weather-use-after-free.md`.
 
 > **Bar entry point deleted 2026-08-09; the decision stands.** The `custom/calendar`
 > module died with `config.jsonc`. `calendar-toggle` and the workspace rule are
