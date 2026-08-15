@@ -4,7 +4,7 @@
   "name": "Omarchy Menu (power glyph)",
   "version": "1.0.0",
   "author": "shokupan",
-  "description": "DEPRECATED — off the bar since 2026-08-15 (stock layout wins, ADR-0029); SUPER+SPACE / SUPER+ALT+SPACE cover the menu. The Omarchy Menu button wearing a power glyph instead of the logo; left opens the menu, right opens a terminal",
+  "description": "The Omarchy Menu button wearing a power glyph instead of the logo; left opens the menu, right opens a terminal. Kept identity deviation (user's word, 2026-08-15, ADR-0029)",
   "kinds": [
     "bar-widget"
   ],
@@ -13,7 +13,7 @@
   },
   "barWidget": {
     "displayName": "Omarchy Menu (power glyph)",
-    "description": "DEPRECATED — off the bar since 2026-08-15 (stock layout wins, ADR-0029); SUPER+SPACE / SUPER+ALT+SPACE cover the menu. The Omarchy Menu button wearing a power glyph instead of the logo; left opens the menu, right opens a terminal",
+    "description": "The Omarchy Menu button wearing a power glyph instead of the logo; left opens the menu, right opens a terminal",
     "category": "System",
     "allowMultiple": false
   }

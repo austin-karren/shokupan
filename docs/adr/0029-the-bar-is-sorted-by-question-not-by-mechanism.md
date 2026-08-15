@@ -295,6 +295,15 @@ silently stops applying and the socket comes back — visible, not broken.
 > re-port must be durable to upstream breaking changes (the ADR-0027 lesson);
 > the better move is upstream's own suggestion box — a glyph setting on the
 > network widget would end this fork war permanently.
+>
+> **Live again 2026-08-15**, as a sanctioned plugin clone rather than a hosted
+> wrapper: `austinkarren.network` (the `omarchy plugin clone` shape the clock
+> already uses, `clonedFrom` routing intact) with exactly one patched line in
+> `Model.js` — `connectionIcon()`'s ethernet arm returns `"\u{f059f}"` instead
+> of `"\u{f0200}"`, marked `// SHOKUPAN:`. Panel.qml is verbatim; the fork line
+> and refresh discipline are in `packages/forks`. The durable wish is
+> unchanged — an upstream glyph setting — drafted in `docs/upstream/` per
+> ADR-0044 rule 5. See the final addendum.
 
 **The hidden list is ordered, and the ratio sits second.** The indicators
 widget allows multiple instances with `items` subsets, so the cluster is split
@@ -434,3 +443,47 @@ superseded: every placement argument and every number in both spacing
 sections. The ink-gap doctrine is not refuted — upstream hand-compensates its
 own glyphs — but maintaining our own copy of that fight across upgrades cost
 more balance than it bought.
+
+## Addendum: two identity deviations are kept, on the user's word, 2026-08-15
+
+The stock-first addendum above rebuilt the layout from upstream's default and
+dropped `shokupan.omenu` with the rest. Same day, the user's explicit ruling:
+**the power-glyph menu button and the wired globe are kept identity
+deviations** — the stock-first posture stands, but these two survive it.
+Recorded here so future stock-first sweeps do not re-flag them; "stock wins"
+means stock *layout and mechanism*, not the erasure of these two glyphs.
+
+1. **`shokupan.omenu` is back in the left cluster** in place of
+   `omarchy.menu`. The plugin's DEPRECATED marking is removed, its QML
+   re-verified against r1744 (the plain-Item widget contract, WidgetButton's
+   `pressed(int)`, and `bar.run`/`bar.barSize` all hold), and its glyph is now
+   written as the escaped codepoint `"\uf011"`. Its two click actions are
+   upstream's verbatim — a `watch` line in `packages/forks` guards that
+   coupling.
+
+2. **`austinkarren.network` replaces `omarchy.network`** in the right
+   cluster — the sanctioned clone described in the un-regression note above.
+   One patched line, one fork line, upstream draft filed.
+
+Both deviations ride mechanisms upstream sanctions (a third-party plugin and
+a plugin clone), which is what makes them compatible with the update posture
+that killed the layout customizations: an upgrade can break them visibly, but
+they cannot silently fight upstream's own files.
+
+### While here: why the monitor panel highlights no scale on this machine
+
+Investigated alongside the bar work (the panel is a bar popout). The panel's
+presets are `["1", "1.25", "1.6", "2", "3", "4"]` and the highlight requires
+the current scale to normalize onto a preset's *effective* value
+(`Model.matchingScaleIndex` compares `normalizeScale(cleanScale(...))`
+strings, two-decimal rounding — no tolerance band). This rice pins
+`scale = 1.666667` (monitors.lua: the deliberate 200/120 rung, 2304×1536
+logical on the 3840×2560 panel), which normalizes to `"1.67"`; the nearest
+preset `1.6` is itself valid at this resolution and stays `"1.6"`. No match,
+so nothing lights — correct behaviour, honestly displayed as none-selected,
+not a bug in the pin. Snapping the pin to a preset was rejected: 1.6 is a
+real, *different* scale (2400×1600), a whole rung smaller than this desktop
+is tuned for. Cloning the monitor panel to paint a non-preset value was also
+rejected — a second clone for a cosmetic highlight fails the durability bar.
+The fix belongs upstream (show the current scale even when it is off-preset),
+drafted in `docs/upstream/` per ADR-0044 rule 5.

@@ -11,7 +11,7 @@
     "layout": {
       "left": [
         {
-          "id": "omarchy.menu"
+          "id": "shokupan.omenu"
         },
         {
           "id": "omarchy.workspaces"
@@ -55,7 +55,7 @@
           "id": "omarchy.bluetooth"
         },
         {
-          "id": "omarchy.network"
+          "id": "austinkarren.network"
         },
         {
           "id": "omarchy.audio"

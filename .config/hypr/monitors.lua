@@ -19,6 +19,12 @@
 -- stock template says "auto", which resolved to 1.6 - a whole rung smaller UI
 -- than this desktop is tuned for.
 --
+-- Known cosmetic effect: the bar's monitor panel highlights NO scale preset on
+-- this machine. Its presets are 1/1.25/1.6/2/3/4 and the highlight needs an
+-- exact normalized match; 1.666667 normalizes to 1.67 and 1.6 stays 1.6, so
+-- nothing lights. Expected, not a bug in this pin — see ADR-0029's final
+-- addendum and docs/upstream/monitor-panel-off-preset-scale.md.
+--
 -- For UI sizing between the two rungs, use fractional TEXT scaling instead of
 -- surface scale (gsettings org.gnome.desktop.interface text-scaling-factor).
 --

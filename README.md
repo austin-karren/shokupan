@@ -309,7 +309,7 @@ are the to-do list.
 | [0026](./docs/adr/0026-zen-ratio-instead-of-a-square.md) | Single-window **zen** aspect ratio, 6:5 not square | accepted |
 | [0027](./docs/adr/0027-one-list-for-apps-and-commands.md) | One list for applications and system commands | superseded — stock; cmd entries fully retired 2026-08-15, commands live in the Omarchy Menu |
 | [0028](./docs/adr/0028-the-rice-re-asserts-itself-after-upstream-updates.md) | The rice re-asserts itself after upstream updates | accepted |
-| [0029](./docs/adr/0029-the-bar-is-sorted-by-question-not-by-mechanism.md) | The bar is sorted by the question each module answers | accepted — wired-globe section regressed at r1744 (socket is back, stock network widget) |
+| [0029](./docs/adr/0029-the-bar-is-sorted-by-question-not-by-mechanism.md) | The bar is sorted by the question each module answers | accepted — layout superseded by stock 2026-08-15; power-glyph menu and wired globe kept as identity deviations (omenu plugin, network clone) |
 | [0030](./docs/adr/0030-the-audio-tui-opens-on-output.md) | The audio TUI opens on Output Devices | superseded — quattro's `omarchy.audio` opens on Output natively |
 | [0031](./docs/adr/0031-the-bar-remembers-the-weather.md) | The bar remembers the weather, so a failed fetch cannot blank it | superseded — stock omarchy.weather covers it |
 | [0032](./docs/adr/0032-flathub-on-the-web-with-a-ref-handler.md) | Flathub on the web, with a ref handler | accepted |
