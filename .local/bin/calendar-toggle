@@ -21,13 +21,18 @@
 # calendar-autohide dismisses on click-outside (focus moving to another window).
 #
 # --date YYYY-MM-DD opens the calendar on that day. gnome-calendar takes
-# `-d, --date` (verified against its --help). COLD ONLY: the flag rides the
-# launch. Warm re-invocation is off the table — forwarding a command line to
-# the running instance SEGFAULTS gnome-calendar 50.0's primary (g_object_unref
-# on a dead object in its command-line handler; two cores collected
-# 2026-08-15 17:04, both `--date`, both dying in gio dispatch ~10s after a
-# warm click). So warm clicks only reveal the popup on whatever month it
-# already shows; the date applies on the next cold launch.
+# `-d, --date` (verified against its --help). Cold, the flag rides the launch.
+# Warm, we re-invoke `gnome-calendar --date`, which GApplication forwards to
+# the running instance. This was briefly removed on 2026-08-15, blamed for
+# SIGSEGVs in the primary — a symbolized core (CachyOS debuginfod) disproved
+# that: the crash is a use-after-free in Calendar 50.0's weather feature
+# (on_gclue_client_stopped_cb unrefs a freed GClueSimple when GeoClue idles
+# out ~10s after launch), unrelated to forwarding. A migration disables
+# weather (org.gnome.calendar weather-settings); the upstream issue draft is
+# docs/upstream/gnome-calendar-weather-use-after-free.md. Whether the running
+# instance actually NAVIGATES on a forwarded date is still unverified — if a
+# version ignores it, the popup still shows and the date applies on the next
+# cold launch; the reveal never depends on the navigation working.
 #
 # The windows.lua rule maps org.gnome.Calendar onto special:calendar WITH
 # `silent` (unlike the .conf era): the login preload must not flash the popup
@@ -106,8 +111,10 @@ if [[ -z $ADDR ]]; then
   exit 0
 fi
 
-# Warm navigation deliberately does NOT happen — a forwarded --date crashes
-# the primary instance (see header). Reveal-only from here.
+# Warm navigation: forward the date to the running instance (see header).
+if [[ -n $DATE ]]; then
+  gnome-calendar --date "$DATE" >/dev/null 2>&1 || true
+fi
 
 # Running, but parked on a normal workspace -- most likely dragged out by hand
 # or launched while no window rule was installed. Recapture it instead of
