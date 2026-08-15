@@ -474,6 +474,48 @@ if [[ -f $WALLPAPER_MANIFEST ]]; then
   fi
 fi
 
+# Helium plays DRM only through the donated Widevine CDM (ADR-0038): a JSON
+# pointer file in the profile naming a versioned directory that holds the
+# manifest and the library. Doctor owns NOTICING a broken or drifted donation;
+# heal deliberately does not redonate — swapping a browser's DRM blob is an
+# attended operation, so the fix is a manual 'loaf widevine'. Guarded on the
+# browser being installed AND its profile existing: no profile means Helium has
+# never run here (fresh machine mid-install, or a test fixture), and a claim
+# about a profile that does not exist yet is not drift.
+HELIUM_BIN="${HELIUM_BIN:-helium-browser}"
+HELIUM_PROFILE="${HELIUM_PROFILE:-$LOAF_HOME/.config/net.imput.helium}"
+CHROME_BUNDLED_CDM="${CHROME_BUNDLED_CDM:-/opt/google/chrome/WidevineCdm}"
+if command -v "$HELIUM_BIN" &>/dev/null && [[ -d $HELIUM_PROFILE ]]; then
+  wv_pointer="$HELIUM_PROFILE/WidevineCdm/latest-component-updated-widevine-cdm"
+  wv_path=""
+  [[ -f $wv_pointer ]] &&
+    wv_path=$(sed -n 's/.*"Path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$wv_pointer" | head -1)
+  if [[ -z $wv_path ]]; then
+    bad "widevine" "no CDM donation in Helium's profile — DRM streams will not play" \
+      "run 'loaf widevine' (needs a Chrome-sourced CDM on disk; see ADR-0038)"
+  elif [[ ! -f $wv_path/manifest.json || ! -f $wv_path/_platform_specific/linux_x64/libwidevinecdm.so ]]; then
+    bad "widevine" "pointer names $wv_path but the CDM files are not there" \
+      "the donation is broken — run 'loaf widevine'"
+  else
+    wv_version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$wv_path/manifest.json" | head -1)
+    if [[ $wv_version != "$(basename "$wv_path")" ]]; then
+      # The component updater keys the directory by the manifest version; a
+      # mismatch means something edited one without the other.
+      bad "widevine" "manifest says $wv_version but the directory is $(basename "$wv_path")" \
+        "version-inconsistent donation — run 'loaf widevine'"
+    else
+      ok "widevine" "CDM $wv_version donated and version-consistent"
+    fi
+    # Chrome is normally gone (ADR-0038), but if it is back and carries a
+    # different CDM, say so — noticed here, redonated only by a human.
+    if [[ -f $CHROME_BUNDLED_CDM/manifest.json ]]; then
+      chrome_wv=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$CHROME_BUNDLED_CDM/manifest.json" | head -1)
+      [[ -n $chrome_wv && $chrome_wv != "$wv_version" ]] &&
+        warn "widevine" "chrome's bundled CDM is $chrome_wv, donation is $wv_version — redonate manually if wanted ('loaf widevine' after removing the old donation)"
+    fi
+  fi
+fi
+
 if [[ -n $(git -C "$LOAF_ROOT" status --porcelain) ]]; then
   # One array element per line: bad() indents each detail, so passing the whole
   # status as a single argument would leave every line after the first flush left.

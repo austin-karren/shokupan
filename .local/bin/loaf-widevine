@@ -1,0 +1,151 @@
+#!/bin/bash
+
+# loaf:summary=Donate a Widevine CDM into Helium's profile for DRM playback
+# loaf:args=[--dry-run]
+
+# Helium is a de-Googled Chromium fork and ships without Widevine, the CDM that
+# every EME/DRM stream (Spotify, Netflix) requires. ADR-0038 records the
+# donation that fixed it: Google Chrome was installed once and its CDM copied
+# into Helium's profile, after which Helium's own component updater keeps the
+# copy current and the donor is removed. This makes that one-time donation
+# reproducible on a fresh machine.
+#
+# The mechanism, read off the live donation: Helium looks for the CDM under
+# <profile>/WidevineCdm/, where a JSON pointer file named
+# latest-component-updated-widevine-cdm carries {"Path": "<versioned dir>"} and
+# that directory holds manifest.json, LICENSE and
+# _platform_specific/linux_x64/libwidevinecdm.so — the exact layout Chrome's
+# component updater writes into its own profile. Chrome's install also ships a
+# bundled, versionless copy of the same three pieces at
+# /opt/google/chrome/WidevineCdm, with the version inside manifest.json.
+# Donating means copying one of those layouts into a versioned directory under
+# Helium's profile and writing the pointer at it.
+#
+# Idempotent: a donation already present is left completely alone, whatever its
+# version — after the first donation Helium's component updater owns currency
+# (ADR-0038), and clobbering its newer copy with an older donor would be a
+# downgrade. Refuses loudly when Helium is absent or no source CDM can be
+# found. No sudo, no network.
+
+set -uo pipefail
+
+# $LOAF_HOME is $HOME everywhere except the test suite, which points it at a
+# fixture tree. Every path below derives from it, so nothing reaches the real
+# home directory unless it was asked to.
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+
+# Injectable for the same reason doctor's /etc paths are: so the suite asserts
+# against a fixture rather than whatever browsers this machine has installed.
+HELIUM_BIN="${HELIUM_BIN:-helium-browser}"
+HELIUM_PROFILE="${HELIUM_PROFILE:-$LOAF_HOME/.config/net.imput.helium}"
+CHROME_BUNDLED_CDM="${CHROME_BUNDLED_CDM:-/opt/google/chrome/WidevineCdm}"
+
+DEST="$HELIUM_PROFILE/WidevineCdm"
+POINTER="$DEST/latest-component-updated-widevine-cdm"
+
+dry_run=false
+case "${1:-}" in
+"") ;;
+--dry-run) dry_run=true ;;
+*)
+  echo "usage: loaf widevine [--dry-run]" >&2
+  exit 64
+  ;;
+esac
+
+die() {
+  printf '\033[31m✗\033[0m %s\n' "$1" >&2
+  local detail
+  for detail in "${@:2}"; do printf '  %s\n' "$detail" >&2; done
+  exit 1
+}
+
+# The version is one JSON string field; jq is not a dependency of the install
+# path, so read it the way doctor reads /proc/cmdline — with sed.
+manifest_version() {
+  sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$1" | head -1
+}
+
+# A directory counts as a CDM only when it has both the manifest and the actual
+# library — a pointer file alone (what Chrome's profile keeps after the package
+# is removed, measured on this machine) is a claim about /opt, not a copy.
+is_cdm_dir() {
+  [[ -f $1/manifest.json && -f $1/_platform_specific/linux_x64/libwidevinecdm.so ]]
+}
+
+command -v "$HELIUM_BIN" &>/dev/null ||
+  die "helium is not installed ($HELIUM_BIN not on PATH)" \
+    "the donation targets Helium's profile — install helium-browser-bin first"
+
+# ---------------------------------------------------------
+# Already donated? Then done — the component updater owns it now
+# ---------------------------------------------------------
+
+if [[ -f $POINTER ]]; then
+  current=$(sed -n 's/.*"Path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$POINTER" | head -1)
+  if [[ -n $current ]] && is_cdm_dir "$current"; then
+    printf 'donation present: %s (version %s) — nothing to do\n' \
+      "${current/#$LOAF_HOME/\~}" "$(manifest_version "$current/manifest.json")"
+    exit 0
+  fi
+  # A pointer at a missing or gutted directory is a broken donation, not a
+  # present one — fall through and redonate over it.
+fi
+
+# ---------------------------------------------------------
+# Find a source CDM
+# ---------------------------------------------------------
+
+# First hit wins. $WIDEVINE_SOURCE lets a human point at anything; the rest are
+# every place a Chrome-fetched CDM has actually been observed on this machine:
+# the package's bundled copy, the versioned copies Chrome's component updater
+# leaves in its profile, and the pre-update snapshot ADR-0038 mentions.
+candidates=("${WIDEVINE_SOURCE:-}")
+candidates+=("$CHROME_BUNDLED_CDM")
+for d in "$LOAF_HOME/.config/google-chrome/WidevineCdm"/*/; do
+  candidates+=("${d%/}")
+done
+for d in "$LOAF_HOME/snapshots"/*/chrome-WidevineCdm; do
+  candidates+=("$d")
+done
+
+source_dir=""
+for d in "${candidates[@]}"; do
+  [[ -n $d ]] && is_cdm_dir "$d" && source_dir=$d && break
+done
+
+[[ -n $source_dir ]] ||
+  die "no source Widevine CDM found — refusing to invent one" \
+    "looked in: \$WIDEVINE_SOURCE, $CHROME_BUNDLED_CDM," \
+    "$LOAF_HOME/.config/google-chrome/WidevineCdm/<version>/, $LOAF_HOME/snapshots/*/chrome-WidevineCdm" \
+    "install google-chrome once, run 'loaf widevine' again, then remove it (ADR-0038)"
+
+version=$(manifest_version "$source_dir/manifest.json")
+[[ -n $version ]] ||
+  die "$source_dir/manifest.json has no version field — not a CDM manifest"
+
+# ---------------------------------------------------------
+# Donate
+# ---------------------------------------------------------
+
+target="$DEST/$version"
+
+if $dry_run; then
+  printf 'would donate %s (version %s) -> %s\n' \
+    "$source_dir" "$version" "${target/#$LOAF_HOME/\~}"
+  exit 0
+fi
+
+mkdir -p "$target"
+cp "$source_dir/manifest.json" "$target/" || die "copy failed: manifest.json"
+# LICENSE ships with both observed layouts but is not load-bearing.
+[[ -f $source_dir/LICENSE ]] && cp "$source_dir/LICENSE" "$target/"
+cp -r "$source_dir/_platform_specific" "$target/" || die "copy failed: _platform_specific"
+
+# Written last, so an interrupted copy never leaves a pointer at a half-donated
+# directory. No trailing newline, matching what the component updater writes.
+printf '{"Path":"%s"}' "$target" >"$POINTER"
+
+printf 'donated %s (version %s) -> %s\n' \
+  "$source_dir" "$version" "${target/#$LOAF_HOME/\~}"
+printf 'restart helium, then verify with a real DRM stream (ADR-0038 still owes that)\n'

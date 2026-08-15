@@ -128,4 +128,19 @@
   // live until the Hyprland bindings are ported to Lua - until then this row is
   // the only way to reach it. Icon f00ed is the glyph the deleted bar module used.
   "trigger.calendar": {"icon":"󰃭","label":"Calendar","keywords":"calendar meetings schedule agenda gnome","action":"/home/austinkarren/.local/bin/calendar-toggle"},
+
+  // Default Browser: Helium. Upstream's Setup > Default Browser submenu lists
+  // seven browsers, all dispatched through omarchy-default-browser, which
+  // hardcodes the same seven — no helium case, and a PATH shim cannot add one
+  // because Omarchy's bin outranks ~/.local/bin (loaf-doctor's mirrorlist
+  // comment; same trap as the ratio override above). The DEFAULT is already
+  // Helium via mimeapps.list (ADR-0036); this row restores the MENU path by
+  // inlining the two things the upstream script does — the xdg-settings write
+  // and the notification — with helium's desktop id (helium.desktop, verified
+  // in /usr/share/applications). `when`/`checked` mirror the upstream rows'
+  // shape; the id lands after upstream's seven in the same submenu (mechanism
+  // 3). An upstream draft proposing helium in the script itself sits in
+  // docs/upstream/omarchy-default-browser-helium.md. Icon f059f web, the one
+  // upstream gives brave and zen.
+  "setup.default.browser.helium": {"icon":"󰖟","label":"Helium","when":"omarchy-cmd-present helium-browser","checked":"[[ \"$(env -u BROWSER /usr/bin/xdg-settings get default-web-browser)\" == \"helium.desktop\" ]]","action":"env -u BROWSER /usr/bin/xdg-settings set default-web-browser helium.desktop && /usr/share/omarchy/bin/omarchy-notification-send -g 󰖟 'Helium is now the default browser'"},
 }
