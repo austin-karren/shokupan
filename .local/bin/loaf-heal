@@ -118,6 +118,38 @@ else
 fi
 
 # ---------------------------------------------------------
+# 2b. Copy theme files (the one COPY-class tree)
+# ---------------------------------------------------------
+
+# .config/omarchy/themes is stow-ignored on purpose: omarchy-theme-set stages
+# a user theme with cp -r, which copies a stow symlink AS a relative symlink —
+# dangling at the staging path, so a section override like tokyo-night's
+# shell.bar.toml silently never applies (measured 2026-08-15). Real files are
+# what upstream's own theme-install produces, so heal installs these by copy.
+THEMES_SRC="$LOAF_ROOT/.config/omarchy/themes"
+THEMES_DST="$LOAF_HOME/.config/omarchy/themes"
+if [[ -d $THEMES_SRC ]]; then
+  themes_changed=false
+  while IFS= read -r -d '' src; do
+    rel=${src#"$THEMES_SRC"/}
+    dst="$THEMES_DST/$rel"
+    # A leftover symlink from the stow era must give way to a real file.
+    if [[ -L $dst ]] || ! cmp -s "$src" "$dst" 2>/dev/null; then
+      if $dry_run; then
+        act "themes: would copy $rel"
+      else
+        mkdir -p "$(dirname "$dst")"
+        rm -f "$dst"
+        cp "$src" "$dst"
+        act "themes: copied $rel"
+      fi
+      themes_changed=true
+    fi
+  done < <(find "$THEMES_SRC" -type f -print0)
+  $themes_changed || say "themes: in sync"
+fi
+
+# ---------------------------------------------------------
 # 3. Re-remove Omarchy defaults decided against
 # ---------------------------------------------------------
 

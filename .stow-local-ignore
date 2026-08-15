@@ -20,3 +20,10 @@
 ^/migrations$
 ^/test$
 ^/lab$
+
+# Theme files are COPY-class, not symlink-class: omarchy-theme-set stages a
+# user theme with cp -r, which copies a stow symlink as a symlink — relative,
+# so it dangles at the staging path and the override silently never applies
+# (measured 2026-08-15 with tokyo-night/shell.bar.toml). loaf heal installs
+# these as real files instead; loaf doctor checks them byte-for-byte.
+^/\.config/omarchy/themes$

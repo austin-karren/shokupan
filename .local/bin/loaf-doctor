@@ -405,13 +405,28 @@ if [[ ! -d $LOAF_ROOT/.git ]]; then
   exit 1
 fi
 
-# Every tracked config file should reach $LOAF_HOME as a symlink pointing back here.
-# A real file means something overwrote the link and our version is not live.
+# Every tracked config file should reach $LOAF_HOME as a symlink pointing back
+# here — except .config/omarchy/themes, the one COPY-class tree: theme-set
+# stages a user theme with cp -r, which copies a symlink AS a dangling relative
+# symlink, so heal installs those as real files (see .stow-local-ignore).
+# A real file elsewhere means something overwrote the link and our version is
+# not live; a SYMLINK under themes/ means the stow era left one behind.
+COPY_CLASS='^\.config/omarchy/themes/'
 linked=0
+copied=0
 clobbered=()
 missing=()
+stale_copies=()
 while IFS= read -r f; do
   target="$LOAF_HOME/$f"
+  if [[ $f =~ $COPY_CLASS ]]; then
+    if [[ ! -L $target ]] && cmp -s "$LOAF_ROOT/$f" "$target" 2>/dev/null; then
+      copied=$((copied + 1))
+    else
+      stale_copies+=("$f")
+    fi
+    continue
+  fi
   if [[ -L $target ]]; then
     linked=$((linked + 1))
   elif [[ -e $target ]]; then
@@ -424,9 +439,11 @@ while IFS= read -r f; do
 done < <(git -C "$LOAF_ROOT" ls-files |
   grep -vE "$REPO_ONLY")
 
-((linked)) && ok "symlinks" "$linked live"
+((linked)) && ok "symlinks" "$linked live$( ((copied)) && printf ', %d theme file(s) copied in sync' "$copied")"
 ((${#clobbered[@]})) && bad "symlinks" "${#clobbered[@]} replaced by real files" "${clobbered[@]}"
 ((${#missing[@]})) && bad "symlinks" "${#missing[@]} not installed" "${missing[@]}"
+((${#stale_copies[@]})) && bad "symlinks" "${#stale_copies[@]} theme file(s) not real in-sync copies" "${stale_copies[@]}" \
+  "run loaf heal — theme files must be real files or theme-set stages them broken"
 
 # Repo-only files must not be stowed into $LOAF_HOME. Anything matched here escaped
 # .stow-local-ignore.
