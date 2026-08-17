@@ -2,20 +2,19 @@
 -- Ported from bindings.conf at the quattro migration (ADR-0033). Unbind a
 -- default before replacing it; hl.unbind of a key that is not bound is an error.
 
--- ADR-0027 (fully retired at r1744, superseded — stock): the merged
--- apps+commands list is gone. Upstream deleted the launcher plugin
+-- The launcher chords are STOCK again (2026-08-17). ADR-0027's merged
+-- apps+commands list is fully retired: upstream deleted the launcher plugin
 -- shokupan.launcher forked, and the generated shokupan-cmd-*.desktop entries
--- are removed with it — commands are reached via the Omarchy Menu now. What
--- stays is where the reflexes land: SUPER+SPACE (upstream's chord, now the
--- root menu there, so unbind first) and bare ALT+SPACE (ours since before the
--- merge) both open the apps menu. SUPER+ALT+SPACE keeps its old meaning here —
--- the Omarchy Menu — though upstream moved that to SUPER+SPACE and put apps on
--- SUPER+ALT+SPACE.
-hl.unbind("SUPER + SPACE")
-hl.unbind("SUPER + ALT + SPACE")
-o.bind("SUPER + SPACE", "Launch apps", "omarchy-menu toggle apps")
+-- went with it, so commands are reached through the Omarchy Menu now.
+-- SUPER+SPACE (root menu) and SUPER+ALT+SPACE (apps) are left exactly as
+-- upstream binds them — no unbind, no replacement.
+--
+-- The one deviation is ADDITIVE: bare ALT+SPACE, ours since before the merge,
+-- also opens the apps menu. Additive is the whole point — it collides with no
+-- upstream chord, so upstream can keep moving its own and this survives
+-- untouched. That is why there is no hl.unbind here: unbind pairs with
+-- replacement, and nothing is being replaced.
 o.bind("ALT + SPACE", "Launch apps", "omarchy-menu toggle apps")
-o.bind("SUPER + ALT + SPACE", "Omarchy menu", "omarchy-menu toggle")
 
 -- The Close ladder (ADR-0020) ------------------------------------------------
 --
@@ -472,4 +471,3 @@ o.bind("SUPER + CTRL + ALT + S", "Screenshot screen", "/usr/bin/apexshot capture
 o.bind("CTRL + ALT + P", "Show last screenshot", "/usr/bin/apexshot show-last-preview")
 o.bind("CTRL + ALT + R", "Record screen", "/usr/bin/apexshot record ui")
 o.bind("CTRL + ALT + SHIFT + S", "Stop recording", "/usr/bin/apexshot record stop")
-
