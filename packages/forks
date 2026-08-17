@@ -17,6 +17,7 @@
 # Model.js are verbatim copies and manifest.json is the clone tool's own jq
 # rewrite — refresh those three by re-cloning, not by re-diffing.
 .config/omarchy/plugins/austinkarren.clock/Panel.qml /usr/share/omarchy/shell/plugins/panels/clock/Panel.qml ce59ce0674dbf22c24ff83c6eeeb827f95d922f5cb5863da94f4bab5c4d1430b
+.config/omarchy/plugins/austinkarren.clock/BarWidget.qml /usr/share/omarchy/shell/plugins/panels/clock/BarWidget.qml cfcdaeedc4ae5832b37271a84bb92ee762301022e2443a0f769992fa792acf28
 # ADR-0029 addendum (2026-08-15): the network clone (austinkarren.network,
 # same sanctioned plugin-clone shape as the clock). Model.js is the only
 # patched file — connectionIcon()'s ethernet arm returns the globe "\u{f059f}"

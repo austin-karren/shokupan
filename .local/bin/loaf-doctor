@@ -428,6 +428,22 @@ done < <(git -C "$LOAF_ROOT" ls-files |
 ((${#stale_copies[@]})) && bad "symlinks" "${#stale_copies[@]} theme file(s) not real in-sync copies" "${stale_copies[@]}" \
   "run loaf heal — theme files must be real files or theme-set stages them broken"
 
+# The bar's plugin/settings UI appends widget enables to bar.layout's CENTER —
+# even when the widget already sits elsewhere — and it writes through the rice
+# symlink, so the duplicate lands in the repo. Measured twice on 2026-08-15
+# (apexshot, then a stock indicators dup sealed into a merge). Doctor reds it;
+# heal deliberately does NOT dedupe — which copy to keep is a human decision.
+if command -v jq &>/dev/null && [[ -f $LOAF_ROOT/.config/omarchy/shell.json ]]; then
+  dup_widgets=$(jq -r '[.bar.layout | to_entries[] | .value[] | .id] | group_by(.) | map(select(length > 1) | .[0]) | join(", ")' \
+    "$LOAF_ROOT/.config/omarchy/shell.json" 2>/dev/null)
+  if [[ -n $dup_widgets ]]; then
+    bad "bar widgets" "duplicated in bar.layout: $dup_widgets" \
+      "the plugin UI appends enables to the CENTER section — remove the copy you did not place"
+  else
+    ok "bar widgets" "no duplicate ids in bar.layout"
+  fi
+fi
+
 # Repo-only files must not be stowed into $LOAF_HOME. Anything matched here escaped
 # .stow-local-ignore.
 leaks=()

@@ -29,7 +29,20 @@ while [[ -S $SOCKET ]]; do
   socat -U - "UNIX-CONNECT:$SOCKET" | while IFS= read -r line; do
     case "$line" in
     "activewindow>>$CLASS,"*) ;; # focus went to the calendar itself: keep it
-    "activewindow>>,"*) ;;       # no focused window (fires as specials hide): ignore
+    "activewindow>>,"*)
+      # Empty class fires BOTH when the user clicks the bare desktop (should
+      # hide — the measured gap in click-outside) and transiently while the
+      # popup is opening, before the calendar takes focus (must not hide).
+      # Grace: wait a beat, then hide only if nothing took focus meanwhile
+      # and the popup is still up.
+      if visible; then
+        sleep 0.3
+        cls=$(hyprctl activewindow -j 2>/dev/null | jq -r '.class // empty')
+        if [[ $cls != "$CLASS" && ( -z $cls || $cls == "null" ) ]] && visible; then
+          hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
+        fi
+      fi
+      ;;
     "activewindow>>"*)
       visible && hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$WS\")" >/dev/null
       ;;

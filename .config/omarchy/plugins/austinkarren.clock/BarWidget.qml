@@ -153,6 +153,11 @@ BarWidget {
     onPressed: function(b) {
       if (b === Qt.RightButton) root.cycleFormat()
       else if (b === Qt.MiddleButton) { if (root.bar) root.bar.run("omarchy-menu-timezone") }
+      // SHOKUPAN: dialog-aware left click — when the GNOME Calendar popup is
+      // up, clicking the clock closes it instead of stacking the month panel
+      // on top; otherwise stock togglePanel via the script's IPC fallback.
+      // Absolute path: bash -lc has no ~/.local/bin.
+      else if (root.bar) root.bar.run(Quickshell.env("HOME") + "/.local/bin/clock-click")
       else root.togglePanel()
     }
 

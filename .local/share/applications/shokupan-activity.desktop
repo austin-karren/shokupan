@@ -1,0 +1,16 @@
+[Desktop Entry]
+# Activity in the app launcher (user's word, 2026-08-16): btop as a launchable
+# app, not only the SUPER+CTRL+T chord. Exec mirrors upstream's own binding
+# ({ tui = "btop" } → omarchy-launch-tui), so the window wears the same
+# floating TUI presentation either way. Deliberately NOT part of the retired
+# shokupan-cmd-* complex: that injected omarchy COMMANDS into the apps list;
+# this is an application by any definition — it opens a monitor you look at.
+Type=Application
+Name=Activity
+Comment=System activity monitor (btop)
+Exec=/usr/share/omarchy/bin/omarchy-launch-tui btop
+Icon=btop
+Keywords=activity;monitor;btop;cpu;memory;top;
+Categories=System;Monitor;
+Terminal=false
+StartupNotify=false
