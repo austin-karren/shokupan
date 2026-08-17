@@ -297,7 +297,7 @@ _Avoid_: stash, shelf, drawer
 **Hover-reveal group**:
 The quiet modules at the centre of the bar, which collapse to zero width until
 the centre section is hovered. Upstream's indicators live there, and so does
-the zen-ratio toggle (ADR-0013). Active members jump to the left of the cluster
+the zen aspect-ratio toggle (ADR-0013). Active members jump to the left of the cluster
 and show unprompted; inactive ones sit right and only hover-reveal — the ratio
 gets that natively now, as `Ratio.qml` inside the indicators fork
 (`bar/indicators/`); the retired `ratio`/`ratio-on` two-faced module pair that
@@ -322,7 +322,7 @@ _Avoid_: custom module (ambiguous with the QML kind), script module
 A bar entry backed by a `.qml` file in `.config/omarchy/bar/modules/`, which
 receives the bar root and can therefore do what a Command module cannot — hide
 itself, animate, read live bar state, or host an upstream widget. Since the
-r1744 upgrade only the `indicators` fork remains (it carries the zen-ratio
+r1744 upgrade only the `indicators` fork remains (it carries the zen aspect-ratio
 toggle the retired `ratio`/`ratio-on` pair used to fake, one control with two
 faces); `barcfg` and the Hosted widgets were deleted — absorbed or regressed
 to stock (ADR-0044 addendum). ADR-0044's wave 1 converted `calendar`, `omenu`
@@ -339,7 +339,11 @@ Quattro's packaging unit for shell code — a directory holding a
 `overlay`, `panel`, `menu`, `bar`) and entry points. Upstream's own widgets
 and panels are first-party plugins; ours are third-party, live one directory
 deep in `.config/omarchy/plugins/<name>/`, and take ids under `shokupan.*`
-(the `omarchy.` namespace is reserved). No longer only upstream's word: since
+(the `omarchy.` namespace is reserved). One exception, and only one: a
+**Clone** of an upstream plugin keeps the id `omarchy plugin clone` gives it —
+`<username>.<plugin>`, so `austinkarren.clock` and `austinkarren.network` —
+because that id is what routes the bar entry and upstream's IPC to the clone
+(ADR-0041 addendum). Authored-from-nothing plugins stay `shokupan.*`. No longer only upstream's word: since
 ADR-0044 this rice authors plugins as its default shape for new shell work,
 written portable so they can be published.
 _Avoid_: extension, addon, QML module (the manifest is the difference),

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Strip window buttons from GNOME CSD headers — the calendar popup is a dialog"
 
 # The GNOME Calendar popup behaves as a dialog (ADR-0006): summoned, dismissed
@@ -9,7 +11,18 @@ echo "Strip window buttons from GNOME CSD headers — the calendar popup is a di
 # to revert:
 #   gsettings reset org.gnome.desktop.wm.preferences button-layout
 
-current=$(gsettings get org.gnome.desktop.wm.preferences button-layout 2>/dev/null)
-if [[ $current != "':'" ]]; then
+set -uo pipefail
+
+if ! command -v gsettings &>/dev/null; then
+  echo "  gsettings not available — nothing to do"
+  exit 0
+fi
+
+if ! gsettings list-schemas 2>/dev/null | grep -qx org.gnome.desktop.wm.preferences; then
+  echo "  org.gnome.desktop.wm.preferences schema not installed — nothing to do"
+  exit 0
+fi
+
+if [[ $(gsettings get org.gnome.desktop.wm.preferences button-layout) != "':'" ]]; then
   gsettings set org.gnome.desktop.wm.preferences button-layout ':'
 fi

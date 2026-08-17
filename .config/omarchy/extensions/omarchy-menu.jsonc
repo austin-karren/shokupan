@@ -122,11 +122,13 @@
   // per mechanism 1; icon f03e is upstream's own.
   "style.background": {"icon":"","label":"Background","aliases":["background","wallpaper"],"keywords":"wallpaper backgrounds picker named search","action":"/home/austinkarren/.local/bin/wallpaper-menu"},
 
-  // Calendar. ADR-0006 keeps GNOME Calendar for online meetings; quattro's clock
-  // is a bar label with no popup and no month grid, so nothing native replaces
-  // it. Its other entry point is SUPER+SHIFT+C in bindings.conf, which is not
-  // live until the Hyprland bindings are ported to Lua - until then this row is
-  // the only way to reach it. Icon f00ed is the glyph the deleted bar module used.
+  // Calendar. ADR-0006 keeps GNOME Calendar because it holds the synced
+  // online-accounts events; r1744's clock DOES have a popup with a month grid,
+  // but that grid is a read-out of the system clock with no event data, so it
+  // does not replace the app. The primary entry point is now that popup — day
+  // cells and the hero date open GNOME Calendar on the clicked day through the
+  // austinkarren.clock clone; this row is the keyboard-free alternative. No
+  // chord is bound. Icon f00ed is the glyph the retired bar module used.
   "trigger.calendar": {"icon":"󰃭","label":"Calendar","keywords":"calendar meetings schedule agenda gnome","action":"/home/austinkarren/.local/bin/calendar-toggle"},
 
   // Default Browser: Helium. Upstream's Setup > Default Browser submenu lists

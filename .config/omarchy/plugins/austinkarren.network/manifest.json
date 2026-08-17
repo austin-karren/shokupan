@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "id": "austinkarren.network",
-  "name": "My Network",
+  "name": "Network (wired globe)",
   "version": "1.0.0",
-  "author": "Omarchy",
-  "description": "Wi-Fi list and connection state",
+  "author": "shokupan",
+  "description": "Upstream's network panel with the wired glyph as a globe instead of an RJ45 socket (ADR-0029).",
   "kinds": [
     "bar-widget"
   ],

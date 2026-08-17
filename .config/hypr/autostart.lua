@@ -3,7 +3,8 @@
 -- /usr/share/omarchy/config/hypr/autostart.lua; this file shadows it via the
 -- ~/.config/?.lua entry bootstrap.lua puts first on package.path).
 
-local home = os.getenv("HOME")
+local paths = require("default.hypr.paths")
+local home = paths.home
 
 -- GNOME Calendar preload (ADR-0006): warmed at login so the first calendar
 -- click is an instant popup instead of a seconds-long evolution-data-server

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Show/hide GNOME Calendar as a centered popup — the engine behind the clock
-# clone's date clicks (austinkarren.clock) and the SUPER+SHIFT+C binding.
+# clone's date clicks (austinkarren.clock) and the Calendar row of the Omarchy Menu.
 #
 # Uses a dedicated Hyprland SPECIAL workspace rather than closing and relaunching
 # the app. Two reasons:

@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Repaint ApexShot's backdrop from the active theme.
+#
+# ApexShot is a third-party screenshot tool (ADR-0044's reversal addendum): it
+# knows nothing about Omarchy themes, so a capture's plain-colour backdrop kept
+# its factory cornflower blue against every theme. Two colour knobs exist and
+# only one is ours to drive:
+#
+#   config.yml       wallpaper_plain_color   the backdrop behind a capture — set here
+#   editor_prefs.yml color: {r,g,b}          the ANNOTATION colour, the user's live
+#                                            pen choice. Left alone deliberately:
+#                                            overwriting it would fight the person
+#                                            drawing, and the file is prefs the app
+#                                            rewrites on exit.
+#
+# Reads the staged theme's colors.toml (the same file every generated theme file
+# derives from) rather than any rendered template: ApexShot has no Omarchy
+# template, so there is nothing to render — this is the sanctioned hook path
+# instead (omarchy-hook theme-set runs every file in this directory with the
+# theme name as $1).
+#
+# ApexShot rewrites config.yml itself when its UI changes a setting, so this is
+# a keyed in-place edit, never a whole-file copy: anything else the user set
+# survives a theme change.
+
+set -uo pipefail
+
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/apexshot/config.yml"
+COLORS="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current/theme/colors.toml"
+
+[[ -f $CONFIG && -f $COLORS ]] || exit 0
+
+# The theme's own background, which is what the bar and terminals use for the
+# same job. Quoted hex on the toml side; ApexShot wants it single-quoted.
+background=$(sed -n "s/^background[[:space:]]*=[[:space:]]*\"\(#[0-9a-fA-F]\{6\}\)\".*/\1/p" "$COLORS" | head -1)
+[[ -n $background ]] || exit 0
+
+grep -q '^wallpaper_plain_color:' "$CONFIG" || exit 0
+sed -i "s|^wallpaper_plain_color:.*|wallpaper_plain_color: '$background'|" "$CONFIG"

@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "id": "austinkarren.clock",
-  "name": "My Clock",
+  "name": "Clock (calendar clicks)",
   "version": "1.0.0",
-  "author": "Omarchy",
-  "description": "Date/time label with a calendar popup",
+  "author": "shokupan",
+  "description": "Upstream's clock panel with day cells and the hero date opening GNOME Calendar on that day; a second click closes it (ADR-0006).",
   "kinds": [
     "bar-widget"
   ],

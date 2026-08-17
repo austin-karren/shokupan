@@ -24,7 +24,7 @@
 # So the toggle path is a straight delegation to
 # `omarchy-hyprland-toggle single-window-aspect-ratio`, which copies or removes
 # the flag and reloads Hyprland. This script remains only as the bar's adapter:
-# --status is the JSON contract .config/omarchy/bar/modules/ratio.qml reads every
+# --status is the JSON contract .config/omarchy/bar/indicators/Ratio.qml reads every
 # 3 seconds, and the click path adds the notification the raw toggle lacks.
 #
 # WHY THE RATIO IS 6:5 AND NOT WIDER

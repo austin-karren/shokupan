@@ -27,7 +27,7 @@ LOAF_HOME="${LOAF_HOME:-$HOME}"
 LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
 MANIFEST="$LOAF_ROOT/packages/wallpapers"
 
-# Injectable for the same reason doctor's /etc paths are: so the suite asserts
+# Injectable for the same reason doctor's /etc paths are: so a future test can assert
 # against a fixture rather than whatever themes this machine has installed.
 THEMES_DIR="${OMARCHY_THEMES_DIR:-/usr/share/omarchy/themes}"
 

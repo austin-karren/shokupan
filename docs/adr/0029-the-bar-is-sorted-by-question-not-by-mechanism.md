@@ -423,7 +423,9 @@ more:
 1. `omarchy.clock` → the `austinkarren.clock` clone (calendar clicks,
    12-hour format per this ADR: `"dddd h:mm AP"`), and `centerAnchor` follows the
    swap so the pinned-clock guarantee is stock behaviour again.
-2. `shokupan.capture` added after the tray, where the old button sat.
+2. `shokupan.apexshot` added after the tray, where the old button sat.
+   (First shipped as `shokupan.capture` on the native tools; reversed at the
+   user's word the same day — capture is parked dormant, ADR-0044 addendum.)
 3. `omarchy.agents` omitted (ADR-0039's reasoning) and
    `omarchy.keyboard-layout` omitted (single-layout machine).
 4. The indicators entry stays hosted (upstream still has no user search path

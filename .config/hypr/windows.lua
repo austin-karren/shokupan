@@ -23,16 +23,18 @@
 -- `hyprctl configerrors` stayed empty, and the window kept gnome-calendar's
 -- own remembered size (gsettings org.gnome.calendar window-size, 768x600).
 --
--- 18/25 and 31/50 are 72% and 62% of the LOGICAL monitor: wider than tall to
--- fit a month grid (1658x952 on the 2304x1536 desktop), written as fractions
--- because the expression grammar is plain arithmetic. Expressions evaluate at
+-- 3/5 and 18/25 are 60% and 72% of the LOGICAL monitor: 1382x1106 on the
+-- 2304x1536 desktop, a 1.25:1 frame — SLIGHTLY wider than tall, which is what
+-- was asked for. The first cut used 72%x62% (1658x952, 1.74:1): wider than
+-- tall, but not slightly. Height stays off full-height on purpose. Written as
+-- fractions because the expression grammar is plain arithmetic. Expressions evaluate at
 -- map time against the window's monitor, so no pixels are hardcoded and the
 -- rule beats the client's remembered size: DefaultFloatingAlgorithm warps the
 -- floating window to its DESIRED geometry first, then applies the size rule
 -- on top (same v0.56.2 order the Meet rule below relies on).
 o.window("org.gnome.Calendar", { float = true })
 o.window("org.gnome.Calendar", { center = true })
-o.window("org.gnome.Calendar", { size = { "(monitor_w*18/25)", "(monitor_h*31/50)" } })
+o.window("org.gnome.Calendar", { size = { "(monitor_w*3/5)", "(monitor_h*18/25)" } })
 o.window("org.gnome.Calendar", { workspace = "special:calendar silent" })
 
 -- GNOME Settings (gnome-control-center) -------------------------------------

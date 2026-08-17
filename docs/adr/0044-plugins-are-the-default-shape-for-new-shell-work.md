@@ -54,3 +54,13 @@ apexshot and switched back until the native capture flow improves. So
 `shokupan.apexshot` holds the bar slot and its six `bindings.lua` chords stay;
 `shokupan-capture/` is parked, not deleted — its manifest is marked DORMANT and
 it is the drop-in swap when the native flow is good enough.*
+
+*Addendum 2026-08-16 (apexshot theming): apexshot exposes exactly two colour
+knobs, both in YAML it owns — `config.yml`'s `wallpaper_plain_color` (the
+backdrop behind a capture) and `editor_prefs.yml`'s `color` (the annotation
+pen). The backdrop is now repainted from the active theme by
+`hooks/theme-set.d/40-theme-apexshot`, a keyed in-place edit so anything else
+the user set in that file survives. The pen colour is deliberately left alone:
+it is a live user choice, and the file is prefs apexshot rewrites on exit. Its
+annotator (`tensaku` 0.26.6) has no documented colour surface at all — a
+feature request, not something to patch.*

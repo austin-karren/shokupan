@@ -13,9 +13,11 @@
 .config/omarchy/bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml f64fc3a122d71e6cc1f9a8b8284416df29cac070306fa6df55e9f1053fe4cf65
 # ADR-0006 addendum: the clock clone (austinkarren.clock, upstream's sanctioned
 # plugin-clone shape). Panel.qml is the only patched file — day/hero clicks run
-# calendar-toggle --date, each divergence marked // SHOKUPAN:. BarWidget.qml and
-# Model.js are verbatim copies and manifest.json is the clone tool's own jq
-# rewrite — refresh those three by re-cloning, not by re-diffing.
+# calendar-toggle --date, each divergence marked // SHOKUPAN:. BarWidget.qml is
+# ALSO patched (its left click runs clock-click, so a second click closes the
+# popup) — re-diff both, never re-clone them, or the dialog behaviour is lost.
+# Model.js is a verbatim copy and manifest.json is the clone tool's own jq
+# rewrite: refresh those two by re-cloning.
 .config/omarchy/plugins/austinkarren.clock/Panel.qml /usr/share/omarchy/shell/plugins/panels/clock/Panel.qml ce59ce0674dbf22c24ff83c6eeeb827f95d922f5cb5863da94f4bab5c4d1430b
 .config/omarchy/plugins/austinkarren.clock/BarWidget.qml /usr/share/omarchy/shell/plugins/panels/clock/BarWidget.qml cfcdaeedc4ae5832b37271a84bb92ee762301022e2443a0f769992fa792acf28
 # ADR-0029 addendum (2026-08-15): the network clone (austinkarren.network,
