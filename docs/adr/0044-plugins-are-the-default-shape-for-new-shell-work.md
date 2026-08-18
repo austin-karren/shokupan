@@ -60,7 +60,12 @@ knobs, both in YAML it owns — `config.yml`'s `wallpaper_plain_color` (the
 backdrop behind a capture) and `editor_prefs.yml`'s `color` (the annotation
 pen). The backdrop is now repainted from the active theme by
 `hooks/theme-set.d/40-theme-apexshot`, a keyed in-place edit so anything else
-the user set in that file survives. The pen colour is deliberately left alone:
-it is a live user choice, and the file is prefs apexshot rewrites on exit. Its
+the user set in that file survives. *Revised 2026-08-17: the pen follows the
+theme's `red` too, at the user's word — the earlier "leave the pen, it is a live
+choice" reasoning was wrong for how they actually use it.* What no hook can
+reach is ApexShot's own UI chrome: its accent is a terracotta family compiled
+into the binary (`#b05c38` and friends), with no config key and no shipped
+stylesheet, so the app stays orange while its captures are themed. Feature
+request drafted at `docs/upstream/apexshot-theme-support.md`. Its
 annotator (`tensaku` 0.26.6) has no documented colour surface at all — a
 feature request, not something to patch.*
