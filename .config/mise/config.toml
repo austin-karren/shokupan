@@ -3,6 +3,7 @@ claude = "latest"
 codex = "latest"
 node = "latest"
 pnpm = "latest"
+stripe-cli = "latest"
 "ubi:max-sixty/worktrunk" = { version = "latest", exe = "wt" }
 
 [settings]

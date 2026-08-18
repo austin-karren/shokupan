@@ -1,0 +1,22 @@
+# The KDE Breeze cursor, restored as this machine's default (2026-08-18).
+#
+# /usr/share/icons/default/index.theme inherits Adwaita, and that is the system
+# fallback every toolkit consults when nothing more specific is set. This
+# user-level file outranks it, which is why the cursor belongs here rather than
+# in a patched /usr/share file (ADR-0034's layer rule: never edit what a package
+# owns).
+#
+# Three mechanisms have to agree or the pointer changes as it crosses windows,
+# and each answers a different consumer:
+#
+#   this file                        the X/XWayland default, and any toolkit
+#                                    that resolves "default" through the icon path
+#   uwsm/env.d/30-cursor-theme       XCURSOR_THEME for Hyprland itself and every
+#                                    Wayland client in the session
+#   migrations/*-cursor-theme        gsettings org.gnome.desktop.interface,
+#                                    which GTK apps read in preference to the above
+#
+# breeze-cursors is in packages/chosen.packages, so a fresh install has the
+# theme before any of this points at it.
+[Icon Theme]
+Inherits=breeze_cursors

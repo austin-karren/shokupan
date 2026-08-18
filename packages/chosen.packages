@@ -51,3 +51,8 @@ direnv
 
 # Language runtimes are deliberately absent: mise owns those, pinned per-project
 # in ~/.config/mise/config.toml, not pacman.
+
+# The KDE Breeze cursor, this machine's pointer since before quattro. Tracked
+# because the theme has to exist before .icons/default/index.theme and
+# uwsm/env.d/30-cursor-theme can point at it (2026-08-18).
+breeze-cursors

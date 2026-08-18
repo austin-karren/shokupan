@@ -1,0 +1,10 @@
+# The Breeze cursor for Hyprland and every Wayland client in the session.
+#
+# Hyprland reads XCURSOR_THEME at startup; clients inherit it from the session
+# environment. XCURSOR_SIZE is deliberately NOT set here — Omarchy's own env
+# already sets 24 and that is a scaling decision, not a theme one.
+#
+# HYPRCURSOR_THEME is deliberately unset too: breeze ships xcursor only, and
+# naming a hyprcursor theme that does not exist makes Hyprland fall back with a
+# warning rather than silently. The xcursor path is the working one here.
+export XCURSOR_THEME=breeze_cursors
