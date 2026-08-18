@@ -42,6 +42,10 @@ refuses an Omarchy other than `packages/omarchy.pin` (ADR-0043), installs the
 chosen packages and flatpaks, stows, debloats and migrates — every step
 idempotent, so a failed run resumes by running it again.
 
+See [`docs/install-from-scratch.md`](./docs/install-from-scratch.md) for the
+full blank-disk path — installer choices, the boot-contract sharp edge, and
+verification.
+
 The directory name matters: `loaf` defaults to `~/shokupan` when `LOAF_ROOT` is
 unset, so cloning it anywhere else means exporting that variable.
 
