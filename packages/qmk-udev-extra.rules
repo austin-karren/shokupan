@@ -1,0 +1,51 @@
+# QMK bootloader rules that Arch's qmk package does not ship.
+#
+# A SUPPLEMENT, not a replacement. udev unions rules across files with distinct
+# basenames and shadows only on an identical one, so this installs as
+# 51-qmk-extra.rules and leaves pacman owning 50-qmk.rules. The rice used to
+# write its full copy of upstream's file to /etc/udev/rules.d/50-qmk.rules,
+# which shadowed the packaged one entirely and was owned by no package.
+#
+# Contents derived, not hand-picked: every idVendor/idProduct pair present in
+# packages/qmk-udev.rules (QMK upstream) and absent from qmk 1.2.0-3's
+# /usr/lib/udev/rules.d/50-qmk.rules. Measured 2026-08-21.
+#
+# The RP2040/RP2350 BOOTSEL pair is the likely reason this file earns its keep:
+# the board here reports 6b66:7575 in normal mode, and a QMK board only shows
+# its bootloader id while flashing, so which one it uses is UNCONFIRMED. Kept
+# because the directions are not symmetric — carrying rules the board never uses
+# costs nothing, while lacking the one it needs makes it unflashable.
+#
+# Self-contained on purpose. TAG+="uaccess" is applied PER RULE rather than
+# deferred to a trailing `ENV{ID_QMK}=="1", TAG+="uaccess"` the way upstream's
+# single file does: udev evaluates files in filename order, so 50-qmk.rules'
+# trailing tag line has already been passed by the time this file sets
+# ID_QMK, and a supplement that only set the env var would tag nothing.
+# ID_QMK is still set, for anything else that keys on it.
+#
+# Redundancy here is harmless: if a later qmk ships these rules, tagging a
+# device uaccess twice does nothing. So this file does not need to shrink in
+# lockstep with the package.
+
+ACTION=="remove", GOTO="qmk_extra_end"
+
+# USBtinyISP
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1782", ATTRS{idProduct}=="0c9f", ENV{ID_QMK}="1", TAG+="uaccess"
+
+# APM32 DFU
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="314b", ATTRS{idProduct}=="0106", ENV{ID_QMK}="1", TAG+="uaccess"
+
+# GD32V DFU
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="28e9", ATTRS{idProduct}=="0189", ENV{ID_QMK}="1", TAG+="uaccess"
+
+# WB32 DFU
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="342d", ATTRS{idProduct}=="dfa0", ENV{ID_QMK}="1", TAG+="uaccess"
+
+# AT32 DFU
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="2e3c", ATTRS{idProduct}=="df11", ENV{ID_QMK}="1", TAG+="uaccess"
+
+# Raspberry Pi RP2040/RP2350 BOOTSEL
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="0003", ENV{ID_QMK}="1", TAG+="uaccess"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000f", ENV{ID_QMK}="1", TAG+="uaccess"
+
+LABEL="qmk_extra_end"
