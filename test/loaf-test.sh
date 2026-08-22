@@ -1107,23 +1107,84 @@ fi
 # .stow-local-ignore and the scripts' REPO_ONLY answer the same question from
 # opposite ends: what is repo furniture rather than config. When they disagree,
 # doctor reports a file as missing that stow was never going to install — which
-# is exactly what happened when test/ was added to one and not the other.
-missing_from_scripts=()
-while IFS= read -r line; do
-  # Only the top-level anchored entries; the rest are Stow's own defaults.
-  [[ $line =~ ^\^/([A-Za-z_.\\]+)\$$ ]] || continue
-  name=${BASH_REMATCH[1]//\\/}
-  for s in loaf-doctor loaf-heal; do
-    grep -q "REPO_ONLY=.*${name%%.*}" "$ROOT/.local/bin/$s" ||
-      missing_from_scripts+=("$name missing from $s")
-  done
-done <"$ROOT/.stow-local-ignore"
+# is what happened when test/ was added to one and not the other, and again when
+# LICENSE landed in .stow-local-ignore alone and doctor started saying
+# `✗ symlinks  1 not installed  LICENSE`.
+#
+# STOW IS THE ORACLE here, not a second reading of its regex dialect. The
+# previous version of this check parsed .stow-local-ignore itself and only
+# understood lines shaped `^/name$`, so it silently skipped `^/LICENSE.*`,
+# `^/COPYING` and `^/README.*` — which is exactly how LICENSE got through with
+# the whole suite green. Rather than teach the test that dialect (bare names
+# match every path segment, slashed patterns match the whole path, a directory
+# entry has to become the `dir/` prefix git ls-files emits, plus `.+~` and
+# `\#.*\#`), stow the REAL repo into a throwaway home and ask what landed.
+#
+# The real repo, not make_home: the fixture writes its own .stow-local-ignore,
+# so a fixture stow would pass no matter what the tracked one says. Same trap
+# the debloat manifest fell into.
+oracle=$(mktemp -d "$BUILD/oracle-XXXXXX")
+stow --no-folding -d "$(dirname "$ROOT")" -t "$oracle" \
+  "$(basename "$ROOT")" >/dev/null 2>&1
 
-if ((${#missing_from_scripts[@]})); then
-  fail "repo-only lists agree between .stow-local-ignore and the scripts" \
-    "${missing_from_scripts[@]}"
+# If the stow itself failed, every tracked file would look un-stowed and the
+# two assertions below would flood with meaningless output. Anchor on a file
+# that must always be installed.
+assert_symlink "repo-only: the oracle stow installed a known config file" \
+  "$oracle/.config/hypr/autostart.lua"
+
+doctor_repo_only=$(sed -n "s/^REPO_ONLY='\(.*\)'$/\1/p" "$ROOT/.local/bin/loaf-doctor")
+heal_repo_only=$(sed -n "s/^REPO_ONLY='\(.*\)'$/\1/p" "$ROOT/.local/bin/loaf-heal")
+copy_class=$(sed -n "s/^COPY_CLASS='\(.*\)'$/\1/p" "$ROOT/.local/bin/loaf-doctor")
+
+# The two scripts census the same tree and must agree with each other before
+# either can be compared against stow.
+assert_equals "repo-only: doctor and heal carry the same REPO_ONLY" \
+  "$doctor_repo_only" "$heal_repo_only"
+if [[ -n $doctor_repo_only && -n $copy_class ]]; then
+  pass "repo-only: REPO_ONLY and COPY_CLASS were both readable from loaf-doctor"
 else
-  pass "repo-only lists agree between .stow-local-ignore and the scripts"
+  fail "repo-only: REPO_ONLY and COPY_CLASS were both readable from loaf-doctor" \
+    "REPO_ONLY='$doctor_repo_only'" "COPY_CLASS='$copy_class'" \
+    "the sed above no longer matches how they are declared — the two assertions" \
+    "after this one would pass vacuously, so fix the sed rather than this test"
+fi
+
+# Both directions matter. A file stow declines to install but REPO_ONLY does not
+# exclude gets reported as missing forever (the LICENSE bug). A file stow DOES
+# install but REPO_ONLY excludes drops out of the census silently, so doctor
+# stops noticing when something clobbers it.
+unstowed_but_censused=()
+stowed_but_excluded=()
+while IFS= read -r f; do
+  if [[ -e $oracle/$f || -L $oracle/$f ]]; then
+    [[ $f =~ $doctor_repo_only ]] && stowed_but_excluded+=("$f")
+  else
+    # COPY_CLASS is the legitimate third state: .config/omarchy/themes is
+    # stow-ignored on purpose and heal installs it as real files instead, so
+    # doctor censuses those separately rather than excluding them.
+    [[ $f =~ $doctor_repo_only || $f =~ $copy_class ]] ||
+      unstowed_but_censused+=("$f")
+  fi
+done < <(git -C "$ROOT" ls-files)
+
+if ((${#unstowed_but_censused[@]})); then
+  fail "repo-only: everything stow declines to install is excluded by REPO_ONLY" \
+    "${unstowed_but_censused[@]}" \
+    "stow ignores these but doctor still censuses them, so it reports each as" \
+    "'symlinks N not installed' forever — add them to REPO_ONLY in BOTH" \
+    "loaf-doctor and loaf-heal, or drop the .stow-local-ignore entry"
+else
+  pass "repo-only: everything stow declines to install is excluded by REPO_ONLY"
+fi
+
+if ((${#stowed_but_excluded[@]})); then
+  fail "repo-only: nothing REPO_ONLY excludes is actually stowed" \
+    "${stowed_but_excluded[@]}" \
+    "these ARE installed into \$HOME but REPO_ONLY drops them from the census," \
+    "so doctor would not notice one being clobbered or going missing"
+else
+  pass "repo-only: nothing REPO_ONLY excludes is actually stowed"
 fi
 
 # CLAUDE.md is agent instructions for working in this repo, not config — it must

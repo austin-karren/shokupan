@@ -39,7 +39,7 @@ PATH="$(dirname "$(realpath "$0")"):$PATH"
 APPLIED="$STATE_DIR/applied"
 
 # Must match loaf-doctor's list and .stow-local-ignore — see the note there.
-REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|CONTEXT|CLAUDE|packages\.txt|\.gitignore|\.stow-local-ignore)'
+REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|LICENSE|COPYING|CONTEXT|CLAUDE|packages\.txt|\.gitignore|\.stow-local-ignore)'
 dry_run=false
 [[ ${1:-} == --dry-run ]] && dry_run=true
 
