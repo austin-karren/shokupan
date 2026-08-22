@@ -121,12 +121,22 @@ dance obsolete — BAP with LC3 is one bidirectional stream at up to 32/48 kHz
 both directions (versus HFP's 16 kHz mSBC), so call audio stops being the
 degraded mode. PipeWire 1.6.8 supports all BAP roles and WirePlumber 0.5's
 default `bluez5.roles` already includes `bap_sink bap_source`. What it would
-take on this machine: kernel 6.4+ for ISO sockets (running 7.1.6 — fine),
-BlueZ with `Experimental = true` plus the ISO-socket `KernelExperimental`
-UUID in `/etc/bluetooth/main.conf`, an adapter whose firmware does ISO
-channels (needs checking), and LE Audio toggled on in Sony's Headphones
-Connect app — which on some models is exclusive with classic BT. A follow-up
-experiment, deliberately not part of this fix.
+take on this machine: kernel 6.4+ for ISO sockets, BlueZ with
+`Experimental = true` plus the ISO-socket `KernelExperimental` UUID in
+`/etc/bluetooth/main.conf`, an adapter whose firmware does ISO channels
+(needs checking), and LE Audio toggled on in Sony's Headphones Connect app —
+which on some models is exclusive with classic BT. A follow-up experiment,
+deliberately not part of this fix.
+
+*Corrected 2026-08-21:* the kernel clause originally read "(running 7.1.6 —
+fine)". 7.1.6 was the installed **`linux-cachyos`** package version when this
+was written (installed 2026-08-03, upgraded to 7.1.8-1 on 2026-08-14) — but
+this machine boots the **LTS** series, and the running kernel is
+`6.18.42-1-cachyos-lts`. Whether 7.1.6 was ever actually booted is no longer
+recoverable: the journal retains one boot, from 2026-08-18. "Fine" survives
+either way — 6.18 clears the 6.4 floor by a wide margin — but **7.1.x is not a
+precondition**, and no reader should infer that LE Audio here waits on the
+mainline series.
 ([LE Audio in PipeWire](https://www.bluez.org/le-audio-support-in-pipewire/),
 [Collabora, 2025-11](https://www.collabora.com/news-and-blog/blog/2025/11/24/implementing-bluetooth-le-audio-and-auracast-on-linux-systems/).)
 
@@ -206,3 +216,142 @@ added by hand.
 
 Proven by the combined test: 70s grab clean and continuous, autoswitch back
 to A2DP (AAC) within 15s of mic release. Sign-off is a real Meet call.
+
+## Amendment, 2026-08-21 — two of Addendum 2's supporting facts were wrong
+
+Addendum 2's decision stands unchanged: the MT7925 cannot run LC3-SWB's
+transparent eSCO, and excluding `lc3_swb` from the `bluez5.codecs` whitelist is
+what makes calls work. That was proven by the A/B capture tests and nothing
+below touches it. Two *supporting* facts in that section were wrong, and both
+were load-bearing for how a future reader would act on it, so they are
+corrected here rather than edited away.
+
+**1. PipeWire's quirk table does not cover this adapter.** Addendum 2 says the
+table "already disables LC3-A127 on this adapter family (pipewire#5213) but not
+standard `lc3_swb`", and used that as evidence that upstream already knew about
+this silicon. It does not say that. The entry, verbatim from
+`/usr/share/spa-0.2/bluez5/bluez-hardware.conf` (pipewire 1.6.8):
+
+```
+# Mediatek MT7925, #pipewire-5213
+{ bus-type = "usb", vendor-id = "usb:0e8d", product-id = "~(e025)", no-features = [ lc3-a127 ] },
+```
+
+The vendor matches; the product-id regex is `e025` and **this adapter is
+`0e8d:0717`**. It does not match. Nor is this ambiguous about which ID the
+matcher sees: `libspa-bluez5.so`'s `adapter_init_modalias` reads
+`/sys/class/bluetooth/%s/device/modalias`, the underlying USB device's sysfs
+modalias, which here is
+
+```
+usb:v0E8Dp0717d0100dcEFdsc02dp01icE0isc01ip01in00
+```
+
+— the real `0E8D:0717`, not BlueZ's D-Bus `Adapter1.Modalias`, which reports the
+Linux Foundation virtual ID `usb:v1D6Bp0246d0557`. The table's own rule is
+"first match wins", so the next rule that applies to this adapter is the generic
+`{ bus-type = "usb", no-features = [ msbc-alt1-rtl ] }`. **LC3-A127 is enabled
+here**, not disabled, and pipewire#5213 is not upstream knowledge of `0717`.
+
+What this changes: nothing about the fix, because the fix never relied on the
+quirk table — the `bluez5.codecs` whitelist is what excludes SWB, and it is
+local, explicit and adapter-independent. What it does change is the shape of the
+upstream report, below.
+
+**2. The planned upstream report is not expressible as written.** Addendum 2
+says "the worthwhile upstream report is against **PipeWire**:
+`bluez-hardware.conf` should add `lc3-swb` to the MT7925 no-features entry
+alongside `lc3-a127`." That cannot be filed as a table row, because **there is
+no `lc3-swb` feature tag**. `bluez-hardware.conf` in 1.6.8 documents its tags
+exhaustively:
+
+```
+#     msbc, msbc-alt1, msbc-alt1-rtl, hw-volume, hw-volume-mic,
+#     sbc-xq, faststream, a2dp-duplex, lc3-a127
+```
+
+and the quirk-driven property set compiled into `libspa-bluez5.so` is exactly as
+narrow — `bluez5.enable-sbc-xq`, `enable-msbc`, `enable-hw-volume`,
+`enable-faststream`, `enable-a2dp-duplex`, `enable-lc3-a127`. There is no
+`bluez5.enable-lc3-swb`. `lc3_swb` exists only as a *codec* name, in
+`libspa-codec-bluez5-hfp-lc3-swb.so`; `lc3-a127` is a *feature*. They live in
+different namespaces and the quirk table can only reach the second.
+
+So the actual mechanism, in the order it would have to happen upstream:
+
+1. A code change in `spa/plugins/bluez5/` adding an `lc3-swb` feature tag and
+   its `bluez5.enable-lc3-swb` property, wired to the HFP codec-selection path
+   the same way `lc3-a127` already is.
+2. Only then a `bluez-hardware.conf` row can carry it.
+3. Separately, and independently useful: the existing MT7925 `lc3-a127` row's
+   `~(e025)` product-id does not cover `0717`, so that row wants widening
+   regardless of anything SWB-related.
+
+Until (1) lands there is no quirk-table fix available to anyone with this
+adapter, which raises the value of the local whitelist rather than lowering it.
+Nothing has been filed — upstream reports need Austin's explicit per-item go
+(`shokupan-plugins` ADR-0044 rule 5).
+
+## Amendment, 2026-08-21 — LE Audio is not the way out; StreamCam mic, buds output
+
+"Looking further out: LE Audio" above treats BAP/LC3 as the eventual escape from
+the profile dance — one bidirectional stream, call audio stops being the
+degraded mode. The question was investigated properly on 2026-08-21: **can the
+WF-1000XM6 do microphone and full-quality output at the same time on this
+machine?** The answer is **no on this hardware**, and it is recorded here so it
+is not re-investigated.
+
+**Bluetooth Classic cannot do it, and that is not a Linux limitation.** A2DP is
+output-only; HFP/HSP is mono and narrowband. There is no classic profile that
+carries a mic and stereo music at once. Every workaround on this machine is a
+choice between them, which is what all of this ADR has been about.
+
+**LE Audio would solve it in principle, and every layer here is ready except
+the adapter.** Kernel: `bluetooth.ko` exports `iso_init` / `iso_inited` /
+`iso_sock_*` in **both** `6.18.42-1-cachyos-lts` and the pending `7.1.8-1-cachyos`
+— the `CONFIG_BT_LE_AUDIO` symbol is simply gone, ISO builds unconditionally
+under `CONFIG_BT_LE=y`. BlueZ 5.87 is built with the full BAP/BASS/CCP profile
+set. PipeWire 1.6.8 ships all four `MediaEndpointLE` roles and an LC3 codec
+plugin with a `bluez5.bap.duplex` knob — the stack answers "yes" to the exact
+question. (A live `BTPROTO_ISO` socket probe returns `EPROTONOSUPPORT` today;
+that is BlueZ's ISO-socket experimental feature being off, **not** evidence the
+kernel lacks ISO. It is a trap worth not falling into twice.)
+
+**The adapter is the blocker, in the same way it already is for eSCO.**
+`btmgmt info` reports `cis-central cis-peripheral iso-broadcaster sync-receiver`
+in *current* settings — the MT7925 claims full ISO support. That claim is
+precisely the kind this ADR already proved false once: this is the adapter that
+advertises `HCI Enhanced Setup Synchronous Connection` and cannot execute it. An
+open upstream report on the same silicon — MT7925, CachyOS kernel, BlueZ —
+carries both failures side by side: `Opcode 0x2062 failed: -95` (that is
+OGF 0x08 / OCF 0x062 = **HCI LE Set CIG Parameters**, `EOPNOTSUPP`, so no
+isochronous group can be created and therefore no LE Audio at all), *and* this
+machine's exact eSCO line. See
+`https://lists.infradead.org/pipermail/linux-mediatek/2025-October/099857.html`.
+One adapter, two advertised-but-absent audio transports, is a pattern rather
+than a coincidence.
+
+**The pending 7.1.8 reboot does not change this on best evidence — with a real
+caveat.** `btmtk.ko`'s ISO string set is identical across 6.18.42 and 7.1.8. But
+the MT7927 upstream-tracking issue reports an unspecified "ISO fix" landing in
+7.1.1, with no commit cited, and a logic-only fix would not show up in a string
+diff. So: probably unchanged, not certainly. If anyone ever wants the measurement,
+the reboot onto 7.1.8 is the cheapest moment to take it.
+
+**And the entry cost is the decisive input, independent of all of the above.**
+Sony requires **deleting the pairing and re-pairing** to enter LE Audio mode,
+and again to leave it. Testing therefore risks the primary call device in both
+directions, for a gain that the adapter evidence says probably will not
+materialise. Note also that even if all of that went well, the `bluez5.codecs`
+whitelist in the tracked drop-in would silently block BAP — see the warning now
+carried in that file.
+
+**The decision, settled: StreamCam for the microphone, the buds for stereo
+output.** Austin explicitly rejected the alternative of pinning the buds to A2DP
+and giving up their mic entirely — calls are what the buds are for, and work is
+what the machine is for. Splitting the two devices costs nothing and keeps both
+at their best.
+
+Revisit only if one of these changes: MT7925 firmware or `btmtk` ships a *named*
+CIG fix; BlueZ drops the `Experimental` requirement for BAP; or the adapter is
+replaced.
