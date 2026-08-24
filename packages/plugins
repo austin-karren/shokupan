@@ -10,7 +10,7 @@
 #            take over upstream's bar slot; shokupan.* is our third-party
 #            namespace (`omarchy.*` is reserved and rejected).
 # <git-url>  the plugin's own repo. `omarchy plugin add` clones the URL and
-#            reads manifest.json at the REPO ROOT, which is why these are seven
+#            reads manifest.json at the REPO ROOT, which is why these are eight
 #            repos and not one — see omarchy-plugin-add, and the layout note in
 #            the shokupan-plugins README.
 #
@@ -34,3 +34,4 @@ shokupan.dpms-guard      https://github.com/austin-karren/omarchy-dpms-guard.git
 shokupan.notifications   https://github.com/austin-karren/omarchy-notification-center.git
 austinkarren.clock       https://github.com/austin-karren/omarchy-clock-calendar.git
 austinkarren.network     https://github.com/austin-karren/omarchy-network-globe.git
+austinkarren.notifications https://github.com/austin-karren/omarchy-notification-desktop-entry.git
