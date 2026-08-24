@@ -34,6 +34,7 @@ PACMAN_CONF="${PACMAN_CONF:-/etc/pacman.conf}"
 # write, and both of which differ per machine.
 QMK_RULES="${QMK_RULES:-/etc/udev/rules.d/50-qmk.rules}"
 QMK_PKG_RULES="${QMK_PKG_RULES:-/usr/lib/udev/rules.d/50-qmk.rules}"
+QMK_EXTRA_RULES="${QMK_EXTRA_RULES:-/etc/udev/rules.d/51-qmk-extra.rules}"
 
 force=false
 [[ ${1:-} == --force ]] && force=true
@@ -185,40 +186,72 @@ step "Keyboard"
 # The QMK CLI can talk to a board over raw HID as any user, but putting it into
 # its bootloader to flash needs a udev rule — without one the device appears
 # root-only and `qmk flash` fails with a permissions error that reads like a
-# missing device. The rice carries a copy (packages/qmk-udev.rules, straight
-# from QMK upstream) for the machines where nothing else provides one.
+# missing device.
 #
-# qmk 1.2.0-3 DOES now ship the rule, at /usr/lib/udev/rules.d/50-qmk.rules,
-# and udev resolves same-named files by directory precedence: anything in
-# /etc/udev/rules.d SHADOWS /usr/lib/udev/rules.d entirely. So the old
-# "write it if /etc has nothing" gate quietly manufactured an unowned file
-# that overrode pacman's — on every fresh machine, and on this one (measured
-# 2026-08-21: 4402 bytes in /etc owned by no package, over a 3698-byte
+# qmk 1.2.0-3 ships such a rule at /usr/lib/udev/rules.d/50-qmk.rules, and udev
+# resolves same-named files by directory precedence: anything in
+# /etc/udev/rules.d SHADOWS /usr/lib/udev/rules.d entirely. The old gate ("write
+# our full copy to /etc if /etc has nothing") therefore manufactured a file
+# owned by no package that overrode pacman's — on every fresh machine, and on
+# this one (measured 2026-08-21: 4402 bytes in /etc, unowned, over a 3698-byte
 # packaged copy).
 #
-# Gated on the packaged FILE, not on `pacman -Qq qmk`. The condition being
-# avoided is "we would shadow something", and the file existing IS that
-# condition; the package being installed is only a proxy for it, and a wrong
-# one in both directions — qmk installed with its rule deleted, or a qmk that
-# does not ship one, would both leave a flashable board unflashable. It also
-# matches how the rest of this script reasons: `pacman -Qq` answers "should I
-# install this package" (steps 1 and 4), while every question about a file on
-# disk — step 3's LUKS drop-in, and this step's own /etc check — tests the
-# path.
-if [[ -f $LOAF_ROOT/packages/qmk-udev.rules ]]; then
-  if [[ -f $QMK_PKG_RULES ]]; then
-    if [[ -f $QMK_RULES ]]; then
-      # Not removed here: it needs root and it is not this script's call.
-      say "$QMK_RULES shadows the packaged rule at $QMK_PKG_RULES"
-      say "remove it to let pacman own the rules, then: udevadm control --reload-rules"
+# But the packaged file is not a substitute either: it is a strict SUBSET of
+# QMK upstream, missing 7 bootloader ids including the Raspberry Pi RP2040 /
+# RP2350 BOOTSEL, which is what this machine's board flashes through. Simply
+# deleting the shadow would have traded an ownership bug for silently losing
+# the ability to flash. So the two cases are separated:
+#
+#   packaged rule present  →  pacman owns 50-, we add only what it lacks as
+#                             51-qmk-extra.rules (packages/qmk-udev-extra.rules)
+#   packaged rule absent   →  nothing provides the rules, so the rice supplies
+#                             the whole file (packages/qmk-udev.rules)
+#
+# Gated on the packaged FILE, not on `pacman -Qq qmk`. The question is "does
+# something already provide this", and the file existing IS that condition; the
+# package is only a proxy for it, and a wrong one in both directions — qmk
+# installed with its rule deleted, or a qmk that ships none, would each send us
+# down the wrong branch. It also matches how the rest of this script reasons:
+# `pacman -Qq` answers "should I install this package" (steps 1 and 4), while
+# every question about a file on disk — step 3's LUKS drop-in, and this step's
+# own /etc checks — tests the path.
+qmk_full=$LOAF_ROOT/packages/qmk-udev.rules
+qmk_extra=$LOAF_ROOT/packages/qmk-udev-extra.rules
+
+if [[ -f $QMK_PKG_RULES ]]; then
+  # pacman ships and owns 50-qmk.rules, so that basename is never ours to
+  # write. Add only the bootloaders it lacks, under a name pacman does not use
+  # — 51- sorts after 50-, and udev unions files with distinct basenames.
+  # Refreshed whenever it differs, unlike the 50- fallback below: this name is
+  # unambiguously the rice's, so there is no hand-tuning to preserve.
+  if [[ -f $qmk_extra ]]; then
+    if cmp -s "$qmk_extra" "$QMK_EXTRA_RULES"; then
+      say "qmk supplemental udev rules current"
     else
-      say "qmk ships its own udev rule at $QMK_PKG_RULES — leaving it to pacman"
+      say "installing $QMK_EXTRA_RULES"
+      if $SUDO install -m 644 "$qmk_extra" "$QMK_EXTRA_RULES"; then
+        $SUDO udevadm control --reload-rules
+        $SUDO udevadm trigger
+      else
+        say "could not install the supplemental qmk udev rules"
+        say "flashing an RP2040/AT32/GD32V/APM32/WB32 board will need sudo"
+      fi
     fi
-  elif [[ -f $QMK_RULES ]]; then
+  fi
+  # The pre-2026-08-21 installer's output, if this machine ran it. Not removed
+  # here: it needs root and it is not this script's call.
+  if [[ -f $QMK_RULES ]]; then
+    say "$QMK_RULES shadows the packaged rule at $QMK_PKG_RULES"
+    say "with $QMK_EXTRA_RULES in place it is redundant: sudo rm $QMK_RULES"
+  fi
+elif [[ -f $qmk_full ]]; then
+  # Nothing packaged provides the rules, so the rice supplies the whole file.
+  # Only ever written when absent: a hand-tuned rule here is left alone.
+  if [[ -f $QMK_RULES ]]; then
     say "qmk udev rule already present"
   else
     say "installing $QMK_RULES"
-    if $SUDO install -m 644 "$LOAF_ROOT/packages/qmk-udev.rules" "$QMK_RULES"; then
+    if $SUDO install -m 644 "$qmk_full" "$QMK_RULES"; then
       $SUDO udevadm control --reload-rules
       $SUDO udevadm trigger
     else

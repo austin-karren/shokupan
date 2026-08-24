@@ -25,9 +25,25 @@ PATH="$(dirname "$(realpath "$0")"):$PATH"
 # Tracked paths that are repo furniture, not config, and so must never be
 # symlinked into the home directory. This has to agree with .stow-local-ignore
 # — they answer the same question from opposite ends, and when they disagree
-# doctor reports a file as missing that stow was never going to install. The
-# test suite asserts they stay in step.
-REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|CONTEXT|CLAUDE|packages\.txt|\.gitignore|\.stow-local-ignore)'
+# doctor reports a file as missing that stow was never going to install.
+#
+# DUPLICATED, deliberately and awkwardly: the same literal lives in loaf-heal,
+# and .stow-local-ignore states the same policy a third time in Stow's own
+# regex dialect. Deriving this FROM .stow-local-ignore is not tractable —
+# that dialect matches bare names against every path segment but slashed
+# patterns against the whole path, and an entry for a directory (^/docs$) has
+# to become the `docs/` prefix `git ls-files` actually emits, which needs a
+# stat rather than a regex. A half-right translation either invents missing
+# files or silently drops a real config file from the census.
+#
+# So the coupling stays, and the SUITE enforces it: test/loaf-test.sh stows the
+# real repo into a throwaway home and asserts that what stow declines to
+# install is exactly what this list excludes. Adding an entry to
+# .stow-local-ignore without adding it here fails that test. It went unnoticed
+# once — LICENSE landed in .stow-local-ignore only, and doctor reported
+# `✗ symlinks  1 not installed  LICENSE` on 2026-08-21 with the whole suite
+# green, because the old check only understood `^/name$` lines.
+REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|LICENSE|COPYING|CONTEXT|CLAUDE|packages\.txt|\.gitignore|\.stow-local-ignore)'
 STATE_DIR="${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/loaf"
 
 # Omarchy is package-backed at a fixed path now, so this is a constant rather

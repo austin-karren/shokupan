@@ -242,6 +242,7 @@ loaf_run() {
     NM_CONF="$home/etc/NetworkManager.conf" \
     QMK_RULES="$home/etc/udev/rules.d/50-qmk.rules" \
     QMK_PKG_RULES="$home/usr/lib/udev/rules.d/50-qmk.rules" \
+    QMK_EXTRA_RULES="$home/etc/udev/rules.d/51-qmk-extra.rules" \
     STUB_ABSENT="${STUB_ABSENT:-}" \
     STUB_LOG="${STUB_LOG:-}" \
     XDG_STATE_HOME="$home/.local/state" \
@@ -877,59 +878,147 @@ assert_contains "install: installs missing chosen packages" "$out" "installing 1
 assert_contains "install: hands pacman the missing package" \
   "$(cat "$home/pacman.log" 2>/dev/null)" "pacman -S --needed --noconfirm bat"
 
-# Step 4a's qmk udev rule. udev resolves same-named rules files by directory
+# Step 4a's qmk udev rules. udev resolves same-named rules files by directory
 # precedence, so anything in /etc/udev/rules.d SHADOWS /usr/lib/udev/rules.d
 # outright. qmk 1.2.0-3 ships its own 50-qmk.rules under /usr/lib, and the old
-# gate ("write ours if /etc has nothing") therefore manufactured an unowned
-# file on every fresh machine that overrode the packaged one. Gated on the
-# packaged file now.
+# gate ("write ours if /etc has nothing") manufactured an unowned file on every
+# fresh machine that overrode the packaged one.
 #
-# The three fixtures below build the packaged rule and the /etc one explicitly,
-# because the gate is entirely about which of those two exist.
+# The packaged file is also a strict SUBSET of QMK upstream — it lacks the
+# RP2040/RP2350 BOOTSEL ids this machine's board flashes through — so the fix
+# is not "never write anything". Two branches, both pinned below:
+#   packaged present -> add only packages/qmk-udev-extra.rules, as 51-
+#   packaged absent  -> supply the whole of packages/qmk-udev.rules, as 50-
+#
+# The fixtures build the packaged rule and the /etc ones explicitly, because
+# the gate is entirely about which of those exist.
 
-# The packaged rule is there: hands off, and nothing lands in /etc.
+# The packaged rule is there: 50- is left to pacman and only the supplement
+# lands. The regression test — an /etc/50- appearing here IS the bug.
 home=$(make_home)
 printf 'ATTRS{idVendor}=="fixture"\n' >"$home/shokupan/packages/qmk-udev.rules"
+printf '# extra\nATTRS{idVendor}=="2e8a"\n' >"$home/shokupan/packages/qmk-udev-extra.rules"
 mkdir -p "$home/etc/udev/rules.d" "$home/usr/lib/udev/rules.d"
 printf '# shipped by qmk\n' >"$home/usr/lib/udev/rules.d/50-qmk.rules"
 out=$(STUB_LOG="$home/udev.log" loaf_run "$home" install)
-assert_contains "install: leaves the qmk rule to pacman when the package ships one" \
-  "$out" "leaving it to pacman"
+assert_contains "install: installs the qmk supplement when the package ships 50-" \
+  "$out" "installing $home/etc/udev/rules.d/51-qmk-extra.rules"
+assert_file_exists "install: the supplement lands as 51-" \
+  "$home/etc/udev/rules.d/51-qmk-extra.rules"
 if [[ -e $home/etc/udev/rules.d/50-qmk.rules ]]; then
-  fail "install: writes no /etc rule that would shadow the packaged one" \
+  fail "install: writes no /etc 50- rule that would shadow the packaged one" \
     "created $home/etc/udev/rules.d/50-qmk.rules over the packaged copy"
 else
-  pass "install: writes no /etc rule that would shadow the packaged one"
+  pass "install: writes no /etc 50- rule that would shadow the packaged one"
 fi
-assert_not_contains "install: does not reload udev when it changed nothing" \
-  "$(cat "$home/udev.log" 2>/dev/null)" "udevadm control"
-
-# Nothing packaged: the rice still provides the rule, which is why it carries a
-# copy at all. The other half of the gate — without this, "fixed" could just
-# mean "never installs".
-home=$(make_home)
-printf 'ATTRS{idVendor}=="fixture"\n' >"$home/shokupan/packages/qmk-udev.rules"
-mkdir -p "$home/etc/udev/rules.d"
-out=$(STUB_LOG="$home/udev.log" loaf_run "$home" install)
-assert_contains "install: installs the qmk rule when nothing packaged provides one" \
-  "$out" "installing $home/etc/udev/rules.d/50-qmk.rules"
-assert_file_exists "install: the qmk rule lands in /etc" \
-  "$home/etc/udev/rules.d/50-qmk.rules"
-assert_contains "install: reloads udev after writing the rule" \
+assert_contains "install: reloads udev after writing the supplement" \
   "$(cat "$home/udev.log" 2>/dev/null)" "udevadm control --reload-rules"
 
-# The state this machine is in: both files present. Named out loud rather than
-# reported as "already present", and left alone — removing it needs root.
+# Second run changes nothing and does not reload — the supplement is compared
+# by content, so a re-run is quiet but an updated rice copy still lands.
+out=$(STUB_LOG="$home/udev2.log" loaf_run "$home" install)
+assert_contains "install: an up-to-date supplement is left alone" \
+  "$out" "qmk supplemental udev rules current"
+assert_not_contains "install: does not reload udev when the supplement is current" \
+  "$(cat "$home/udev2.log" 2>/dev/null)" "udevadm control"
+
+printf '# extra\nATTRS{idVendor}=="2e8a"\nATTRS{idVendor}=="342d"\n' \
+  >"$home/shokupan/packages/qmk-udev-extra.rules"
+out=$(loaf_run "$home" install)
+assert_contains "install: refreshes the supplement when the rice copy changed" \
+  "$out" "installing $home/etc/udev/rules.d/51-qmk-extra.rules"
+assert_contains "install: the refreshed supplement has the new rule" \
+  "$(cat "$home/etc/udev/rules.d/51-qmk-extra.rules")" '342d'
+
+# Nothing packaged: the rice still supplies the whole file at 50-, which is why
+# it carries a full copy at all. The other half of the gate — without this,
+# "fixed" could just mean "never installs anything".
 home=$(make_home)
 printf 'ATTRS{idVendor}=="fixture"\n' >"$home/shokupan/packages/qmk-udev.rules"
+printf '# extra\n' >"$home/shokupan/packages/qmk-udev-extra.rules"
+mkdir -p "$home/etc/udev/rules.d"
+out=$(STUB_LOG="$home/udev.log" loaf_run "$home" install)
+assert_contains "install: installs the full qmk rule when nothing packaged provides one" \
+  "$out" "installing $home/etc/udev/rules.d/50-qmk.rules"
+assert_file_exists "install: the full qmk rule lands in /etc" \
+  "$home/etc/udev/rules.d/50-qmk.rules"
+if [[ -e $home/etc/udev/rules.d/51-qmk-extra.rules ]]; then
+  fail "install: no supplement when the rice supplied the whole file" \
+    "51-qmk-extra.rules would duplicate rules already in the 50- copy"
+else
+  pass "install: no supplement when the rice supplied the whole file"
+fi
+assert_contains "install: reloads udev after writing the full rule" \
+  "$(cat "$home/udev.log" 2>/dev/null)" "udevadm control --reload-rules"
+
+# The state this machine is in: packaged rule plus the old installer's shadow.
+# Named out loud rather than reported as "already present", and left in place —
+# removing it needs root.
+home=$(make_home)
+printf 'ATTRS{idVendor}=="fixture"\n' >"$home/shokupan/packages/qmk-udev.rules"
+printf '# extra\n' >"$home/shokupan/packages/qmk-udev-extra.rules"
 mkdir -p "$home/etc/udev/rules.d" "$home/usr/lib/udev/rules.d"
 printf '# shipped by qmk\n' >"$home/usr/lib/udev/rules.d/50-qmk.rules"
 printf '# unowned, ours\n' >"$home/etc/udev/rules.d/50-qmk.rules"
 out=$(loaf_run "$home" install)
 assert_contains "install: names an /etc rule that shadows the packaged one" \
   "$out" "shadows the packaged rule"
+assert_contains "install: says the shadow is redundant once the supplement is in" \
+  "$out" "sudo rm $home/etc/udev/rules.d/50-qmk.rules"
 assert_equals "install: leaves the shadowing rule in place for a human" \
   "$(cat "$home/etc/udev/rules.d/50-qmk.rules")" "# unowned, ours"
+
+# The TRACKED supplement, not a fixture's toy version. It must be a valid udev
+# rules file and must carry the RP2040/RP2350 BOOTSEL ids, which are the reason
+# it exists — pacman's copy lacks them and this machine's board flashes through
+# them. Read from $ROOT: the fixtures above write their own, so nothing there
+# says anything about the real file.
+tracked_extra=$ROOT/packages/qmk-udev-extra.rules
+assert_file_exists "qmk: the tracked supplement exists" "$tracked_extra"
+assert_contains "qmk: the supplement carries the RP2040 BOOTSEL id" \
+  "$(cat "$tracked_extra")" 'ATTRS{idProduct}=="0003"'
+assert_contains "qmk: the supplement carries the RP2350 BOOTSEL id" \
+  "$(cat "$tracked_extra")" 'ATTRS{idProduct}=="000f"'
+
+# Every rule tags uaccess itself. udev evaluates files in filename order, so
+# 50-qmk.rules' trailing `ENV{ID_QMK}=="1", TAG+="uaccess"` has already been
+# passed by the time 51- runs: a supplement that only set ID_QMK would tag
+# nothing and the device would stay root-only. This catches someone "tidying"
+# the per-rule tags out into a single trailing line.
+untagged=()
+while IFS= read -r rule; do
+  [[ $rule == *'TAG+="uaccess"'* ]] || untagged+=("$rule")
+done < <(grep '^SUBSYSTEMS==' "$tracked_extra")
+if ((${#untagged[@]})); then
+  fail "qmk: every supplement rule tags uaccess itself" "${untagged[@]}"
+else
+  pass "qmk: every supplement rule tags uaccess itself"
+fi
+
+# Every id the supplement carries must be one the rice's full upstream copy
+# also has. A typo'd vendor id here would tag nothing and nobody would notice.
+strays=()
+while IFS= read -r id; do
+  grep -q "$id" "$ROOT/packages/qmk-udev.rules" || strays+=("$id not in packages/qmk-udev.rules")
+done < <(grep -o 'ATTRS{idVendor}=="[0-9a-f]*"' "$tracked_extra" | sort -u)
+if ((${#strays[@]})); then
+  fail "qmk: every supplement vendor id is one upstream knows" "${strays[@]}"
+else
+  pass "qmk: every supplement vendor id is one upstream knows"
+fi
+
+# Real udev parse, when udevadm is available. /usr/bin/udevadm explicitly: the
+# suite puts a stubbed udevadm on $PATH so the install tests cannot reload the
+# host's rules, and that stub would happily "verify" anything.
+if [[ -x /usr/bin/udevadm ]]; then
+  for f in "$tracked_extra" "$ROOT/packages/qmk-udev.rules"; do
+    if verify_out=$(/usr/bin/udevadm verify "$f" 2>&1); then
+      pass "qmk: $(basename "$f") parses as udev rules"
+    else
+      fail "qmk: $(basename "$f") parses as udev rules" "$verify_out"
+    fi
+  done
+fi
 
 # A linked git worktree. `.git` there is a FILE holding a `gitdir:` pointer, not
 # a directory — install used to test for the directory and refuse the tree as no
@@ -1018,23 +1107,84 @@ fi
 # .stow-local-ignore and the scripts' REPO_ONLY answer the same question from
 # opposite ends: what is repo furniture rather than config. When they disagree,
 # doctor reports a file as missing that stow was never going to install — which
-# is exactly what happened when test/ was added to one and not the other.
-missing_from_scripts=()
-while IFS= read -r line; do
-  # Only the top-level anchored entries; the rest are Stow's own defaults.
-  [[ $line =~ ^\^/([A-Za-z_.\\]+)\$$ ]] || continue
-  name=${BASH_REMATCH[1]//\\/}
-  for s in loaf-doctor loaf-heal; do
-    grep -q "REPO_ONLY=.*${name%%.*}" "$ROOT/.local/bin/$s" ||
-      missing_from_scripts+=("$name missing from $s")
-  done
-done <"$ROOT/.stow-local-ignore"
+# is what happened when test/ was added to one and not the other, and again when
+# LICENSE landed in .stow-local-ignore alone and doctor started saying
+# `✗ symlinks  1 not installed  LICENSE`.
+#
+# STOW IS THE ORACLE here, not a second reading of its regex dialect. The
+# previous version of this check parsed .stow-local-ignore itself and only
+# understood lines shaped `^/name$`, so it silently skipped `^/LICENSE.*`,
+# `^/COPYING` and `^/README.*` — which is exactly how LICENSE got through with
+# the whole suite green. Rather than teach the test that dialect (bare names
+# match every path segment, slashed patterns match the whole path, a directory
+# entry has to become the `dir/` prefix git ls-files emits, plus `.+~` and
+# `\#.*\#`), stow the REAL repo into a throwaway home and ask what landed.
+#
+# The real repo, not make_home: the fixture writes its own .stow-local-ignore,
+# so a fixture stow would pass no matter what the tracked one says. Same trap
+# the debloat manifest fell into.
+oracle=$(mktemp -d "$BUILD/oracle-XXXXXX")
+stow --no-folding -d "$(dirname "$ROOT")" -t "$oracle" \
+  "$(basename "$ROOT")" >/dev/null 2>&1
 
-if ((${#missing_from_scripts[@]})); then
-  fail "repo-only lists agree between .stow-local-ignore and the scripts" \
-    "${missing_from_scripts[@]}"
+# If the stow itself failed, every tracked file would look un-stowed and the
+# two assertions below would flood with meaningless output. Anchor on a file
+# that must always be installed.
+assert_symlink "repo-only: the oracle stow installed a known config file" \
+  "$oracle/.config/hypr/autostart.lua"
+
+doctor_repo_only=$(sed -n "s/^REPO_ONLY='\(.*\)'$/\1/p" "$ROOT/.local/bin/loaf-doctor")
+heal_repo_only=$(sed -n "s/^REPO_ONLY='\(.*\)'$/\1/p" "$ROOT/.local/bin/loaf-heal")
+copy_class=$(sed -n "s/^COPY_CLASS='\(.*\)'$/\1/p" "$ROOT/.local/bin/loaf-doctor")
+
+# The two scripts census the same tree and must agree with each other before
+# either can be compared against stow.
+assert_equals "repo-only: doctor and heal carry the same REPO_ONLY" \
+  "$doctor_repo_only" "$heal_repo_only"
+if [[ -n $doctor_repo_only && -n $copy_class ]]; then
+  pass "repo-only: REPO_ONLY and COPY_CLASS were both readable from loaf-doctor"
 else
-  pass "repo-only lists agree between .stow-local-ignore and the scripts"
+  fail "repo-only: REPO_ONLY and COPY_CLASS were both readable from loaf-doctor" \
+    "REPO_ONLY='$doctor_repo_only'" "COPY_CLASS='$copy_class'" \
+    "the sed above no longer matches how they are declared — the two assertions" \
+    "after this one would pass vacuously, so fix the sed rather than this test"
+fi
+
+# Both directions matter. A file stow declines to install but REPO_ONLY does not
+# exclude gets reported as missing forever (the LICENSE bug). A file stow DOES
+# install but REPO_ONLY excludes drops out of the census silently, so doctor
+# stops noticing when something clobbers it.
+unstowed_but_censused=()
+stowed_but_excluded=()
+while IFS= read -r f; do
+  if [[ -e $oracle/$f || -L $oracle/$f ]]; then
+    [[ $f =~ $doctor_repo_only ]] && stowed_but_excluded+=("$f")
+  else
+    # COPY_CLASS is the legitimate third state: .config/omarchy/themes is
+    # stow-ignored on purpose and heal installs it as real files instead, so
+    # doctor censuses those separately rather than excluding them.
+    [[ $f =~ $doctor_repo_only || $f =~ $copy_class ]] ||
+      unstowed_but_censused+=("$f")
+  fi
+done < <(git -C "$ROOT" ls-files)
+
+if ((${#unstowed_but_censused[@]})); then
+  fail "repo-only: everything stow declines to install is excluded by REPO_ONLY" \
+    "${unstowed_but_censused[@]}" \
+    "stow ignores these but doctor still censuses them, so it reports each as" \
+    "'symlinks N not installed' forever — add them to REPO_ONLY in BOTH" \
+    "loaf-doctor and loaf-heal, or drop the .stow-local-ignore entry"
+else
+  pass "repo-only: everything stow declines to install is excluded by REPO_ONLY"
+fi
+
+if ((${#stowed_but_excluded[@]})); then
+  fail "repo-only: nothing REPO_ONLY excludes is actually stowed" \
+    "${stowed_but_excluded[@]}" \
+    "these ARE installed into \$HOME but REPO_ONLY drops them from the census," \
+    "so doctor would not notice one being clobbered or going missing"
+else
+  pass "repo-only: nothing REPO_ONLY excludes is actually stowed"
 fi
 
 # CLAUDE.md is agent instructions for working in this repo, not config — it must
