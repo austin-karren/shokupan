@@ -32,6 +32,35 @@ plugins/austinkarren.clock/BarWidget.qml /usr/share/omarchy/shell/plugins/panels
 # re-lives the wired-globe section that regressed at r1744; the durable end
 # state is still an upstream glyph setting (draft in docs/upstream/).
 plugins/austinkarren.network/Model.js /usr/share/omarchy/shell/plugins/panels/network/Model.js 864f658384438e319d6051bf95a18384fee1c6512686dc8cb9df18888c1760a1
+# shokupan-plugins ADR-0044 addendum (2026-08-24): the notification-service
+# clone (austinkarren.notifications, the same sanctioned plugin-clone shape as
+# the clock and the network panel — but a `service` kind, so enabling it swaps
+# out the daemon that receives notifications rather than a bar widget).
+#
+# The fork exists to read the `desktop-entry` hint that upstream's
+# `app: n.appName || ""` discards, so a sender that supplied no app_name still
+# gets a name and an icon. Two files are patched and both are recorded:
+#
+#   Service.qml           — four added lines and three changed, all marked
+#                           // SHOKUPAN:. It is upstream's 1,062-line service;
+#                           re-diff it, never re-clone it, or the fallback's
+#                           three call sites go back to upstream's arity and the
+#                           name silently stops being recovered.
+#   NotificationLogic.js  — the fallback itself, plus five changed lines inside
+#                           snapshotOf and replacementSnapshot.
+#
+# components/NotificationCard.qml is a verbatim copy and manifest.json is the
+# clone tool's own jq rewrite with the metadata edited: refresh the card by
+# re-cloning, not by re-diffing. It is recorded as a fork anyway, because it is
+# a copy of a file upstream keeps changing and a stale card is exactly the drift
+# this board exists to catch. DesktopEntryLookup.qml is ours and has no upstream.
+#
+# The durable end state is upstream taking the fallback (draft in
+# docs/upstream/notification-desktop-entry-fallback.md); this goes away if they
+# do.
+plugins/austinkarren.notifications/Service.qml /usr/share/omarchy/shell/plugins/notifications/Service.qml f806759a6ccb27a19d39ab9884d438b69af392256cae7b760d944619738f2726
+plugins/austinkarren.notifications/NotificationLogic.js /usr/share/omarchy/shell/plugins/notifications/NotificationLogic.js d45dc8debd8946a48a909a126dd755ba9f95846382a85afdd6fd1e8921f5d131
+plugins/austinkarren.notifications/components/NotificationCard.qml /usr/share/omarchy/shell/plugins/notifications/components/NotificationCard.qml 3ffb66ebc065886fc05b6215bd6fff9cd9e5769fac15f807748d550c91efc2f4
 # shokupan-plugins ADR-0029 addendum (2026-08-15): shokupan.omenu is back on the
 # bar (kept identity deviation, user's word). Its BarWidget.qml is our own QML,
 # but the two click actions (the omarchy-shell IPC toggle and xdg-terminal-exec)
