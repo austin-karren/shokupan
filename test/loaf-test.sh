@@ -779,6 +779,32 @@ out=$(loaf_run "$home" doctor)
 assert_not_contains "doctor: silent about the index when there is none" \
   "$out" "plugin index"
 
+# Retirement: a plugin whose source sits OUTSIDE the monorepo's `plugins/`
+# directory is neither linked into the desktop nor demanded by the index. This
+# is the whole mechanism `retired/` in shokupan-plugins rests on — there is no
+# "unlinked" flag, only being out of the glob — and it is load-bearing because
+# doctor treats any plugins/* directory that is not linked as a broken install.
+# Widening either glob to `*/` would silently un-retire everything under
+# retired/ and turn the index red for it, so both directions are pinned here.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/retired/shokupan-retired"
+echo '{"id":"shokupan.retired"}' \
+  >"$home/.local/share/shokupan-plugins/retired/shokupan-retired/manifest.json"
+loaf_run "$home" plugins --offline >/dev/null
+assert_equals "retired: a plugin outside plugins/ is not linked into the desktop" \
+  "$([[ -e $home/.config/omarchy/plugins/shokupan-retired ]] && echo linked || echo absent)" \
+  "absent"
+
+out=$(loaf_run "$home" plugins --index)
+status=$?
+assert_not_contains "retired: the index does not demand a published repo for it" \
+  "$out" "shokupan.retired"
+assert_equals "retired: a retired plugin leaves the index healthy" "$status" "0"
+
+out=$(loaf_run "$home" doctor)
+assert_not_contains "retired: doctor does not count it as a missing link" \
+  "$out" "shokupan-retired"
+
 # The index is repo furniture, not config: it must never be stowed into the
 # home directory. packages/ is already repo-only, so this just pins it.
 home=$(make_home)
