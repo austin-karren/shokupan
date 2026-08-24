@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Runs after every `omarchy update`, via Omarchy's sanctioned hook directory,
+# after 10-loaf-heal — omarchy-hook globs post-update.d/ and runs each file in
+# turn with its own bash, so the numeric prefix is the order and nothing here
+# can reach heal's exit status.
+#
+# Why this exists at all: fork drift is the one red on doctor's board with no
+# symptom. A missing symlink, an uninstalled package, a dirty tree all announce
+# themselves eventually; a fork whose upstream moved keeps working against a
+# stale copy of a file upstream has moved on from, and the first sign is
+# something subtly wrong months later. An `omarchy update` is the moment that
+# becomes true, so it is the moment to say so.
+#
+# Warn, never fail — 10-loaf-heal states that principle and this does not
+# weaken it. `loaf forks --drifted` is the same comparison `loaf doctor` runs,
+# so there is one implementation of it and not a second copy here; it prints
+# headlines only, and nothing at all when nothing moved. Silence on a clean
+# update is the point: a line printed every time is a line he learns to skip.
+
+command -v loaf-forks &>/dev/null || exit 0
+
+drift=$(loaf-forks --drifted 2>/dev/null)
+
+if [[ -n $drift ]]; then
+  echo
+  echo "Upstream moved under files the rice copies or watches:"
+  printf '%s\n' "$drift"
+  echo "Re-verify, then re-stamp — run 'loaf forks' for detail"
+fi
+
+exit 0
