@@ -1799,6 +1799,56 @@ else
 fi
 
 # ---------------------------------------------------------
+# herdr config tracking (shokupan ADR-0050)
+# ---------------------------------------------------------
+#
+# .config/herdr/config.toml is a plain tracked file, not a forks/watch entry
+# (ADR-0050) — the hazard it faces is `omarchy refresh herdr` overwriting the
+# live symlink with a real copy of upstream's template, and the generic
+# "symlinks replaced by real files" check (already exercised above against
+# looknfeel.conf) covers that the moment the file is tracked at all. This
+# proves it does so for herdr specifically, against the REAL repo rather than
+# make_home's fixture: the fixture repo never carries this file, so a fixture
+# stow would say nothing about it either way.
+
+herdr_stow_home=$(mktemp -d "$BUILD/herdrhome-XXXXXX")
+stow --no-folding -d "$(dirname "$ROOT")" -t "$herdr_stow_home" \
+  "$(basename "$ROOT")" >/dev/null 2>&1
+
+assert_symlink "herdr config: stow installs it as a symlink" \
+  "$herdr_stow_home/.config/herdr/config.toml"
+
+out=$(LOAF_ROOT="$ROOT" loaf_run "$herdr_stow_home" doctor)
+assert_not_contains "herdr config: doctor reports no displacement while stowed" \
+  "$out" "replaced by real files"
+
+# Simulate exactly what `omarchy refresh herdr` does: drop the symlink, write a
+# plain file in its place (the shape of upstream's overwrite, prefix and all).
+rm "$herdr_stow_home/.config/herdr/config.toml"
+cat >"$herdr_stow_home/.config/herdr/config.toml" <<'EOF'
+[keys]
+prefix = "ctrl+space"
+EOF
+
+out=$(LOAF_ROOT="$ROOT" loaf_run "$herdr_stow_home" doctor)
+status=$?
+assert_contains "herdr config: doctor detects the clobber" \
+  "$out" "replaced by real files"
+assert_contains "herdr config: doctor names the herdr config specifically" \
+  "$out" ".config/herdr/config.toml"
+assert_equals "herdr config: doctor exits non-zero on the clobber" "$status" "1"
+
+# Restore by re-stowing, the same recovery `loaf heal` performs.
+rm "$herdr_stow_home/.config/herdr/config.toml"
+stow --no-folding -d "$(dirname "$ROOT")" -t "$herdr_stow_home" \
+  "$(basename "$ROOT")" >/dev/null 2>&1
+assert_symlink "herdr config: re-stowing restores the symlink" \
+  "$herdr_stow_home/.config/herdr/config.toml"
+out=$(LOAF_ROOT="$ROOT" loaf_run "$herdr_stow_home" doctor)
+assert_not_contains "herdr config: doctor is clean again after restore" \
+  "$out" "replaced by real files"
+
+# ---------------------------------------------------------
 
 printf '\n1..%d\n' "$tests"
 if ((failures)); then
