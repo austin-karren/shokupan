@@ -1598,6 +1598,171 @@ assert_equals "forks: a rice-repo watch exits 0" "$status" "0"
 
 
 # ---------------------------------------------------------
+# post-update drift warning
+# ---------------------------------------------------------
+
+# The gap this closes: 10-loaf-heal deliberately does not run doctor, and fork
+# drift is the one red with no symptom of its own, so an update that moved
+# upstream under a fork left no trace anywhere. 20-forks-drift warns and only
+# warns.
+#
+# The TRACKED hook is what runs here, from $ROOT — not a copy written into the
+# fixture. A fixture copy would pass no matter what the installed hook says,
+# the same trap the debloat manifest and .stow-local-ignore both fell into.
+# Invoked with `bash <file>`, which is how omarchy-hook invokes it.
+FORKS_HOOK="$ROOT/.config/omarchy/hooks/post-update.d/20-forks-drift"
+
+hook_run() {
+  local home=$1
+  LOAF_HOME="$home" LOAF_ROOT="$home/shokupan" \
+    PLUGINS_ROOT="$home/.local/share/shokupan-plugins" \
+    PATH="$BUILD/stub:$ROOT/.local/bin:$PATH" \
+    bash "$FORKS_HOOK" 2>&1
+}
+
+# omarchy-hook globs post-update.d/ and runs what it finds in glob order, so the
+# prefixes are the whole ordering contract: heal re-asserts the rice, then the
+# warning reports on what the update moved. Asserted against the tracked
+# directory, since a third hook landing out of order would be silent otherwise.
+mapfile -t post_update_hooks < <(cd "$ROOT/.config/omarchy/hooks/post-update.d" && printf '%s\n' *)
+assert_equals "post-update: heal runs before the drift warning" \
+  "${post_update_hooks[0]} ${post_update_hooks[1]}" "10-loaf-heal 20-forks-drift"
+
+# One implementation of the comparison, not two. The hook must delegate to
+# loaf-forks rather than hash anything itself — a second copy of the comparison
+# is the same defect class as doctor's REPO_ONLY list drifting from
+# .stow-local-ignore, which bit this repo this week.
+assert_contains "post-update: the warning delegates to loaf-forks" \
+  "$(cat "$FORKS_HOOK")" "loaf-forks --drifted"
+assert_not_contains "post-update: the warning does not re-implement the hashing" \
+  "$(cat "$FORKS_HOOK")" "sha256sum"
+
+# A clean board must print nothing. An update that reports on forks every time
+# trains the eye to skip the line, which costs the warning its whole value.
+# Two entries, one of which never moves: with a single-entry board the "does
+# not print the healthy entries" assertion below has no healthy entry to catch
+# and passes on an empty board, which is how a printed ✓ would have got through.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/plugins"
+echo "fork" >"$home/.local/share/shokupan-plugins/plugins/Fork.qml"
+echo "steady" >"$home/.local/share/shokupan-plugins/plugins/Steady.qml"
+echo "upstream v1" >"$home/upstream.qml"
+echo "steady upstream" >"$home/steady-upstream.qml"
+{
+  printf 'plugins/Fork.qml %s %s\n' "$home/upstream.qml" \
+    "$(sha256sum "$home/upstream.qml" | awk '{print $1}')"
+  printf 'plugins/Steady.qml %s %s\n' "$home/steady-upstream.qml" \
+    "$(sha256sum "$home/steady-upstream.qml" | awk '{print $1}')"
+} >"$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_equals "post-update: silent when nothing drifted" "$out" ""
+assert_equals "post-update: exits 0 when nothing drifted" "$status" "0"
+
+# Drift names the file. "forks: 1 drifted" sends him hunting, so the path has to
+# be in the output, and so does what to do about it.
+echo "upstream v2 - a fix the fork never got" >"$home/upstream.qml"
+out=$(hook_run "$home")
+status=$?
+assert_contains "post-update: warns when upstream moved under a fork" \
+  "$out" "Upstream moved under files the rice copies or watches"
+assert_contains "post-update: names the drifted file" "$out" "plugins/Fork.qml"
+assert_contains "post-update: says what to do about it" "$out" "loaf forks"
+assert_equals "post-update: never fails the update on drift" "$status" "0"
+# Warning, not board: the ✓ lines and the per-entry detail belong to
+# `loaf forks`, and this prints after every single update.
+assert_not_contains "post-update: does not print the healthy entries" \
+  "$out" "plugins/Steady.qml"
+assert_not_contains "post-update: does not print the detail lines" \
+  "$out" "re-diff, carry the fix across"
+
+# A watch is reported too, in its own words — the coupling usually survives, so
+# the ask is a re-verify and not a re-diff.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/bar/modules"
+echo "hosts upstream" >"$home/.local/share/shokupan-plugins/bar/modules/hosted.qml"
+echo "upstream v1" >"$home/hosted-upstream.qml"
+printf 'bar/modules/hosted.qml %s deadbeef watch\n' "$home/hosted-upstream.qml" \
+  >"$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_contains "post-update: warns on a changed watch" "$out" "watched upstream file changed"
+assert_contains "post-update: names the drifted watch" "$out" "bar/modules/hosted.qml"
+assert_equals "post-update: never fails the update on watch drift" "$status" "0"
+
+# No ledger at all. Nothing to report, and above all nothing to crash on — a
+# machine that never recorded a fork still runs this hook after every update.
+home=$(make_home)
+rm -f "$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_equals "post-update: silent with no fork ledger" "$out" ""
+assert_equals "post-update: exits 0 with no fork ledger" "$status" "0"
+
+# A recorded upstream file that is gone entirely — an upstream rename, which is
+# worse than a change and must still not fail the update.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/plugins"
+echo "fork" >"$home/.local/share/shokupan-plugins/plugins/Fork.qml"
+printf 'plugins/Fork.qml %s deadbeef\n' "$home/renamed-away.qml" \
+  >"$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_contains "post-update: reports an upstream file that is gone" "$out" "no longer exists"
+assert_equals "post-update: never fails the update on a renamed upstream" "$status" "0"
+
+# And the recorded rice file gone from the repo, the other half of that pair.
+home=$(make_home)
+echo "upstream v1" >"$home/upstream.qml"
+printf 'plugins/NeverExisted.qml %s deadbeef\n' "$home/upstream.qml" \
+  >"$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_contains "post-update: reports a rice file missing from the repo" \
+  "$out" "missing from the repo"
+assert_equals "post-update: never fails the update on a missing rice file" "$status" "0"
+
+# loaf-forks' own --drifted contract, asserted directly rather than only through
+# the hook, so a regression names the side that broke.
+# Two entries again, for the same reason: the omission assertions need a
+# healthy entry present to be capable of catching one.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/plugins"
+echo "fork" >"$home/.local/share/shokupan-plugins/plugins/Fork.qml"
+echo "steady" >"$home/.local/share/shokupan-plugins/plugins/Steady.qml"
+echo "upstream v1" >"$home/upstream.qml"
+echo "steady upstream" >"$home/steady-upstream.qml"
+{
+  printf 'plugins/Fork.qml %s %s\n' "$home/upstream.qml" \
+    "$(sha256sum "$home/upstream.qml" | awk '{print $1}')"
+  printf 'plugins/Steady.qml %s %s\n' "$home/steady-upstream.qml" \
+    "$(sha256sum "$home/steady-upstream.qml" | awk '{print $1}')"
+} >"$home/shokupan/packages/forks"
+out=$(loaf_run "$home" forks --drifted)
+status=$?
+assert_equals "forks: --drifted prints nothing on a clean board" "$out" ""
+assert_equals "forks: --drifted exits 0 on a clean board" "$status" "0"
+
+echo "upstream v2" >"$home/upstream.qml"
+out=$(loaf_run "$home" forks --drifted)
+status=$?
+assert_contains "forks: --drifted names the drifted entry" "$out" "plugins/Fork.qml"
+assert_not_contains "forks: --drifted omits the healthy entries" \
+  "$out" "plugins/Steady.qml"
+assert_not_contains "forks: --drifted omits the detail lines" \
+  "$out" "re-diff, carry the fix across"
+assert_equals "forks: --drifted exits non-zero on drift" "$status" "1"
+
+# --drifted keeps quiet about a missing manifest where a bare run says so: the
+# hook's silence when there is no board depends on this.
+rm -f "$home/shokupan/packages/forks"
+out=$(loaf_run "$home" forks --drifted)
+assert_equals "forks: --drifted is silent with no manifest" "$out" ""
+out=$(loaf_run "$home" forks)
+assert_contains "forks: a bare run still reports a missing manifest" \
+  "$out" "no fork manifest"
+
+# ---------------------------------------------------------
 # lint
 # ---------------------------------------------------------
 #
