@@ -142,7 +142,8 @@ mechanism and the reasoning; the record used to claim the opposite.
 | `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express. Since the r1744 upgrade only one remains: the indicators fork carrying the zen aspect-ratio toggle (the hosted network/microphone widgets and the bar-settings gear were deleted — absorbed or regressed to stock, see shokupan-plugins ADR-0044's addendum). New files here need `omarchy-restart-shell`; edits hot-reload |
 | `.config/omarchy/themes/tokyo-night/shell.bar.toml` | Pins the Tokyo Night bar near-black as system chrome (shokupan-plugins ADR-0009, scoped to that theme at r1744). A `[bar]` section override spliced into the generated shell.toml, the same mechanism as stock tokyo-night's `shell.lock.toml` — it replaces the whole section, so re-check its keys against upstream's template after an upgrade. Other themes get stock bar colors |
 | `.config/omarchy/extensions/omarchy-menu.jsonc` | Our rows in the Omarchy Menu, and the System Palette's only home since quattro (ADR-0027) — the sanctioned extension point, not a patched Omarchy file. Hot-reloaded. Replaced `menu.sh`, whose bash extension point quattro removed |
-| `.config/starship.toml`, `.config/tmux/` | Prompt, and the general-purpose multiplexer. Agent sessions live in herdr instead — a self-updating binary in `~/.local/bin`, deliberately not in the manifest (ADR-0015) |
+| `.config/starship.toml`, `.config/tmux/` | Prompt, and the general-purpose multiplexer. Agent sessions live in herdr instead (ADR-0015) — herdr is now Omarchy-packaged (`omarchy-base.packages`), not the self-updating `~/.local/bin` binary ADR-0015 described |
+| `.config/herdr/config.toml` | Agent-session multiplexer config. Plain tracked file, not a `packages/forks` entry (ADR-0050) — `omarchy refresh herdr` overwrites it wholesale, which `loaf doctor`'s generic symlink-displacement check catches once it's tracked at all. `keys.prefix = "ctrl+s"` must never become upstream's `ctrl+space`, which collides with tmux's `C-Space` (ADR-0015) |
 | `.config/bash/` | The Omarchy half of the shell seam: `env.d/00-omarchy.sh` above `crumb`'s interactivity guard, `50-omarchy-rc.sh` below it. `crumb` owns the `.bashrc` that sources both and knows nothing about Omarchy — see "The bash seam" above |
 | `.local/bin/` | The `loaf` CLI, plus every script a keybinding or bar module depends on. The npx shims (`codex`, `gemini`, …) stay untracked — they are generated, not config |
 | `.config/omarchy/hooks/post-update.d/` | Runs `loaf heal` after each `omarchy update` — the sanctioned hook directory, not a patched Omarchy file |
@@ -356,6 +357,7 @@ are the to-do list.
 | [0046](./docs/adr/0046-meet-controls-its-own-pip-popup.md) | Meet controls its own PiP popup, and the main window keeps its border | accepted |
 | 0047 | The boot contract is guarded, not assumed | accepted — recorded in `omarchy-desktop-on-cachyos` |
 | [0048](./docs/adr/0048-the-wallpaper-pool-is-a-manifest-not-a-payload.md) | The wallpaper pool is a manifest, not a payload | accepted |
+| [0050](./docs/adr/0050-herdrs-config-lives-in-shokupan-as-a-plain-tracked-file.md) | herdr's config lives in shokupan, as a plain tracked file | accepted |
 
 ## To do
 
