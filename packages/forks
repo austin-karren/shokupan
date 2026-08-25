@@ -37,17 +37,33 @@ plugins/austinkarren.network/Model.js /usr/share/omarchy/shell/plugins/panels/ne
 # the clock and the network panel — but a `service` kind, so enabling it swaps
 # out the daemon that receives notifications rather than a bar widget).
 #
-# The fork exists to read the `desktop-entry` hint that upstream's
-# `app: n.appName || ""` discards, so a sender that supplied no app_name still
-# gets a name and an icon. Two files are patched and both are recorded:
+# The fork carries TWO independent patches, both to how an entry's identity is
+# stored, and they retire on different triggers — do not assume removing one
+# empties the plugin out:
+#
+#   1. The desktop-entry fallback. Reads the `desktop-entry` hint that
+#      upstream's `app: n.appName || ""` discards, so a sender that supplied no
+#      app_name still gets a name and an icon. Retires if upstream takes it.
+#   2. The slot shift (2026-08-24). When a summary is exactly the app's own
+#      name and there is a body under it, the body's first line is promoted
+#      into the summary slot. It exists because OSC 9 carries a body and no
+#      title, so Ghostty hardcodes "Ghostty" as the summary of every
+#      terminal-delivered notification and the real message sits one slot low.
+#      This is NOT an Omarchy bug and is not in the upstream draft: it is a
+#      workaround for a transport that loses titles, and it retires when herdr
+#      can emit OSC 777. It is a heuristic — see the plugin README, which is
+#      where its provisional nature and its retirement condition are recorded.
+#
+# Two files are patched and both are recorded:
 #
 #   Service.qml           — four added lines and three changed, all marked
 #                           // SHOKUPAN:. It is upstream's 1,062-line service;
 #                           re-diff it, never re-clone it, or the fallback's
 #                           three call sites go back to upstream's arity and the
 #                           name silently stops being recovered.
-#   NotificationLogic.js  — the fallback itself, plus five changed lines inside
-#                           snapshotOf and replacementSnapshot.
+#   NotificationLogic.js  — both patches, plus the body of snapshotOf rewritten
+#                           to route through them. Every divergence is marked
+#                           // SHOKUPAN:.
 #
 # components/NotificationCard.qml is a verbatim copy and manifest.json is the
 # clone tool's own jq rewrite with the metadata edited: refresh the card by
@@ -55,9 +71,9 @@ plugins/austinkarren.network/Model.js /usr/share/omarchy/shell/plugins/panels/ne
 # a copy of a file upstream keeps changing and a stale card is exactly the drift
 # this board exists to catch. DesktopEntryLookup.qml is ours and has no upstream.
 #
-# The durable end state is upstream taking the fallback (draft in
-# docs/upstream/notification-desktop-entry-fallback.md); this goes away if they
-# do.
+# The durable end state for patch 1 is upstream taking the fallback (draft in
+# docs/upstream/notification-desktop-entry-fallback.md). Patch 2 survives that,
+# so upstream saying yes shrinks this fork rather than deleting it.
 plugins/austinkarren.notifications/Service.qml /usr/share/omarchy/shell/plugins/notifications/Service.qml f806759a6ccb27a19d39ab9884d438b69af392256cae7b760d944619738f2726
 plugins/austinkarren.notifications/NotificationLogic.js /usr/share/omarchy/shell/plugins/notifications/NotificationLogic.js d45dc8debd8946a48a909a126dd755ba9f95846382a85afdd6fd1e8921f5d131
 plugins/austinkarren.notifications/components/NotificationCard.qml /usr/share/omarchy/shell/plugins/notifications/components/NotificationCard.qml 3ffb66ebc065886fc05b6215bd6fff9cd9e5769fac15f807748d550c91efc2f4
