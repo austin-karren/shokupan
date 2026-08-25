@@ -75,3 +75,20 @@ superseded-by-upstream: both stock bindings return, and with tmux reinstalled
 (the partial revert above) each chord now opens a multiplexer that exists. The
 user retrains to `SUPER+CTRL+RETURN` for herdr. The split itself — agents in
 herdr, everything else in tmux — is unchanged and remains the standing decision.
+
+## Addendum, 2026-08-25: herdr is package-backed; the manifest claim is stale
+
+"What the first acceptance established" above says herdr "stays outside the
+package manifest: it is a static binary in `~/.local/bin`, installed and
+updated by its own `herdr update` channel, not by pacman." That is no longer
+true under quattro. Omarchy now installs herdr as a base package: it appears
+in `omarchy-base.packages`, and `pacman -Q herdr` reports `herdr
+0.8.0.r13-1`. `herdr --version` reports `0.8.2` — the two strings differ
+because one is the pacman package version and the other is the binary's own
+version string; both are real, neither is wrong.
+
+This was found and first recorded in shokupan ADR-0050, while tracking
+herdr's config in this repo. That ADR is the record of *why* the two
+multiplexers must never fight over a prefix, and its finding supersedes the
+manifest claim above; nothing else in this ADR changes. This addendum exists
+so the correction lives here too, not only in the newer ADR that noticed it.
