@@ -151,10 +151,29 @@ o.window({ tag = "chromium-based-browser", initial_title = "^Meet - .+" }, {
 -- focus, and most games now default to windowed-fullscreen, which trades one
 -- small annoyance for a per-game one.
 --
--- This does NOT stop a manual resize past the screen edge - `size` is a static
--- rule, applied once at map. `maxsize` would clamp it; it is left out here
--- rather than stacked on speculation. See report-steamsize.md.
+-- `size` is a static rule, applied once at map, so it does not stop a manual
+-- resize past the screen edge. `max_size` closes that: it is enforced at map,
+-- reload and rule-add time, so an oversized remembered geometry gets clamped
+-- back on-screen at every launch. It is capped at the USABLE AREA
+-- (monitor_w-16, monitor_h-42: the bar's 26px top reservation plus gaps_out 8
+-- on each remaining side), not at the same 4/5 fraction as `size` above -
+-- capping at the launch fraction would mean Steam could never be made larger
+-- than its launch size, which is a UX regression.
+--
+-- The Lua field is `max_size`; `maxsize` is rejected outright by
+-- `hl.window_rule`'s field validation. Confirmed clamping a live oversized
+-- window (2500x1600, dragged off-screen at -98,-19) back to 2288x1494 at
+-- 8,34 on `hyprctl reload` (2026-08-25).
+--
+-- Known gap: this does NOT constrain a dispatcher-driven resize
+-- (`resizewindowpixel`/`hl.dsp.window.resize`) - the cap applies only when the
+-- rule itself is (re-)applied, not continuously - and whether it constrains an
+-- interactive mouse-drag overshoot is untested; synthesizing a real pointer
+-- drag was out of reach. See report-steamsize.md for the full characterization.
 --
 -- Only the main client window. Upstream's `Sign in to Steam` (transient, uses
 -- Steam's own 840x528) and `Friends List` (460x800) rules are left alone.
-o.window({ class = "steam", title = "Steam" }, { size = { "(monitor_w*4/5)", "(monitor_h*4/5)" } })
+o.window({ class = "steam", title = "Steam" }, {
+  size = { "(monitor_w*4/5)", "(monitor_h*4/5)" },
+  max_size = { "(monitor_w-16)", "(monitor_h-42)" },
+})
