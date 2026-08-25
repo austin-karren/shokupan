@@ -14,6 +14,9 @@
           "id": "shokupan.omenu"
         },
         {
+          "id": "jankeesvw.workspace-name"
+        },
+        {
           "id": "omarchy.workspaces"
         }
       ],
@@ -78,6 +81,15 @@
   "plugins": [
     {
       "id": "shokupan.dpms-guard"
+    },
+    {
+      "id": "austinkarren.notifications"
     }
+  ],
+  "disabledPlugins": [
+    "omarchy.notifications"
+  ],
+  "cloneSourceRestores": [
+    "austinkarren.notifications"
   ]
 }
