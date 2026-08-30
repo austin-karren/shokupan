@@ -177,3 +177,71 @@ o.window({ class = "steam", title = "Steam" }, {
   size = { "(monitor_w*4/5)", "(monitor_h*4/5)" },
   max_size = { "(monitor_w-16)", "(monitor_h-42)" },
 })
+
+-- Steam: clamp client-driven resizes back on-screen (watchdog) ---------------
+--
+-- max_size above closes the map/reload path only. Hyprland enforces maxsize
+-- when rules are APPLIED, never against a client-driven resize — proven live
+-- 2026-08-29 with an X11 ConfigureRequest (xdotool windowsize, the same path
+-- as Steam's own grab handles): with max_size active, the window went to
+-- 2700x1560 logical at 502,152 — 898px off the right edge of the 2304px
+-- screen. That is the "resizing Steam pushes it off the screen" bug, and no
+-- static rule can close it: hl.on has no window.resize event (checked
+-- hl.meta.lua, 0.56.2) and suppress_event has no resize/configure.
+--
+-- So a compositor-side hl.timer polls the Steam main window twice a second
+-- and, when it strays outside the usable area, dispatches the same exact
+-- resize+move that rule re-application performs (both verified working via
+-- address selectors on the live oversized window). Cost is a few in-process
+-- table reads per tick; dispatches fire only when actually out of bounds.
+--
+-- Geometry facts this leans on (probed live via hyprctl eval + io.open —
+-- eval never prints return values): w.at/w.size are LOGICAL {x,y};
+-- m.width/m.height are PHYSICAL (divide by m.scale); m.reserved and
+-- general.gaps_out both read back as {top,bottom,left,right} tables (the
+-- bar's 26px shows in reserved.top). Gaps are re-read every tick, so the
+-- no-gaps toggle is honored without the snapshot lag the Meet rule accepts
+-- for border_size.
+--
+-- SLOP is 2px: XWayland logical sizes round inconsistently (hyprctl reports
+-- 1844 for 1843.2 — see report-steamsize.md), and correcting inside the
+-- rounding noise would loop forever.
+--
+-- The position clamp also means Steam cannot be PARKED hanging off an edge —
+-- deliberate half-offscreen placement gets pulled back. Accepted: the whole
+-- point is that this window stays reachable.
+--
+-- get_windows filters are regexes ("steam" would also hit steam_app_* game
+-- windows), so the loop re-checks class/title EXACTLY. Fullscreen is skipped
+-- so Big Picture / games are never fought. Sign-in and Friends List windows
+-- (different titles) are untouched, same as the rules above.
+local function clamp_steam_window()
+  for _, w in ipairs(hl.get_windows({ class = "steam", title = "Steam", floating = true, mapped = true })) do
+    if w.class == "steam" and w.title == "Steam" and w.fullscreen == 0 and w.monitor then
+      local m = w.monitor
+      local gaps = hl.get_config("general.gaps_out") or { top = 8, bottom = 8, left = 8, right = 8 }
+      local r = m.reserved
+      local ux = m.x + r.left + gaps.left
+      local uy = m.y + r.top + gaps.top
+      local uw = m.width / m.scale - r.left - r.right - gaps.left - gaps.right
+      local uh = m.height / m.scale - r.top - r.bottom - gaps.top - gaps.bottom
+      local nw = math.min(w.size.x, uw)
+      local nh = math.min(w.size.y, uh)
+      local nx = math.max(ux, math.min(w.at.x, ux + uw - nw))
+      local ny = math.max(uy, math.min(w.at.y, uy + uh - nh))
+      local SLOP = 2
+      local sel = "address:" .. w.address
+      if w.size.x > nw + SLOP or w.size.y > nh + SLOP then
+        hl.dispatch(hl.dsp.window.resize({ x = math.floor(nw), y = math.floor(nh), exact = true, window = sel }))
+      end
+      if math.abs(w.at.x - nx) > SLOP or math.abs(w.at.y - ny) > SLOP then
+        hl.dispatch(hl.dsp.window.move({ x = math.floor(nx), y = math.floor(ny), exact = true, window = sel }))
+      end
+    end
+  end
+end
+
+hl.timer(function()
+  local ok, err = pcall(clamp_steam_window)
+  if not ok then print("steam clamp watchdog: " .. tostring(err)) end
+end, { timeout = 500, type = "repeat" })
