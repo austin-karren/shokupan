@@ -14,10 +14,13 @@
           "id": "shokupan.omenu"
         },
         {
-          "id": "jankeesvw.workspace-name"
+          "id": "jankeesvw.workspace-name",
+          "indicators": true,
+          "numbers": true,
+          "alwaysShown": 10
         },
         {
-          "id": "omarchy.workspaces"
+          "id": "omarchy.active-window"
         }
       ],
       "center": [
@@ -55,6 +58,9 @@
           "id": "omarchy.tailscale"
         },
         {
+          "id": "io.github.dicemans.docker-vms"
+        },
+        {
           "id": "jankeesvw.notification-center"
         },
         {
@@ -81,15 +87,6 @@
   "plugins": [
     {
       "id": "shokupan.dpms-guard"
-    },
-    {
-      "id": "austinkarren.notifications"
     }
-  ],
-  "disabledPlugins": [
-    "omarchy.notifications"
-  ],
-  "cloneSourceRestores": [
-    "austinkarren.notifications"
   ]
 }
