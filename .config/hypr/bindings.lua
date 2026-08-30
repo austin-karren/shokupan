@@ -467,9 +467,74 @@ shokupan.usable_area = usable_area
 -- Kept through the 2026-08-15 stock-first audit at the user's word: apexshot is
 -- back over the native capture flow until that flow improves (shokupan-plugins
 -- ADR-0044).
-o.bind("SUPER + SHIFT + 4", "Screenshot area", "/usr/bin/apexshot capture area")
+--
+-- Area capture is the one that toggles. Fired while the selector is already up
+-- it takes that selector down instead of stacking a second one on the first,
+-- which is no use to anybody. The selector is a layer-shell surface (namespace
+-- apexshot-area-selector), not a window, so nothing in the close ladder at the
+-- top of this file sees it and killactive cannot reach it either -- ending the
+-- process that owns it is the way to close it.
+--
+-- The pattern has no spaces in it on purpose: it goes through a shell, and it
+-- must not match /usr/bin/apexshot-capture --worker, the long-lived helper that
+-- outlives every capture and that captures stop working without. Matching on
+-- `area` is what separates the two, the worker's command line having no such
+-- word in it.
+local function apexshot_area()
+  for _, layer in ipairs(hl.get_layers()) do
+    if (layer.namespace or "") == "apexshot-area-selector" then
+      hl.exec_cmd("pkill -f apexshot.capture.area")
+      return
+    end
+  end
+
+  hl.exec_cmd("/usr/bin/apexshot capture area")
+end
+
+-- Exposed for repl-driven verification, like the close family above: nothing
+-- here can synthesise a real key press, so measuring means calling the closure
+-- the bind holds.
+shokupan.apexshot_area = apexshot_area
+
+-- Both chords reach the same toggle. SUPER+SHIFT+4 is the macOS muscle memory;
+-- SUPER+A is what a left click on the bar widget does (BarWidget.qml: left is
+-- capture area, middle record, right full screen) and is the one hand can find
+-- without looking. SUPER+A was the last bare-SUPER A chord free -- CTRL+A is
+-- Audio, SHIFT+A ChatGPT, ALT+SHIFT+A Grok, CTRL+SHIFT+A Agent.
+o.bind("SUPER + SHIFT + 4", "Screenshot area", apexshot_area)
+o.bind("SUPER + A", "Screenshot area", apexshot_area)
 o.bind("CTRL + ALT + X", "Screenshot crosshair", "/usr/bin/apexshot capture crosshair")
 o.bind("SUPER + CTRL + ALT + S", "Screenshot screen", "/usr/bin/apexshot capture screen")
 o.bind("CTRL + ALT + P", "Show last screenshot", "/usr/bin/apexshot show-last-preview")
 o.bind("CTRL + ALT + R", "Record screen", "/usr/bin/apexshot record ui")
 o.bind("CTRL + ALT + SHIFT + S", "Stop recording", "/usr/bin/apexshot record stop")
+
+-- Workspace name (jankeesvw.workspace-name) ----------------------------------
+--
+-- The plugin's own docs bind this to a `hyper` chord this config does not
+-- define, so it gets a real one. SUPER+R is free: every stock R chord carries
+-- CTRL (SUPER+CTRL+R set reminder, +ALT show, +SHIFT clear), and CTRL+ALT+R is
+-- ApexShot's recorder above. Bare SUPER+R is bound by nothing.
+--
+-- The panel is otherwise only reachable by clicking the workspace button you
+-- are already standing on, which is a mouse trip to rename the thing you are
+-- looking at. It opens as layer omarchy-keyboard-panel, so it is transient by
+-- the close ladder's reckoning and SUPER+W dismisses it like any other popup.
+o.bind("SUPER + R", "Name workspace", "omarchy-shell shell toggle jankeesvw.workspace-name")
+
+-- Notification centre (jankeesvw.notification-center) ------------------------
+--
+-- Same shape as the workspace-name bind above: an omarchy-shell panel that is
+-- otherwise only reachable by clicking its bar widget. SUPER+N is free -- the
+-- stock N chords both carry a second modifier (SUPER+CTRL+N nightlight,
+-- SUPER+SHIFT+N editor).
+o.bind("SUPER + N", "Notification centre", "omarchy-shell shell toggle jankeesvw.notification-center")
+
+-- Tailscale (omarchy.tailscale) ----------------------------------------------
+--
+-- Third of the same family. T is crowded -- SUPER+T floats a window,
+-- SUPER+CTRL+T is Activity, SUPER+CTRL+ALT+T shows the time -- so this takes
+-- SUPER+ALT+T, which nothing holds. ALT+SPACE already opens the apps menu, so
+-- SUPER+ALT plus a letter reading as "open a thing" is the reading this
+-- config already has.
+o.bind("SUPER + ALT + T", "Tailscale", "omarchy-shell shell toggle omarchy.tailscale")
