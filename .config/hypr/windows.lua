@@ -1,8 +1,9 @@
 -- Personal window rules, loaded from hyprland.lua after Omarchy's defaults.
--- Ported from windows.conf at the quattro migration (ADR-0033). Quattro's stock
--- config has no user windows file - hyprland.lua requires this one explicitly.
+-- Ported from windows.conf at the quattro migration
+-- (omarchy-desktop-on-cachyos ADR-0033). Quattro's stock config has no user
+-- windows file - hyprland.lua requires this one explicitly.
 --
--- GNOME Calendar as the clock popup's engine (ADR-0006) ----------------------
+-- GNOME Calendar as the clock popup's engine (shokupan-plugins ADR-0006) ----
 --
 -- Restored with the r1744 calendar-clone work: the quattro port dropped these
 -- rules on the (wrong) assumption the clock's month grid replaced the app, and
@@ -112,3 +113,135 @@ o.window({ tag = "chromium-based-browser", initial_title = "^Meet - .+" }, {
   size = { "window_w", "window_h" },
   keep_aspect_ratio = false,
 })
+
+-- Steam: size the client as a fraction of the monitor, not in pixels ----------
+--
+-- Upstream (default/hypr/apps/steam.lua) sizes the main window with
+-- `size = { 1100, 700 }`. That rule is not broken - it fires, centered, on
+-- every launch - but 1100x700 is a constant tuned for a ~1080p screen. On this
+-- 2304x1536 logical desktop (DP-2, 3840x2560 at scale 1.6666666) it is 48% x
+-- 46%: a postage stamp on a 27" 4K panel. Resizing it by hand then overshoots -
+-- observed at 2420 logical px wide against a 2304 px screen, hanging 116px off
+-- the right edge with the grab handles, which is the "can't interact with it"
+-- trap.
+--
+-- 4/5 x 4/5 is 1843x1229. Both axes take the SAME fraction on purpose: that
+-- makes the frame a proportional shrink of the desktop rather than an aspect
+-- ratio picked by eye. The margin it leaves is real - the usable area is
+-- 2304x1510 after the bar's 26px reservation, and a tiled window's outer box
+-- is 2288x1494 after gaps_out 8 - so at 1843x1229 the client sits ~230px clear
+-- of each side and ~140px clear of top and bottom, well inside the screen on
+-- every axis.
+--
+-- Mechanism is the same rule-EXPRESSION grammar the calendar rule above uses,
+-- and for the same reason: the grammar has NO percent syntax (`"80%"` hits
+-- "failed to parse expression" and the size effect is dropped SILENTLY, with
+-- `hyprctl configerrors` still clean), and its only variables are monitor_w,
+-- monitor_h, window_w, window_h, cursor_x, cursor_y - verified against the
+-- v0.56.2 binary. So the fraction is written as plain arithmetic. Expressions
+-- evaluate at map time against the window's own monitor, so nothing here is
+-- pixel-pinned to this display.
+--
+-- `size` only, no `center` and no `float`: upstream's own two rules already set
+-- both, they are separate effects, and a later size-only rule overrides just
+-- the size while centering recomputes from the new size (the calendar rule
+-- above proves the ordering - float/center/size as three rules land correctly).
+-- Steam stays FLOATING deliberately. Tiling it was tested and rejected: a
+-- tiled Steam client forces games into exclusive fullscreen to hold keyboard
+-- focus, and most games now default to windowed-fullscreen, which trades one
+-- small annoyance for a per-game one.
+--
+-- `size` is a static rule, applied once at map, so it does not stop a manual
+-- resize past the screen edge. `max_size` closes that: it is enforced at map,
+-- reload and rule-add time, so an oversized remembered geometry gets clamped
+-- back on-screen at every launch. It is capped at the USABLE AREA
+-- (monitor_w-16, monitor_h-42: the bar's 26px top reservation plus gaps_out 8
+-- on each remaining side), not at the same 4/5 fraction as `size` above -
+-- capping at the launch fraction would mean Steam could never be made larger
+-- than its launch size, which is a UX regression.
+--
+-- The Lua field is `max_size`; `maxsize` is rejected outright by
+-- `hl.window_rule`'s field validation. Confirmed clamping a live oversized
+-- window (2500x1600, dragged off-screen at -98,-19) back to 2288x1494 at
+-- 8,34 on `hyprctl reload` (2026-08-25).
+--
+-- Known gap: this does NOT constrain a dispatcher-driven resize
+-- (`resizewindowpixel`/`hl.dsp.window.resize`) - the cap applies only when the
+-- rule itself is (re-)applied, not continuously - and whether it constrains an
+-- interactive mouse-drag overshoot is untested; synthesizing a real pointer
+-- drag was out of reach. See report-steamsize.md for the full characterization.
+--
+-- Only the main client window. Upstream's `Sign in to Steam` (transient, uses
+-- Steam's own 840x528) and `Friends List` (460x800) rules are left alone.
+o.window({ class = "steam", title = "Steam" }, {
+  size = { "(monitor_w*4/5)", "(monitor_h*4/5)" },
+  max_size = { "(monitor_w-16)", "(monitor_h-42)" },
+})
+
+-- Steam: clamp client-driven resizes back on-screen (watchdog) ---------------
+--
+-- max_size above closes the map/reload path only. Hyprland enforces maxsize
+-- when rules are APPLIED, never against a client-driven resize — proven live
+-- 2026-08-29 with an X11 ConfigureRequest (xdotool windowsize, the same path
+-- as Steam's own grab handles): with max_size active, the window went to
+-- 2700x1560 logical at 502,152 — 898px off the right edge of the 2304px
+-- screen. That is the "resizing Steam pushes it off the screen" bug, and no
+-- static rule can close it: hl.on has no window.resize event (checked
+-- hl.meta.lua, 0.56.2) and suppress_event has no resize/configure.
+--
+-- So a compositor-side hl.timer polls the Steam main window twice a second
+-- and, when it strays outside the usable area, dispatches the same exact
+-- resize+move that rule re-application performs (both verified working via
+-- address selectors on the live oversized window). Cost is a few in-process
+-- table reads per tick; dispatches fire only when actually out of bounds.
+--
+-- Geometry facts this leans on (probed live via hyprctl eval + io.open —
+-- eval never prints return values): w.at/w.size are LOGICAL {x,y};
+-- m.width/m.height are PHYSICAL (divide by m.scale); m.reserved and
+-- general.gaps_out both read back as {top,bottom,left,right} tables (the
+-- bar's 26px shows in reserved.top). Gaps are re-read every tick, so the
+-- no-gaps toggle is honored without the snapshot lag the Meet rule accepts
+-- for border_size.
+--
+-- SLOP is 2px: XWayland logical sizes round inconsistently (hyprctl reports
+-- 1844 for 1843.2 — see report-steamsize.md), and correcting inside the
+-- rounding noise would loop forever.
+--
+-- The position clamp also means Steam cannot be PARKED hanging off an edge —
+-- deliberate half-offscreen placement gets pulled back. Accepted: the whole
+-- point is that this window stays reachable.
+--
+-- get_windows filters are regexes ("steam" would also hit steam_app_* game
+-- windows), so the loop re-checks class/title EXACTLY. Fullscreen is skipped
+-- so Big Picture / games are never fought. Sign-in and Friends List windows
+-- (different titles) are untouched, same as the rules above.
+local function clamp_steam_window()
+  for _, w in ipairs(hl.get_windows({ class = "steam", title = "Steam", floating = true, mapped = true })) do
+    if w.class == "steam" and w.title == "Steam" and w.fullscreen == 0 and w.monitor then
+      local m = w.monitor
+      local gaps = hl.get_config("general.gaps_out") or { top = 8, bottom = 8, left = 8, right = 8 }
+      local r = m.reserved
+      local ux = m.x + r.left + gaps.left
+      local uy = m.y + r.top + gaps.top
+      local uw = m.width / m.scale - r.left - r.right - gaps.left - gaps.right
+      local uh = m.height / m.scale - r.top - r.bottom - gaps.top - gaps.bottom
+      local nw = math.min(w.size.x, uw)
+      local nh = math.min(w.size.y, uh)
+      local nx = math.max(ux, math.min(w.at.x, ux + uw - nw))
+      local ny = math.max(uy, math.min(w.at.y, uy + uh - nh))
+      local SLOP = 2
+      local sel = "address:" .. w.address
+      if w.size.x > nw + SLOP or w.size.y > nh + SLOP then
+        hl.dispatch(hl.dsp.window.resize({ x = math.floor(nw), y = math.floor(nh), exact = true, window = sel }))
+      end
+      if math.abs(w.at.x - nx) > SLOP or math.abs(w.at.y - ny) > SLOP then
+        hl.dispatch(hl.dsp.window.move({ x = math.floor(nx), y = math.floor(ny), exact = true, window = sel }))
+      end
+    end
+  end
+end
+
+hl.timer(function()
+  local ok, err = pcall(clamp_steam_window)
+  if not ok then print("steam clamp watchdog: " .. tostring(err)) end
+end, { timeout = 500, type = "repeat" })

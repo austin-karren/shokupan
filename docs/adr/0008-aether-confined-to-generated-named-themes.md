@@ -42,11 +42,11 @@ Two gaps in Aether's output that the wrapper fills:
   GUI with no image picked) has an **empty** `backgrounds/` directory, which
   triggers the black-screen fallback described in ADR-0007. `aether --generate
   <wallpaper>` does copy the image in; the other paths do not. The wrapper
-  guarantees a background either way.
-- Aether never writes the `light.mode` marker, so Omarchy cannot tell a generated
-  light theme from a dark one — and the Waybar override hook (ADR-0009) keys off
-  exactly that file, so a light theme would render dark-on-dark. The wrapper reads
-  `mode` from the generated `colors.toml` and writes the marker.
+  guarantees a background either way. - Aether never writes the `light.mode`
+  marker, so Omarchy cannot tell a generated light theme from a dark one — and
+  the Waybar override hook (shokupan-plugins ADR-0009) keys off exactly that
+  file, so a light theme would render dark-on-dark. The wrapper reads `mode`
+  from the generated `colors.toml` and writes the marker.
 
 `aether upgrade` self-updates outside pacman, so a future version can reintroduce
 the GTK write regardless of the setting. Re-check after upgrades.

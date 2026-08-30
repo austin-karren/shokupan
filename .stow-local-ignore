@@ -15,6 +15,7 @@
 # config. `loaf doctor` checks for exactly that leak.
 ^/packages\.txt$
 ^/CONTEXT\.md$
+^/CLAUDE\.md$
 ^/docs$
 ^/packages$
 ^/migrations$

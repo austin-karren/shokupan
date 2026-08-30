@@ -39,7 +39,7 @@ PATH="$(dirname "$(realpath "$0")"):$PATH"
 APPLIED="$STATE_DIR/applied"
 
 # Must match loaf-doctor's list and .stow-local-ignore — see the note there.
-REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|CONTEXT|packages\.txt|\.gitignore|\.stow-local-ignore)'
+REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|LICENSE|COPYING|CONTEXT|CLAUDE|packages\.txt|\.gitignore|\.stow-local-ignore)'
 dry_run=false
 [[ ${1:-} == --dry-run ]] && dry_run=true
 
@@ -115,6 +115,30 @@ if command -v stow &>/dev/null; then
   fi
 else
   say "stow: not installed — skipped"
+fi
+
+# ---------------------------------------------------------
+# 2a. Re-assert the plugins checkout
+# ---------------------------------------------------------
+
+# The plugins live in their own repo since the 2026-08-18 split, so stow no
+# longer installs them; loaf-plugins owns that. --offline keeps heal off the
+# network: an existing checkout is re-linked, a missing one fails loudly rather
+# than cloning behind the user's back.
+if command -v loaf-plugins &>/dev/null; then
+  if $dry_run; then
+    plugins_out=$(loaf-plugins --offline --dry-run 2>&1)
+  else
+    plugins_out=$(loaf-plugins --offline 2>&1)
+  fi
+  if [[ -n $plugins_out ]]; then
+    while IFS= read -r line; do act "$line"; done <<<"$plugins_out"
+    # Bar modules register at shell startup only, and they arrive here now
+    # rather than through stow.
+    [[ $plugins_out == *bar/modules* ]] && bar_touched=true
+  else
+    say "plugins: nothing to do"
+  fi
 fi
 
 # ---------------------------------------------------------

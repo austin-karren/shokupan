@@ -13,9 +13,9 @@ status: accepted
 > `omarchy-theme-set` still runs `theme-set.d` hooks. The swaybg paragraph below
 > is retired — see Consequences. Quattro's per-theme user backgrounds
 > (`~/.config/omarchy/backgrounds/<theme>/`) are not a substitute: a pin
-> outranks every theme, not one. The hook itself is now *tracked*; it had been
-> a real file only this machine knew about, which is the exact class of loss
-> ADR-0028 exists to prevent.
+> outranks every theme, not one. The hook itself is now *tracked*; it had been a
+> real file only this machine knew about, which is the exact class of loss
+> omarchy-desktop-on-cachyos ADR-0028 exists to prevent.
 
 Omarchy treats backgrounds as a property of the Theme: they live inside the theme
 directory, and `omarchy-theme-set` repopulates that directory from the new theme

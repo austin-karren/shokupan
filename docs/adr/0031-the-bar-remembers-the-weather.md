@@ -4,11 +4,12 @@ status: superseded
 
 # The bar remembers the weather
 
-> **Largely native on quattro 2026-08-09, and ADR-0033 overstated the loss.**
-> `omarchy.weather` is a first-party plugin and it is back on the bar in this
-> ADR's position, right of the clock. It keeps a stale reading rather than
-> blanking, which is this ADR's whole point. The residual gap is narrower than
-> "rebuild as a plugin clone" implied — see the addendum.
+> **Largely native on quattro 2026-08-09, and omarchy-desktop-on-cachyos
+> ADR-0033 overstated the loss.** `omarchy.weather` is a first-party plugin and
+> it is back on the bar in this ADR's position, right of the clock. It keeps a
+> stale reading rather than blanking, which is this ADR's whole point. The
+> residual gap is narrower than "rebuild as a plugin clone" implied — see the
+> addendum.
 
 The weather module reads a cached reading from disk and refreshes it in the background,
 rather than fetching wttr.in on every poll. Implemented as
@@ -116,12 +117,12 @@ glyph `case` block. This is duplication and it is deliberate: upstream's mapping
 welded to upstream's own fetch, so there is no way to ask it for the mapping alone
 without paying for a second request and losing the day/night recomputation above.
 
-The copy was made with `sed`, never retyped — these are Nerd Font glyphs where a
-transcription error is invisible in review. It is spliced in unindented so that
-`weather-icon --check-icons` can diff it against upstream as an exact comparison, and
-`loaf doctor` runs that check on the Desktop layer. This is the drift ADR-0028 is about:
-`omarchy update` can change the table underneath us, and the failure would otherwise be
-silent.
+The copy was made with `sed`, never retyped — these are Nerd Font glyphs where
+a transcription error is invisible in review. It is spliced in unindented so
+that `weather-icon --check-icons` can diff it against upstream as an exact
+comparison, and `loaf doctor` runs that check on the Desktop layer. This is the
+drift omarchy-desktop-on-cachyos ADR-0028 is about: `omarchy update` can change
+the table underneath us, and the failure would otherwise be silent.
 
 It reports as a **warning, not a failure**, because the consequence is cosmetic — a
 condition code we do not know renders as the fallback cloud, not as nothing.
@@ -165,9 +166,9 @@ The second row is the whole ADR. Everything else is what it cost to get there.
 
 ## Addendum: what quattro already does, 2026-08-09
 
-ADR-0033 called this "the one real regression" of the quattro move and proposed
-rebuilding `weather-icon` as a plugin clone. Reading the plugin rather than
-assuming, that is too strong.
+omarchy-desktop-on-cachyos ADR-0033 called this "the one real regression" of the
+quattro move and proposed rebuilding `weather-icon` as a plugin clone. Reading
+the plugin rather than assuming, that is too strong.
 
 `plugins/panels/weather/Panel.qml` fetches wttr.in itself and comments its own
 `report` property: *"Parsed wttr.in j1 response. Kept on failure so stale data

@@ -202,9 +202,10 @@ tabs and splits. A chord chosen carelessly is either swallowed by the compositor
 collides inside the terminal. `SUPER+ALT` was freed deliberately instead.
 
 Wrap/clamp is switched with `window-resize --toggle-mode`, which flag-files into
-`~/.local/state/omarchy/toggles/` like Omarchy's own toggles. Deliberately not bound
-to a key — it is an occasional A/B switch, and `SUPER+CTRL+ALT+R` was already taken.
-It belongs in the Toggle Menu eventually (ADR-0013).
+`~/.local/state/omarchy/toggles/` like Omarchy's own toggles. Deliberately not
+bound to a key — it is an occasional A/B switch, and `SUPER+CTRL+ALT+R` was
+already taken. It belongs in the Toggle Menu eventually (shokupan-plugins
+ADR-0013).
 
 ## Still open
 

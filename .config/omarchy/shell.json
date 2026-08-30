@@ -14,7 +14,13 @@
           "id": "shokupan.omenu"
         },
         {
-          "id": "omarchy.workspaces"
+          "id": "jankeesvw.workspace-name",
+          "indicators": true,
+          "numbers": true,
+          "alwaysShown": 10
+        },
+        {
+          "id": "omarchy.active-window"
         }
       ],
       "center": [
@@ -47,6 +53,15 @@
       "right": [
         {
           "id": "omarchy.tray"
+        },
+        {
+          "id": "omarchy.tailscale"
+        },
+        {
+          "id": "io.github.dicemans.docker-vms"
+        },
+        {
+          "id": "jankeesvw.notification-center"
         },
         {
           "id": "shokupan.apexshot"

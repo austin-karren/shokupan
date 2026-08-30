@@ -131,9 +131,10 @@ nothing and there is no upstream version to drift from. The displaced original i
 kept next to the symlink in the usual way.
 
 A one-shot migration was considered and rejected on those grounds. Migrations
-exist for state that has nowhere else to live (ADR-0028); a flags file is
-ordinary config, and a migration would have run once and then stopped defending
-the setting, which is the opposite of what was asked for.
+exist for state that has nowhere else to live (omarchy-desktop-on-cachyos
+ADR-0028); a flags file is ordinary config, and a migration would have run once
+and then stopped defending the setting, which is the opposite of what was asked
+for.
 
 ## Firefox: nothing to do, and nothing written
 
@@ -177,12 +178,12 @@ default on Linux.
 *Addendum 2026-08-15: the menu path now exists too.* The default set here via
 `mimeapps.list` was fine, but Setup > Default Browser could not express it:
 `omarchy-default-browser` hardcodes seven browsers with no helium case, and a
-PATH shim cannot override it (Omarchy's bin outranks `~/.local/bin`). Two
-things record the fix: a `setup.default.browser.helium` row in
+PATH shim cannot override it (Omarchy's bin outranks `~/.local/bin`). Two things
+record the fix: a `setup.default.browser.helium` row in
 `.config/omarchy/extensions/omarchy-menu.jsonc` that inlines the upstream
 script's two effects — the `env -u BROWSER xdg-settings set` and the
 notification — against `helium.desktop`, and a draft upstream issue at
-`docs/upstream/omarchy-default-browser-helium.md` (issue-first, ADR-0044 rule
-5, not posted) proposing helium in the script's own list. If upstream takes
-it, the menu row becomes a duplicate id silently overriding their row
-(mechanism 1 in the jsonc) and should then be deleted.
+`docs/upstream/omarchy-default-browser-helium.md` (issue-first, shokupan-plugins
+ADR-0044 rule 5, not posted) proposing helium in the script's own list. If
+upstream takes it, the menu row becomes a duplicate id silently overriding their
+row (mechanism 1 in the jsonc) and should then be deleted.

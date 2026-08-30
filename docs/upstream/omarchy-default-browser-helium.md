@@ -1,7 +1,8 @@
 # Draft issue: add Helium to omarchy-default-browser's list
 
-**Status: draft — not posted.** Per ADR-0044 rule 5: issue first, PR only
-after upstream's temperature is known, nothing posted without an explicit go.
+**Status: draft — not posted.** Per shokupan-plugins ADR-0044 rule 5: issue
+first, PR only after upstream's temperature is known, nothing posted without an
+explicit go.
 
 ## Title
 

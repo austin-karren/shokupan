@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # loaf:summary=Check recorded forks and watched upstream files for drift
-# loaf:args=[--record] [--quiet]
+# loaf:args=[--record] [--quiet] [--drifted]
 
 # The rice depends on upstream files in two ways it cannot patch in place
 # (ADR-0027, ADR-0042). FORKS are copies — the launcher plugin, the indicators
@@ -18,59 +18,88 @@
 # board red instead of leaving stale drift. A changed watch is not breakage —
 # the coupling usually survives — so its message says re-verify, not re-diff.
 # `--record` re-stamps the hashes after a re-verification — the same by-hand
-# contract as packages/omarchy.pin.
+# contract as packages/omarchy.pin. `--drifted` prints just the headline for each
+# entry that moved and nothing at all when none did: it is what the post-update
+# hook consumes, so that the comparison has exactly one implementation here
+# rather than a second copy in the hook.
 
 set -uo pipefail
 
 LOAF_HOME="${LOAF_HOME:-$HOME}"
 LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
+# Most forked files live in the plugins repo since the 2026-08-18 split; the
+# board stays here because it is loaf's to run. A manifest path is relative to
+# one of the two checkouts and resolved against whichever holds it — the
+# plugins repo for hosted QML, this repo for the rice's own files (the bash
+# drop-in that loads upstream's rc is one).
+PLUGINS_ROOT="${PLUGINS_ROOT:-$LOAF_HOME/.local/share/shokupan-plugins}"
 MANIFEST="$LOAF_ROOT/packages/forks"
 
 quiet=false
 record=false
+drifted=false
 for arg in "$@"; do
   case $arg in
   --quiet) quiet=true ;;
   --record) record=true ;;
+  --drifted) drifted=true ;;
   *)
-    echo "usage: loaf forks [--record] [--quiet]" >&2
+    echo "usage: loaf forks [--record] [--quiet] [--drifted]" >&2
     exit 64
     ;;
   esac
 done
 
 if [[ ! -f $MANIFEST ]]; then
-  # No manifest means no claim.
-  $quiet || echo "loaf: no fork manifest at $MANIFEST"
+  # No manifest means no claim. --drifted is silent about it too: it runs after
+  # every update, and a machine with no board has nothing to report.
+  $quiet || $drifted || echo "loaf: no fork manifest at $MANIFEST"
   exit 0
 fi
 
 problems=0
 out=""
+# The headline line of each problem, without its detail lines — what --drifted
+# prints. Collected alongside $out rather than filtered back out of it, so the
+# hook's output does not depend on parsing this command's presentation.
+names=""
+
+problem() {
+  problems=$((problems + 1))
+  names+="$1"$'\n'
+  out+="$1"$'\n'
+}
+
+# Where a manifest path lives. Both roots are searched rather than the path
+# carrying its own root, so the manifest stays readable and a file moving
+# between the two checkouts does not need a re-record.
+resolve_rice_path() {
+  local candidate
+  for candidate in "$PLUGINS_ROOT/$1" "$LOAF_ROOT/$1"; do
+    [[ -e $candidate ]] && { printf '%s' "$candidate"; return 0; }
+  done
+  return 1
+}
 
 while read -r rice_path upstream_path recorded_sha mode; do
   [[ -n ${recorded_sha:-} ]] || continue
-  if [[ ! -e $LOAF_ROOT/$rice_path ]]; then
-    problems=$((problems + 1))
-    out+="✗ $rice_path — rice file missing from the repo"$'\n'
+  if ! resolve_rice_path "$rice_path" >/dev/null; then
+    problem "✗ $rice_path — rice file missing from the repo"
     continue
   fi
   if [[ ! -e $upstream_path ]]; then
-    problems=$((problems + 1))
-    out+="✗ $rice_path — upstream $upstream_path no longer exists (renamed?)"$'\n'
+    problem "✗ $rice_path — upstream $upstream_path no longer exists (renamed?)"
     continue
   fi
   current_sha=$(sha256sum "$upstream_path" | awk '{print $1}')
   if [[ $current_sha == "$recorded_sha" ]]; then
     out+="✓ $rice_path — upstream unchanged since verification"$'\n'
   elif [[ ${mode:-} == watch ]]; then
-    problems=$((problems + 1))
-    out+="✗ $rice_path — watched upstream file changed"$'\n'
+    problem "✗ $rice_path — watched upstream file changed"
     out+="    $upstream_path changed since the coupling was verified"$'\n'
     out+="    re-verify the module still applies, then: loaf forks --record"$'\n'
   else
-    problems=$((problems + 1))
-    out+="✗ $rice_path — upstream moved under the fork"$'\n'
+    problem "✗ $rice_path — upstream moved under the fork"
     out+="    $upstream_path changed since the fork was verified"$'\n'
     out+="    re-diff, carry the fix across, then: loaf forks --record"$'\n'
   fi
@@ -94,6 +123,14 @@ if $record; then
   done <"$MANIFEST"
   mv "$tmp" "$MANIFEST"
   $quiet || echo "recorded — commit packages/forks with the re-verification"
+  exit 0
+fi
+
+if $drifted; then
+  # Headlines only. This prints after every `omarchy update`, so it stays short;
+  # the detail lines are one `loaf forks` away.
+  printf '%s' "$names"
+  ((problems)) && exit 1
   exit 0
 fi
 

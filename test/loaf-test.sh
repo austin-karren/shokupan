@@ -1,23 +1,19 @@
 #!/bin/bash
 
-# Tests for the loaf CLI, which maintains the Shokupan rice.
-#
-# No framework on purpose. `loaf heal` runs from Omarchy's post-update.d hook, so
-# anything needed to test it would become a dependency of the update path. This
-# emits TAP and follows the shape of Omarchy's own test/omarchy-cli-test.sh.
-#
-# Every test builds a throwaway home under $BUILD and points LOAF_HOME at it, so
-# nothing here can touch the real one. `pacman` and the files doctor reads under
-# /etc are stubbed; `git` and `stow` are real, because what they do to a fixture
-# is exactly what they would do to the machine.
-#
-# The /etc stubs matter more than they look. Omarchy became package-backed
-# (ADR-0035) and doctor's base checks now assert things about pacman's config and
-# NetworkManager's, so a suite reading the real /etc would pass or fail on how the
-# machine running it happens to be set up — and would have gone red on the very
-# machine whose broken wifi backend prompted the check.
-#
-# Run: test/loaf-test.sh
+# Tests for the loaf CLI, which maintains the Shokupan rice. No framework on
+# purpose. `loaf heal` runs from Omarchy's post-update.d hook, so anything
+# needed to test it would become a dependency of the update path. This emits TAP
+# and follows the shape of Omarchy's own test/omarchy-cli-test.sh. Every test
+# builds a throwaway home under $BUILD and points LOAF_HOME at it, so nothing
+# here can touch the real one. `pacman` and the files doctor reads under /etc
+# are stubbed; `git` and `stow` are real, because what they do to a fixture is
+# exactly what they would do to the machine. The /etc stubs matter more than
+# they look. Omarchy became package-backed (omarchy-desktop-on-cachyos ADR-0035)
+# and doctor's base checks now assert things about pacman's config and
+# NetworkManager's, so a suite reading the real /etc would pass or fail on how
+# the machine running it happens to be set up — and would have gone red on the
+# very machine whose broken wifi backend prompted the check. Run:
+# test/loaf-test.sh
 
 set -uo pipefail
 
@@ -111,6 +107,15 @@ make_home() {
   {
     mkdir -p "$home/.config/hypr" "$home/.local/state"
 
+  # The plugins checkout, which the rice consumes rather than carries since the
+  # 2026-08-18 split. Doctor asserts every plugin it ships is linked into the
+  # desktop, so a fixture needs both halves or every clean-fixture test reds.
+    local plugins="$home/.local/share/shokupan-plugins"
+    mkdir -p "$plugins/plugins/shokupan-fixture" "$home/.config/omarchy/plugins"
+    echo '{"id":"shokupan.fixture"}' >"$plugins/plugins/shokupan-fixture/manifest.json"
+    ln -sfn "$plugins/plugins/shokupan-fixture" \
+      "$home/.config/omarchy/plugins/shokupan-fixture"
+
   # The rice repo
     local repo="$home/shokupan"
     mkdir -p "$repo/.config/hypr" "$repo/packages" "$repo/migrations"
@@ -120,6 +125,12 @@ make_home() {
     # which a fresh fixture home already is — so listing one here exercises
     # doctor's debloat check on every clean fixture.
     printf 'HEY\n' >"$repo/packages/removed.webapps"
+    # The plugin index (packages/plugins) records the standalone repo each
+    # plugin is published from. The healthy state is it agreeing with the
+    # checkout built above, so listing the one fixture plugin here exercises
+    # doctor's index check on every clean fixture.
+    printf 'shokupan.fixture https://github.com/austin-karren/omarchy-fixture.git\n' \
+      >"$repo/packages/plugins"
     # Must match what the stubbed pacman reports for `pacman -Q omarchy`, or every
     # fixture warns about version drift.
     printf '%s\n' "$STUB_OMARCHY_VERSION" >"$repo/packages/omarchy.pin"
@@ -198,6 +209,15 @@ printf '%s' "${STUB_HYPR_ERRORS:-}"
 STUB
 chmod +x "$BUILD/stub/hyprctl"
 
+# Stubbed udevadm, so a test that exercises loaf-install's qmk step cannot
+# reload udev rules on the machine running the suite. Recorded, not performed,
+# so a test can assert the reload WAS asked for.
+cat >"$BUILD/stub/udevadm" <<'STUB'
+#!/bin/bash
+echo "udevadm $*" >>"${STUB_LOG:-/dev/null}"
+STUB
+chmod +x "$BUILD/stub/udevadm"
+
 # Stubbed sudo: loaf-install prefixes its pacman calls with it when not root.
 # Exec the command as-is, so the stubbed pacman is still what runs.
 printf '#!/bin/bash\nexec "$@"\n' >"$BUILD/stub/sudo"
@@ -212,10 +232,17 @@ chmod +x "$BUILD/stub/sudo"
 loaf_run() {
   local home=$1 cmd=$2
   shift 2
-  LOAF_HOME="$home" LOAF_ROOT="$home/shokupan" \
+  # $LOAF_ROOT defaults to the fixture's rice repo, but a caller may point it
+  # elsewhere in the fixture home — the worktree tests run doctor against a
+  # linked worktree of that repo rather than the repo itself.
+  LOAF_HOME="$home" LOAF_ROOT="${LOAF_ROOT:-$home/shokupan}" \
+    PLUGINS_ROOT="$home/.local/share/shokupan-plugins" \
     PACMAN_CONF="$home/etc/pacman.conf" \
     MIRRORLIST="$home/etc/pacman.d/mirrorlist" \
     NM_CONF="$home/etc/NetworkManager.conf" \
+    QMK_RULES="$home/etc/udev/rules.d/50-qmk.rules" \
+    QMK_PKG_RULES="$home/usr/lib/udev/rules.d/50-qmk.rules" \
+    QMK_EXTRA_RULES="$home/etc/udev/rules.d/51-qmk-extra.rules" \
     STUB_ABSENT="${STUB_ABSENT:-}" \
     STUB_LOG="${STUB_LOG:-}" \
     XDG_STATE_HOME="$home/.local/state" \
@@ -246,10 +273,11 @@ assert_contains "doctor: confirms the mirrorlist is not Omarchy's" "$out" "none 
 assert_contains "doctor: accepts NetworkManager's default wifi backend" \
   "$out" "NetworkManager default"
 
-# The retired bridge (ADR-0035) took three checks with it, and a package-backed
-# Omarchy took a fourth. Asserted by absence: leaving one behind would mean doctor
-# reporting on an installer that can no longer run, which is exactly the noise
-# ADR-0028 says to delete rather than tolerate.
+# The retired bridge (omarchy-desktop-on-cachyos ADR-0035) took three checks
+# with it, and a package-backed Omarchy took a fourth. Asserted by absence:
+# leaving one behind would mean doctor reporting on an installer that can no
+# longer run, which is exactly the noise omarchy-desktop-on-cachyos ADR-0028
+# says to delete rather than tolerate.
 for gone in "bridge patch" "stale clone" "walker hold" "cachyos patch" "checkout"; do
   assert_not_contains "doctor: no longer reports '$gone'" "$out" "$gone"
 done
@@ -272,8 +300,35 @@ touch "$home/CONTEXT.md"
 out=$(loaf_run "$home" doctor)
 assert_contains "doctor: detects a leaked repo-only path" "$out" "repo-only path"
 
-# Omarchy is packages now (ADR-0035), so "the desktop layer is gone" means the
-# package is gone rather than a checkout being absent.
+# A linked git worktree. `.git` there is a FILE holding a `gitdir:` pointer, not
+# a directory — doctor used to test for the directory and report the tree as not
+# a checkout, which made it useless in exactly the place every lane of a
+# worktree-based workflow runs. Built for real rather than faked: the worktree is
+# what stow installs from, so the whole run is against it.
+home=$(make_home)
+git -C "$home/shokupan" worktree add -q -b lane "$home/lane" >/dev/null 2>&1
+(cd "$home/lane" && stow --no-folding -t "$home" . 2>/dev/null)
+assert_file_exists "doctor: the worktree fixture has a .git file, not a directory" \
+  "$home/lane/.git"
+out=$(LOAF_ROOT="$home/lane" loaf_run "$home" doctor)
+status=$?
+assert_not_contains "doctor: accepts a linked worktree as a checkout" \
+  "$out" "is not a git checkout"
+assert_contains "doctor: a linked worktree reports no problems" "$out" "No problems"
+assert_equals "doctor: exits 0 in a linked worktree" "$status" "0"
+
+# The other half: the normal-checkout case still passes, and a directory that is
+# no checkout at all is still caught.
+home=$(make_home)
+rm -rf "$home/shokupan/.git"
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: still rejects a directory that is not a checkout" \
+  "$out" "is not a git checkout"
+assert_equals "doctor: exits non-zero when the rice is not a checkout" "$status" "1"
+
+# Omarchy is packages now (omarchy-desktop-on-cachyos ADR-0035), so "the desktop
+# layer is gone" means the package is gone rather than a checkout being absent.
 home=$(make_home)
 out=$(STUB_ABSENT=omarchy loaf_run "$home" doctor)
 status=$?
@@ -348,10 +403,11 @@ status=$?
 assert_contains "doctor: accepts an installed wifi backend" "$out" "wifi backend   iwd"
 assert_equals "doctor: an installed backend is not a problem" "$status" "0"
 
-# The mirrorlist. ADR-0035's measured root cause: Omarchy pins a frozen Arch
-# snapshot, CachyOS is rolling, and the two skew permanently. Note the fixture's
-# pacman.conf still has its [cachyos*] section — the repo list surviving is exactly
-# what makes this failure look fine until pacman starts refusing downgrades.
+# The mirrorlist. omarchy-desktop-on-cachyos ADR-0035's measured root cause:
+# Omarchy pins a frozen Arch snapshot, CachyOS is rolling, and the two skew
+# permanently. Note the fixture's pacman.conf still has its [cachyos*] section
+# — the repo list surviving is exactly what makes this failure look fine until
+# pacman starts refusing downgrades.
 home=$(make_home)
 # shellcheck disable=SC2016  # pacman's own $repo/$arch placeholders, kept literal
 printf 'Server = https://stable-mirror.omarchy.org/$repo/os/$arch\n' \
@@ -505,16 +561,56 @@ else
   pass "heal: the launcher is gone afterwards"
 fi
 
+# The TRACKED manifest, not the fixture's. make_home writes its own
+# packages/removed.webapps holding only HEY, so every test above passes no
+# matter what the real one says — Basecamp could be deleted from the tracked
+# list and the whole suite would stay green. It was, and it did.
+#
+# Basecamp is an Omarchy default web app (upstream ships
+# applications/Basecamp.desktop) that this machine has decided against, and
+# omarchy-refresh-applications copies it back on every update. The manifest
+# entry is the only thing that keeps it gone, so the entry itself is pinned.
+tracked_removed=$ROOT/packages/removed.webapps
+assert_file_exists "debloat: the tracked manifest is present" "$tracked_removed"
+if grep -qx 'Basecamp' "$tracked_removed"; then
+  pass "debloat: the tracked manifest keeps Basecamp removed"
+else
+  fail "debloat: the tracked manifest keeps Basecamp removed" \
+    "Basecamp is not listed in packages/removed.webapps" \
+    "without it, every Omarchy update restores ~/.local/share/applications/Basecamp.desktop"
+fi
+
+# And that the entry actually drives a removal, rather than merely being a
+# string in a file. Driven by the tracked manifest copied into the fixture, so
+# this fails if Basecamp is dropped from it OR if debloat stops acting on it.
+home=$(make_home)
+cp "$tracked_removed" "$home/shokupan/packages/removed.webapps"
+mkdir -p "$home/.local/share/applications" "$home/.local/share/icons/hicolor/256x256/apps"
+touch "$home/.local/share/applications/Basecamp.desktop"
+touch "$home/.local/share/icons/hicolor/256x256/apps/basecamp.png"
+out=$(loaf_run "$home" debloat)
+assert_contains "debloat: the tracked manifest removes Basecamp" "$out" "removed Basecamp"
+if [[ -e $home/.local/share/applications/Basecamp.desktop ]]; then
+  fail "debloat: Basecamp's launcher is gone"
+else
+  pass "debloat: Basecamp's launcher is gone"
+fi
+if [[ -e $home/.local/share/icons/hicolor/256x256/apps/basecamp.png ]]; then
+  fail "debloat: Basecamp's icon goes with it"
+else
+  pass "debloat: Basecamp's icon goes with it"
+fi
+
 # ---------------------------------------------------------
 # forks
 # ---------------------------------------------------------
 
 # A recorded fork whose upstream is unchanged is healthy.
 home=$(make_home)
-mkdir -p "$home/shokupan/.config/omarchy/plugins"
-echo "fork" >"$home/shokupan/.config/omarchy/plugins/Fork.qml"
+mkdir -p "$home/.local/share/shokupan-plugins/plugins"
+echo "fork" >"$home/.local/share/shokupan-plugins/plugins/Fork.qml"
 echo "upstream v1" >"$home/upstream.qml"
-printf '.config/omarchy/plugins/Fork.qml %s %s\n' "$home/upstream.qml" \
+printf 'plugins/Fork.qml %s %s\n' "$home/upstream.qml" \
   "$(sha256sum "$home/upstream.qml" | awk '{print $1}')" \
   >"$home/shokupan/packages/forks"
 out=$(loaf_run "$home" forks)
@@ -548,10 +644,10 @@ assert_equals "forks: a missing upstream is a failure" "$status" "1"
 # copies (hosted-widget couplings). Drift is still red, but the message asks
 # for a re-verify of the coupling, not a re-diff of a copy.
 home=$(make_home)
-mkdir -p "$home/shokupan/.config/omarchy/bar/modules"
-echo "hosts upstream" >"$home/shokupan/.config/omarchy/bar/modules/hosted.qml"
+mkdir -p "$home/.local/share/shokupan-plugins/bar/modules"
+echo "hosts upstream" >"$home/.local/share/shokupan-plugins/bar/modules/hosted.qml"
 echo "upstream v1" >"$home/hosted-upstream.qml"
-printf '.config/omarchy/bar/modules/hosted.qml %s %s watch\n' \
+printf 'bar/modules/hosted.qml %s %s watch\n' \
   "$home/hosted-upstream.qml" \
   "$(sha256sum "$home/hosted-upstream.qml" | awk '{print $1}')" \
   >"$home/shokupan/packages/forks"
@@ -579,9 +675,9 @@ assert_contains "forks: a re-stamped watch is healthy again" "$out" "upstream un
 # (ADR-0042 want 2) — hosted widgets fail silently when a rename lands.
 home=$(make_home)
 (cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
-mkdir -p "$home/shokupan/.config/omarchy/bar/modules"
+mkdir -p "$home/.local/share/shokupan-plugins/bar/modules"
 printf 'source: "file:///usr/share/omarchy/shell/definitely-renamed-away.qml"\n' \
-  >"$home/shokupan/.config/omarchy/bar/modules/hosted.qml"
+  >"$home/.local/share/shokupan-plugins/bar/modules/hosted.qml"
 git -C "$home/shokupan" add -A && git -C "$home/shokupan" commit -qm 'bar module' 2>/dev/null
 (cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
 out=$(loaf_run "$home" doctor)
@@ -589,6 +685,132 @@ status=$?
 assert_contains "doctor: detects a broken upstream QML reference" \
   "$out" "referenced upstream path(s) missing"
 assert_equals "doctor: a broken upstream reference is a failure" "$status" "1"
+
+# ---------------------------------------------------------
+# plugin index
+# ---------------------------------------------------------
+
+# The index resolves a recorded id to the plugin in the checkout that declares
+# it. Resolution goes through manifest.json on purpose: the repo is named
+# `omarchy-<function>` while the id stays `shokupan.*`, so the directory name is
+# NOT derivable from the id and a path guess would pass for the wrong reason.
+home=$(make_home)
+out=$(loaf_run "$home" plugins --index)
+status=$?
+assert_contains "index: resolves a recorded id to its plugin" "$out" "shokupan.fixture"
+assert_contains "index: reports the publish URL" \
+  "$out" "https://github.com/austin-karren/omarchy-fixture.git"
+assert_contains "index: a resolving index is healthy" "$out" "resolve to the checkout"
+assert_equals "index: healthy exits 0" "$status" "0"
+
+# --index must not install anything — it is the read-only direction, and doctor
+# calls it. A run against a checkout with nothing linked leaves it unlinked.
+home=$(make_home)
+rm -rf "$home/.config/omarchy/plugins/shokupan-fixture"
+loaf_run "$home" plugins --index >/dev/null
+assert_equals "index: does not link anything" \
+  "$(ls "$home/.config/omarchy/plugins" 2>/dev/null)" ""
+
+# A line for a plugin the checkout no longer ships: the published edge would
+# serve a plugin this repo dropped.
+home=$(make_home)
+printf 'shokupan.fixture https://github.com/austin-karren/omarchy-fixture.git\nshokupan.gone https://github.com/austin-karren/omarchy-gone.git\n' \
+  >"$home/shokupan/packages/plugins"
+out=$(loaf_run "$home" plugins --index)
+status=$?
+assert_contains "index: detects a recorded id with no plugin" "$out" "shokupan.gone"
+assert_contains "index: says why the recorded id failed" \
+  "$out" "no plugin with that id in the checkout"
+assert_equals "index: an unresolved id is a failure" "$status" "1"
+
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: surfaces index drift" "$out" "packages/plugins and the checkout disagree"
+assert_equals "doctor: index drift is a failure" "$status" "1"
+
+# The other direction: a plugin that ships but was never split out and recorded.
+# Unlike `loaf packages`, this is red rather than advisory — an unrecorded
+# plugin is one a stranger following the README cannot install.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/plugins/shokupan-unpublished"
+echo '{"id":"shokupan.unpublished"}' \
+  >"$home/.local/share/shokupan-plugins/plugins/shokupan-unpublished/manifest.json"
+ln -sfn "$home/.local/share/shokupan-plugins/plugins/shokupan-unpublished" \
+  "$home/.config/omarchy/plugins/shokupan-unpublished"
+out=$(loaf_run "$home" plugins --index)
+status=$?
+assert_contains "index: detects a shipped plugin with no published repo" \
+  "$out" "shokupan.unpublished"
+assert_contains "index: says what to do about it" "$out" "split it out and add the line"
+assert_equals "index: an unrecorded plugin is a failure" "$status" "1"
+
+# An id is matched as a whole field, not as a substring — `shokupan.capture`
+# must not satisfy the record for a hypothetical `shokupan.capt`.
+home=$(make_home)
+printf 'shokupan.fixtures https://github.com/austin-karren/omarchy-fixtures.git\n' \
+  >"$home/shokupan/packages/plugins"
+out=$(loaf_run "$home" plugins --index)
+assert_contains "index: a near-miss id does not resolve" \
+  "$out" "no plugin with that id in the checkout"
+assert_contains "index: nor does the near-miss record cover the real plugin" \
+  "$out" "with no published repo recorded"
+
+# Comments and blank lines are stripped the same way every other manifest here
+# strips them.
+home=$(make_home)
+printf '# a comment\n\n   \nshokupan.fixture https://github.com/austin-karren/omarchy-fixture.git  # trailing\n' \
+  >"$home/shokupan/packages/plugins"
+out=$(loaf_run "$home" plugins --index)
+status=$?
+assert_contains "index: ignores comments and blank lines" "$out" "all 1 published plugin"
+assert_equals "index: a commented manifest still exits 0" "$status" "0"
+
+# No index is a hard failure for --index specifically: it was asked for the
+# index. Doctor's own check is guarded on the file instead, so a repo without
+# one simply does not make the claim.
+home=$(make_home)
+rm -f "$home/shokupan/packages/plugins"
+out=$(loaf_run "$home" plugins --index)
+status=$?
+assert_contains "index: reports a missing index" "$out" "no index at"
+assert_equals "index: a missing index exits non-zero" "$status" "1"
+
+out=$(loaf_run "$home" doctor)
+assert_not_contains "doctor: silent about the index when there is none" \
+  "$out" "plugin index"
+
+# Retirement: a plugin whose source sits OUTSIDE the monorepo's `plugins/`
+# directory is neither linked into the desktop nor demanded by the index. This
+# is the whole mechanism `retired/` in shokupan-plugins rests on — there is no
+# "unlinked" flag, only being out of the glob — and it is load-bearing because
+# doctor treats any plugins/* directory that is not linked as a broken install.
+# Widening either glob to `*/` would silently un-retire everything under
+# retired/ and turn the index red for it, so both directions are pinned here.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/retired/shokupan-retired"
+echo '{"id":"shokupan.retired"}' \
+  >"$home/.local/share/shokupan-plugins/retired/shokupan-retired/manifest.json"
+loaf_run "$home" plugins --offline >/dev/null
+assert_equals "retired: a plugin outside plugins/ is not linked into the desktop" \
+  "$([[ -e $home/.config/omarchy/plugins/shokupan-retired ]] && echo linked || echo absent)" \
+  "absent"
+
+out=$(loaf_run "$home" plugins --index)
+status=$?
+assert_not_contains "retired: the index does not demand a published repo for it" \
+  "$out" "shokupan.retired"
+assert_equals "retired: a retired plugin leaves the index healthy" "$status" "0"
+
+out=$(loaf_run "$home" doctor)
+assert_not_contains "retired: doctor does not count it as a missing link" \
+  "$out" "shokupan-retired"
+
+# The index is repo furniture, not config: it must never be stowed into the
+# home directory. packages/ is already repo-only, so this just pins it.
+home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
+assert_equals "index: the manifest is not stowed into the home" \
+  "$([[ -e $home/packages/plugins ]] && echo present || echo absent)" "absent"
 
 # ---------------------------------------------------------
 # hyprland emergency mode
@@ -638,8 +860,8 @@ assert_equals "heal: exits non-zero when stow fails" "$status" "1"
 # Placing a bar module is unfinished until the shell restarts — the shell only
 # registers bar/modules/ files at startup.
 home=$(make_home)
-mkdir -p "$home/shokupan/.config/omarchy/bar/modules"
-echo "// module" >"$home/shokupan/.config/omarchy/bar/modules/new.qml"
+mkdir -p "$home/.local/share/shokupan-plugins/bar/modules"
+echo "// module" >"$home/.local/share/shokupan-plugins/bar/modules/new.qml"
 git -C "$home/shokupan" add -A && git -C "$home/shokupan" commit -qm 'bar module' 2>/dev/null
 out=$(loaf_run "$home" heal)
 assert_contains "heal: says the shell must restart after placing a bar module" \
@@ -681,6 +903,176 @@ out=$(STUB_ABSENT=bat STUB_LOG="$home/pacman.log" loaf_run "$home" install)
 assert_contains "install: installs missing chosen packages" "$out" "installing 1 chosen package(s)"
 assert_contains "install: hands pacman the missing package" \
   "$(cat "$home/pacman.log" 2>/dev/null)" "pacman -S --needed --noconfirm bat"
+
+# Step 4a's qmk udev rules. udev resolves same-named rules files by directory
+# precedence, so anything in /etc/udev/rules.d SHADOWS /usr/lib/udev/rules.d
+# outright. qmk 1.2.0-3 ships its own 50-qmk.rules under /usr/lib, and the old
+# gate ("write ours if /etc has nothing") manufactured an unowned file on every
+# fresh machine that overrode the packaged one.
+#
+# The packaged file is also a strict SUBSET of QMK upstream — it lacks the
+# RP2040/RP2350 BOOTSEL ids this machine's board flashes through — so the fix
+# is not "never write anything". Two branches, both pinned below:
+#   packaged present -> add only packages/qmk-udev-extra.rules, as 51-
+#   packaged absent  -> supply the whole of packages/qmk-udev.rules, as 50-
+#
+# The fixtures build the packaged rule and the /etc ones explicitly, because
+# the gate is entirely about which of those exist.
+
+# The packaged rule is there: 50- is left to pacman and only the supplement
+# lands. The regression test — an /etc/50- appearing here IS the bug.
+home=$(make_home)
+printf 'ATTRS{idVendor}=="fixture"\n' >"$home/shokupan/packages/qmk-udev.rules"
+printf '# extra\nATTRS{idVendor}=="2e8a"\n' >"$home/shokupan/packages/qmk-udev-extra.rules"
+mkdir -p "$home/etc/udev/rules.d" "$home/usr/lib/udev/rules.d"
+printf '# shipped by qmk\n' >"$home/usr/lib/udev/rules.d/50-qmk.rules"
+out=$(STUB_LOG="$home/udev.log" loaf_run "$home" install)
+assert_contains "install: installs the qmk supplement when the package ships 50-" \
+  "$out" "installing $home/etc/udev/rules.d/51-qmk-extra.rules"
+assert_file_exists "install: the supplement lands as 51-" \
+  "$home/etc/udev/rules.d/51-qmk-extra.rules"
+if [[ -e $home/etc/udev/rules.d/50-qmk.rules ]]; then
+  fail "install: writes no /etc 50- rule that would shadow the packaged one" \
+    "created $home/etc/udev/rules.d/50-qmk.rules over the packaged copy"
+else
+  pass "install: writes no /etc 50- rule that would shadow the packaged one"
+fi
+assert_contains "install: reloads udev after writing the supplement" \
+  "$(cat "$home/udev.log" 2>/dev/null)" "udevadm control --reload-rules"
+
+# Second run changes nothing and does not reload — the supplement is compared
+# by content, so a re-run is quiet but an updated rice copy still lands.
+out=$(STUB_LOG="$home/udev2.log" loaf_run "$home" install)
+assert_contains "install: an up-to-date supplement is left alone" \
+  "$out" "qmk supplemental udev rules current"
+assert_not_contains "install: does not reload udev when the supplement is current" \
+  "$(cat "$home/udev2.log" 2>/dev/null)" "udevadm control"
+
+printf '# extra\nATTRS{idVendor}=="2e8a"\nATTRS{idVendor}=="342d"\n' \
+  >"$home/shokupan/packages/qmk-udev-extra.rules"
+out=$(loaf_run "$home" install)
+assert_contains "install: refreshes the supplement when the rice copy changed" \
+  "$out" "installing $home/etc/udev/rules.d/51-qmk-extra.rules"
+assert_contains "install: the refreshed supplement has the new rule" \
+  "$(cat "$home/etc/udev/rules.d/51-qmk-extra.rules")" '342d'
+
+# Nothing packaged: the rice still supplies the whole file at 50-, which is why
+# it carries a full copy at all. The other half of the gate — without this,
+# "fixed" could just mean "never installs anything".
+home=$(make_home)
+printf 'ATTRS{idVendor}=="fixture"\n' >"$home/shokupan/packages/qmk-udev.rules"
+printf '# extra\n' >"$home/shokupan/packages/qmk-udev-extra.rules"
+mkdir -p "$home/etc/udev/rules.d"
+out=$(STUB_LOG="$home/udev.log" loaf_run "$home" install)
+assert_contains "install: installs the full qmk rule when nothing packaged provides one" \
+  "$out" "installing $home/etc/udev/rules.d/50-qmk.rules"
+assert_file_exists "install: the full qmk rule lands in /etc" \
+  "$home/etc/udev/rules.d/50-qmk.rules"
+if [[ -e $home/etc/udev/rules.d/51-qmk-extra.rules ]]; then
+  fail "install: no supplement when the rice supplied the whole file" \
+    "51-qmk-extra.rules would duplicate rules already in the 50- copy"
+else
+  pass "install: no supplement when the rice supplied the whole file"
+fi
+assert_contains "install: reloads udev after writing the full rule" \
+  "$(cat "$home/udev.log" 2>/dev/null)" "udevadm control --reload-rules"
+
+# The state this machine is in: packaged rule plus the old installer's shadow.
+# Named out loud rather than reported as "already present", and left in place —
+# removing it needs root.
+home=$(make_home)
+printf 'ATTRS{idVendor}=="fixture"\n' >"$home/shokupan/packages/qmk-udev.rules"
+printf '# extra\n' >"$home/shokupan/packages/qmk-udev-extra.rules"
+mkdir -p "$home/etc/udev/rules.d" "$home/usr/lib/udev/rules.d"
+printf '# shipped by qmk\n' >"$home/usr/lib/udev/rules.d/50-qmk.rules"
+printf '# unowned, ours\n' >"$home/etc/udev/rules.d/50-qmk.rules"
+out=$(loaf_run "$home" install)
+assert_contains "install: names an /etc rule that shadows the packaged one" \
+  "$out" "shadows the packaged rule"
+assert_contains "install: says the shadow is redundant once the supplement is in" \
+  "$out" "sudo rm $home/etc/udev/rules.d/50-qmk.rules"
+assert_equals "install: leaves the shadowing rule in place for a human" \
+  "$(cat "$home/etc/udev/rules.d/50-qmk.rules")" "# unowned, ours"
+
+# The TRACKED supplement, not a fixture's toy version. It must be a valid udev
+# rules file and must carry the RP2040/RP2350 BOOTSEL ids, which are the reason
+# it exists — pacman's copy lacks them and this machine's board flashes through
+# them. Read from $ROOT: the fixtures above write their own, so nothing there
+# says anything about the real file.
+tracked_extra=$ROOT/packages/qmk-udev-extra.rules
+assert_file_exists "qmk: the tracked supplement exists" "$tracked_extra"
+assert_contains "qmk: the supplement carries the RP2040 BOOTSEL id" \
+  "$(cat "$tracked_extra")" 'ATTRS{idProduct}=="0003"'
+assert_contains "qmk: the supplement carries the RP2350 BOOTSEL id" \
+  "$(cat "$tracked_extra")" 'ATTRS{idProduct}=="000f"'
+
+# Every rule tags uaccess itself. udev evaluates files in filename order, so
+# 50-qmk.rules' trailing `ENV{ID_QMK}=="1", TAG+="uaccess"` has already been
+# passed by the time 51- runs: a supplement that only set ID_QMK would tag
+# nothing and the device would stay root-only. This catches someone "tidying"
+# the per-rule tags out into a single trailing line.
+untagged=()
+while IFS= read -r rule; do
+  [[ $rule == *'TAG+="uaccess"'* ]] || untagged+=("$rule")
+done < <(grep '^SUBSYSTEMS==' "$tracked_extra")
+if ((${#untagged[@]})); then
+  fail "qmk: every supplement rule tags uaccess itself" "${untagged[@]}"
+else
+  pass "qmk: every supplement rule tags uaccess itself"
+fi
+
+# Every id the supplement carries must be one the rice's full upstream copy
+# also has. A typo'd vendor id here would tag nothing and nobody would notice.
+strays=()
+while IFS= read -r id; do
+  grep -q "$id" "$ROOT/packages/qmk-udev.rules" || strays+=("$id not in packages/qmk-udev.rules")
+done < <(grep -o 'ATTRS{idVendor}=="[0-9a-f]*"' "$tracked_extra" | sort -u)
+if ((${#strays[@]})); then
+  fail "qmk: every supplement vendor id is one upstream knows" "${strays[@]}"
+else
+  pass "qmk: every supplement vendor id is one upstream knows"
+fi
+
+# Real udev parse, when udevadm is available. /usr/bin/udevadm explicitly: the
+# suite puts a stubbed udevadm on $PATH so the install tests cannot reload the
+# host's rules, and that stub would happily "verify" anything.
+if [[ -x /usr/bin/udevadm ]]; then
+  for f in "$tracked_extra" "$ROOT/packages/qmk-udev.rules"; do
+    if verify_out=$(/usr/bin/udevadm verify "$f" 2>&1); then
+      pass "qmk: $(basename "$f") parses as udev rules"
+    else
+      fail "qmk: $(basename "$f") parses as udev rules" "$verify_out"
+    fi
+  done
+fi
+
+# A linked git worktree. `.git` there is a FILE holding a `gitdir:` pointer, not
+# a directory — install used to test for the directory and refuse the tree as no
+# checkout, which locked out exactly the place every lane of a worktree-based
+# workflow installs from. Built for real rather than faked: the install runs
+# against the worktree, so it is the worktree that gets stowed.
+home=$(make_home)
+git -C "$home/shokupan" worktree add -q -b lane "$home/lane" >/dev/null 2>&1
+assert_file_exists "install: the worktree fixture has a .git file, not a directory" \
+  "$home/lane/.git"
+out=$(LOAF_ROOT="$home/lane" loaf_run "$home" install)
+status=$?
+# Matched against the worktree path, since the plugins step prints the same
+# phrase about its own (deliberately unversioned) fixture directory.
+assert_not_contains "install: accepts a linked worktree as a checkout" \
+  "$out" "$home/lane is not a git checkout"
+assert_equals "install: exits 0 when installing from a linked worktree" "$status" "0"
+assert_symlink "install: stowed the rice from the worktree" \
+  "$home/.config/hypr/looknfeel.conf"
+
+# The other half: a directory that is no checkout at all is still refused.
+home=$(make_home)
+rm -rf "$home/shokupan/.git"
+out=$(loaf_run "$home" install)
+status=$?
+assert_contains "install: still refuses a directory that is not a checkout" \
+  "$out" "is not a git checkout"
+assert_equals "install: a non-checkout is a hard stop" "$status" "1"
 
 # No CachyOS base, no install.
 home=$(make_home)
@@ -741,23 +1133,101 @@ fi
 # .stow-local-ignore and the scripts' REPO_ONLY answer the same question from
 # opposite ends: what is repo furniture rather than config. When they disagree,
 # doctor reports a file as missing that stow was never going to install — which
-# is exactly what happened when test/ was added to one and not the other.
-missing_from_scripts=()
-while IFS= read -r line; do
-  # Only the top-level anchored entries; the rest are Stow's own defaults.
-  [[ $line =~ ^\^/([A-Za-z_.\\]+)\$$ ]] || continue
-  name=${BASH_REMATCH[1]//\\/}
-  for s in loaf-doctor loaf-heal; do
-    grep -q "REPO_ONLY=.*${name%%.*}" "$ROOT/.local/bin/$s" ||
-      missing_from_scripts+=("$name missing from $s")
-  done
-done <"$ROOT/.stow-local-ignore"
+# is what happened when test/ was added to one and not the other, and again when
+# LICENSE landed in .stow-local-ignore alone and doctor started saying
+# `✗ symlinks  1 not installed  LICENSE`.
+#
+# STOW IS THE ORACLE here, not a second reading of its regex dialect. The
+# previous version of this check parsed .stow-local-ignore itself and only
+# understood lines shaped `^/name$`, so it silently skipped `^/LICENSE.*`,
+# `^/COPYING` and `^/README.*` — which is exactly how LICENSE got through with
+# the whole suite green. Rather than teach the test that dialect (bare names
+# match every path segment, slashed patterns match the whole path, a directory
+# entry has to become the `dir/` prefix git ls-files emits, plus `.+~` and
+# `\#.*\#`), stow the REAL repo into a throwaway home and ask what landed.
+#
+# The real repo, not make_home: the fixture writes its own .stow-local-ignore,
+# so a fixture stow would pass no matter what the tracked one says. Same trap
+# the debloat manifest fell into.
+oracle=$(mktemp -d "$BUILD/oracle-XXXXXX")
+stow --no-folding -d "$(dirname "$ROOT")" -t "$oracle" \
+  "$(basename "$ROOT")" >/dev/null 2>&1
 
-if ((${#missing_from_scripts[@]})); then
-  fail "repo-only lists agree between .stow-local-ignore and the scripts" \
-    "${missing_from_scripts[@]}"
+# If the stow itself failed, every tracked file would look un-stowed and the
+# two assertions below would flood with meaningless output. Anchor on a file
+# that must always be installed.
+assert_symlink "repo-only: the oracle stow installed a known config file" \
+  "$oracle/.config/hypr/autostart.lua"
+
+doctor_repo_only=$(sed -n "s/^REPO_ONLY='\(.*\)'$/\1/p" "$ROOT/.local/bin/loaf-doctor")
+heal_repo_only=$(sed -n "s/^REPO_ONLY='\(.*\)'$/\1/p" "$ROOT/.local/bin/loaf-heal")
+copy_class=$(sed -n "s/^COPY_CLASS='\(.*\)'$/\1/p" "$ROOT/.local/bin/loaf-doctor")
+
+# The two scripts census the same tree and must agree with each other before
+# either can be compared against stow.
+assert_equals "repo-only: doctor and heal carry the same REPO_ONLY" \
+  "$doctor_repo_only" "$heal_repo_only"
+if [[ -n $doctor_repo_only && -n $copy_class ]]; then
+  pass "repo-only: REPO_ONLY and COPY_CLASS were both readable from loaf-doctor"
 else
-  pass "repo-only lists agree between .stow-local-ignore and the scripts"
+  fail "repo-only: REPO_ONLY and COPY_CLASS were both readable from loaf-doctor" \
+    "REPO_ONLY='$doctor_repo_only'" "COPY_CLASS='$copy_class'" \
+    "the sed above no longer matches how they are declared — the two assertions" \
+    "after this one would pass vacuously, so fix the sed rather than this test"
+fi
+
+# Both directions matter. A file stow declines to install but REPO_ONLY does not
+# exclude gets reported as missing forever (the LICENSE bug). A file stow DOES
+# install but REPO_ONLY excludes drops out of the census silently, so doctor
+# stops noticing when something clobbers it.
+unstowed_but_censused=()
+stowed_but_excluded=()
+while IFS= read -r f; do
+  if [[ -e $oracle/$f || -L $oracle/$f ]]; then
+    [[ $f =~ $doctor_repo_only ]] && stowed_but_excluded+=("$f")
+  else
+    # COPY_CLASS is the legitimate third state: .config/omarchy/themes is
+    # stow-ignored on purpose and heal installs it as real files instead, so
+    # doctor censuses those separately rather than excluding them.
+    [[ $f =~ $doctor_repo_only || $f =~ $copy_class ]] ||
+      unstowed_but_censused+=("$f")
+  fi
+done < <(git -C "$ROOT" ls-files)
+
+if ((${#unstowed_but_censused[@]})); then
+  fail "repo-only: everything stow declines to install is excluded by REPO_ONLY" \
+    "${unstowed_but_censused[@]}" \
+    "stow ignores these but doctor still censuses them, so it reports each as" \
+    "'symlinks N not installed' forever — add them to REPO_ONLY in BOTH" \
+    "loaf-doctor and loaf-heal, or drop the .stow-local-ignore entry"
+else
+  pass "repo-only: everything stow declines to install is excluded by REPO_ONLY"
+fi
+
+if ((${#stowed_but_excluded[@]})); then
+  fail "repo-only: nothing REPO_ONLY excludes is actually stowed" \
+    "${stowed_but_excluded[@]}" \
+    "these ARE installed into \$HOME but REPO_ONLY drops them from the census," \
+    "so doctor would not notice one being clobbered or going missing"
+else
+  pass "repo-only: nothing REPO_ONLY excludes is actually stowed"
+fi
+
+# CLAUDE.md is agent instructions for working in this repo, not config — it must
+# never be symlinked into $HOME as ~/CLAUDE.md. Stowed from the REAL repo, not
+# from make_home: the fixture writes its own .stow-local-ignore, so a fixture
+# stow would pass no matter what the tracked one says.
+claude_tracked=$(git -C "$ROOT" ls-files -- CLAUDE.md)
+assert_equals "repo-only: CLAUDE.md is tracked" "$claude_tracked" "CLAUDE.md"
+
+stow_home=$(mktemp -d "$BUILD/stowhome-XXXXXX")
+stow --no-folding -d "$(dirname "$ROOT")" -t "$stow_home" \
+  "$(basename "$ROOT")" >/dev/null 2>&1
+if [[ -e $stow_home/CLAUDE.md ]]; then
+  fail "repo-only: CLAUDE.md is not stowed into \$HOME" \
+    "stow linked $stow_home/CLAUDE.md — add ^/CLAUDE\\.md\$ to .stow-local-ignore"
+else
+  pass "repo-only: CLAUDE.md is not stowed into \$HOME"
 fi
 
 # ---------------------------------------------------------
@@ -860,6 +1330,439 @@ else
 fi
 
 # ---------------------------------------------------------
+# bash seam
+# ---------------------------------------------------------
+#
+# The rice's .bashrc was split: crumb took the portable half and owns a
+# desktop-agnostic .bashrc that sources two tiers of drop-ins —
+# ~/.config/bash/env.d/*.sh BEFORE the `[[ $- != *i* ]] && return` guard, and
+# ~/.config/bash/*.sh after it. The rice keeps the Omarchy-coupled half; crumb
+# knows nothing about Omarchy and only provides the seam.
+#
+# The rice's half is split across BOTH tiers, the way upstream's own
+# default/bashrc divides them: the environment (OMARCHY_PATH) above the guard
+# because `ssh box somecommand` needs the variable, and the interactive rc
+# below it because aliases, functions, completions and key bindings have no
+# business in a non-interactive shell. Which tier a piece lands in is the thing
+# these tests hold — a file drifting across the guard is silent otherwise.
+#
+# The cutover happened 2026-08-19: .bashrc is no longer tracked here and
+# ~/.bashrc is a symlink into ~/crumb. These assertions cover only the rice's
+# two drop-ins, which is all this repo still owns of the seam.
+
+seam_env=.config/bash/env.d/00-omarchy.sh
+seam_rc=.config/bash/50-omarchy-rc.sh
+
+assert_file_exists "seam: the pre-guard OMARCHY_PATH drop-in exists" "$ROOT/$seam_env"
+assert_file_exists "seam: the post-guard rc drop-in exists" "$ROOT/$seam_rc"
+
+for f in "$seam_env" "$seam_rc"; do
+  if bash -n "$ROOT/$f" 2>/dev/null; then
+    pass "seam: $f parses"
+  else
+    fail "seam: $f parses" "$(bash -n "$ROOT/$f" 2>&1)"
+  fi
+done
+
+# The watch belongs to the file that actually sources upstream's rc (ADR-0042).
+# .bashrc had never been recorded here at all, which is why its drift from
+# upstream went unnoticed while the board read clean.
+assert_contains "seam: the rc drop-in is a recorded watch" \
+  "$(grep "^$seam_rc " "$ROOT/packages/forks")" \
+  "/usr/share/omarchy/default/bash/rc"
+assert_contains "seam: recorded as a watch, not a fork" \
+  "$(grep "^$seam_rc " "$ROOT/packages/forks")" " watch"
+# The env tier carries a watch of its own now. It used to hand-roll the
+# OMARCHY_PATH block against /etc/omarchy.conf — machine state, not a packaged
+# upstream file, so there was nothing to watch and this asserted zero. It now
+# sources upstream's default/bash/env-bootstrap, which is a packaged file whose
+# drift can silently reorder PATH in every non-interactive shell. Exactly one
+# watch, and against env-bootstrap rather than rc: a watch pointing at the wrong
+# upstream file sends the re-verification to the wrong place.
+assert_contains "seam: the env drop-in is a recorded watch" \
+  "$(grep "^$seam_env " "$ROOT/packages/forks")" \
+  "/usr/share/omarchy/default/bash/env-bootstrap"
+assert_contains "seam: the env watch is a watch, not a fork" \
+  "$(grep "^$seam_env " "$ROOT/packages/forks")" " watch"
+assert_equals "seam: the env tier records exactly one watch" \
+  "$(grep -c "^$seam_env " "$ROOT/packages/forks")" "1"
+
+# Both drop-ins have to reach $HOME, so neither may be caught by the repo-only
+# ignore list. Stowed from the real repo into a throwaway home rather than
+# reasoning about the patterns, since what matters is what stow actually does.
+home=$(make_home)
+(cd "$ROOT" && stow --no-folding -t "$home" . 2>/dev/null)
+assert_symlink "seam: .config/bash/env.d reaches \$HOME" "$home/$seam_env"
+assert_symlink "seam: .config/bash reaches \$HOME" "$home/$seam_rc"
+
+# Behaviour. Both drop-ins are copied into the fixture with /usr/share/omarchy
+# and /etc/omarchy.conf rewritten to fixture paths, so the runs answer to the
+# fixture rather than to whether the machine running the suite has Omarchy
+# installed or is dev-linked.
+#
+# env-bootstrap is copied in for real rather than stubbed, path-rewritten the
+# same way. It is upstream's file, not ours, but every assertion below is about
+# what the env tier actually puts in the environment — OMARCHY_PATH, the
+# dev-link prepend, the appended user paths — and a stub would only re-assert
+# whatever the stub was written to do. The copy is what makes those assertions
+# mean something; the fixture rewrite is what keeps them from answering to how
+# the machine running the suite happens to be dev-linked. Its absence is a
+# scenario, tested by deleting the copy.
+seam_bootstrap=usr/share/omarchy/default/bash/env-bootstrap
+
+assert_file_exists "seam: upstream ships the watched env-bootstrap" \
+  "/$seam_bootstrap"
+
+seam_fixture() {
+  local home=$1 src dst
+  mkdir -p "$home/usr/share/omarchy/default/bash" "$home/etc"
+  for src in "$seam_env:env.sh" "$seam_rc:rc.sh"; do
+    dst=${src#*:}
+    sed -e "s|/usr/share/omarchy|$home/usr/share/omarchy|g" \
+      -e "s|/etc/omarchy.conf|$home/etc/omarchy.conf|g" \
+      "$ROOT/${src%%:*}" >"$home/$dst"
+  done
+  sed -e "s|/usr/share/omarchy|$home/usr/share/omarchy|g" \
+    -e "s|/etc/omarchy.conf|$home/etc/omarchy.conf|g" \
+    "/$seam_bootstrap" >"$home/$seam_bootstrap"
+}
+
+# The env tier's whole job: OMARCHY_PATH exported with no interactive shell in
+# sight, which is what `ssh box somecommand` gets. The pre-crumb .bashrc left
+# it unset because its Omarchy block sat below the interactivity guard.
+home=$(make_home)
+seam_fixture "$home"
+out=$(env -u OMARCHY_PATH bash -c \
+  "source '$home/env.sh' 2>/dev/null; echo \${OMARCHY_PATH:-UNSET}")
+assert_equals "seam: the env tier exports OMARCHY_PATH non-interactively" \
+  "$out" "$home/usr/share/omarchy"
+
+# ...and nothing else. rc is present here, so a stray source in this tier would
+# show up — that is the regression the split exists to prevent, and it is
+# invisible in a shell that happens to be interactive.
+mkdir -p "$home/usr/share/omarchy/default/bash"
+# The stub mirrors the shape that matters: upstream's rc ends in
+# `[[ $- == *i* ]] && bind -f ...`, so sourcing it non-interactively returns 1.
+# A stub that returned 0 would make the $? assertion below unfalsifiable.
+{
+  echo 'echo SEAM-RC-SOURCED'
+  echo '[[ $- == *i* ]] && :'
+} >"$home/usr/share/omarchy/default/bash/rc"
+out=$(env -u OMARCHY_PATH bash -c "source '$home/env.sh'" 2>/dev/null)
+assert_not_contains "seam: the env tier does not source Omarchy's rc" \
+  "$out" "SEAM-RC-SOURCED"
+# rc's last line is `[[ $- == *i* ]] && bind -f ...`, so sourcing it
+# non-interactively returns 1. Sourcing only the env tier must leave $? clean.
+env -u OMARCHY_PATH bash -c "source '$home/env.sh'" >/dev/null 2>&1
+assert_equals "seam: the env tier leaves \$? at 0" "$?" "0"
+
+# The rc tier, sourced the way crumb's .bashrc would: env tier first, this one
+# after the guard. Present rc must actually be loaded — without this the
+# silence test below would pass on a guard that never fires.
+out=$(env -u OMARCHY_PATH bash -c \
+  "source '$home/env.sh'; source '$home/rc.sh'" 2>/dev/null)
+assert_contains "seam: the rc tier sources Omarchy's rc when present" \
+  "$out" "SEAM-RC-SOURCED"
+# ...and under `set -u` too. The guard's `${OMARCHY_PATH:-}` default exists for
+# the unset case only; if it ever swallowed a value that IS set, this repo would
+# have traded an aborted shell for a silently unloaded rc — a behaviour change
+# rather than the hardening it is meant to be.
+out=$(env -u OMARCHY_PATH bash -c \
+  "set -u; source '$home/env.sh'; source '$home/rc.sh'" 2>/dev/null)
+assert_contains "seam: the rc tier sources Omarchy's rc under set -u" \
+  "$out" "SEAM-RC-SOURCED"
+
+# rc absent: a bare `source` errors on every shell, which is exactly what a
+# machine without Omarchy is. Nothing may reach stderr.
+home=$(make_home)
+seam_fixture "$home"
+err=$(env -u OMARCHY_PATH bash -c \
+  "source '$home/env.sh'; source '$home/rc.sh'" 2>&1 >/dev/null)
+assert_equals "seam: the rc tier is silent when Omarchy's rc is absent" "$err" ""
+
+# Dev-link. /etc/omarchy.conf is written by omarchy-dev-link, and a dev-linked
+# checkout has to win over the packaged path — otherwise the rc tier below loads
+# the package's rc out from under a dev-linked tree. Fixture /etc, never the
+# real one.
+home=$(make_home)
+seam_fixture "$home"
+mkdir -p "$home/dev/omarchy/bin"
+echo "OMARCHY_PATH=$home/dev/omarchy" >"$home/etc/omarchy.conf"
+out=$(env -u OMARCHY_PATH HOME="$home" bash -c \
+  "source '$home/env.sh' 2>/dev/null; echo \${OMARCHY_PATH:-UNSET}")
+assert_equals "seam: dev-link's OMARCHY_PATH wins over the packaged default" \
+  "$out" "$home/dev/omarchy"
+# ...and only then is $OMARCHY_PATH/bin prepended. On a production install the
+# omarchy-* binaries are already /usr/bin/omarchy-*, so prepending would be noise.
+assert_contains "seam: dev-link prepends its own bin" \
+  "$(env -u OMARCHY_PATH HOME="$home" PATH=/usr/bin bash -c \
+    "source '$home/env.sh' 2>/dev/null; echo \$PATH")" \
+  "$home/dev/omarchy/bin:/usr/bin"
+
+# Dev-link absent, with a stale value inherited from the environment: the
+# packaged default must be forced, not the stale value preserved. This is the
+# staleness reasoning the hand-rolled block carried and upstream's file now
+# carries; without this assertion the file could simply pass OMARCHY_PATH
+# through and every test above would still be green.
+home=$(make_home)
+seam_fixture "$home"
+out=$(env OMARCHY_PATH=/stale/dev/link HOME="$home" bash -c \
+  "source '$home/env.sh' 2>/dev/null; echo \${OMARCHY_PATH:-UNSET}")
+assert_equals "seam: no dev-link forces the packaged default over a stale value" \
+  "$out" "$home/usr/share/omarchy"
+
+# User tool paths are APPENDED, so system binaries keep precedence — and so
+# crumb's own env.d/10-pnpm.sh and env.d/20-local-bin.sh, which run after this
+# file and prepend, stay in front of them. An upstream switch from append to
+# prepend would silently reorder every non-interactive shell, which is what the
+# watch on this file exists to catch.
+out=$(env -u OMARCHY_PATH HOME="$home" PATH=/usr/bin bash -c \
+  "source '$home/env.sh' 2>/dev/null; echo \$PATH")
+assert_equals "seam: the env tier appends the user tool paths behind /usr/bin" \
+  "$out" "/usr/bin:$home/.local/share/mise/shims:$home/.local/bin"
+
+# Omarchy absent — a machine without it is crumb's whole premise, and the guard
+# is the only thing standing between that machine and an error on every shell,
+# interactive or not.
+home=$(make_home)
+seam_fixture "$home"
+rm -f "$home/$seam_bootstrap"
+err=$(env -u OMARCHY_PATH HOME="$home" bash -c "source '$home/env.sh'" 2>&1 >/dev/null)
+assert_equals "seam: the env tier is silent when env-bootstrap is absent" "$err" ""
+# And $? stays clean. The guard is the last thing in the file, so a false guard
+# would hand 1 to whatever crumb's tier-1 loop did next — the same trap that
+# keeps the rc tier post-guard. The trailing `:` is what holds this.
+env -u OMARCHY_PATH HOME="$home" bash -c "source '$home/env.sh'" >/dev/null 2>&1
+assert_equals "seam: the env tier leaves \$? at 0 with env-bootstrap absent" "$?" "0"
+
+# The rc tier does NOT do the same, and that asymmetry is the point of these two
+# assertions. Its guard is also the last line of its file, but it carries no
+# trailing `:`, so on this same no-Omarchy machine it returns 1. That is the
+# behaviour both drop-ins now document: safe because crumb's tier-2 loop is
+# followed by a `[[ ]]` test and an `unset -v` that overwrite $? before anything
+# reads it, and deliberately left alone rather than "fixed" to match tier 1.
+# Pinned so a future `:` added to the rc tier arrives as a deliberate change to
+# this file instead of a silent behaviour change nothing notices.
+env -u OMARCHY_PATH HOME="$home" bash -c "source '$home/rc.sh'" >/dev/null 2>&1
+assert_equals "seam: the rc tier leaves \$? at 1 with Omarchy absent" "$?" "1"
+# And the asymmetry itself, both tiers in one shell in crumb's order, so the
+# assertion that fails names the pair rather than one half of it. Either tier
+# growing or losing its trailing `:` moves this string.
+out=$(env -u OMARCHY_PATH HOME="$home" bash -c \
+  "source '$home/env.sh' >/dev/null 2>&1; printf '%s ' \$?
+   source '$home/rc.sh' >/dev/null 2>&1; printf '%s' \$?")
+assert_equals "seam: the two tiers' no-Omarchy exit statuses differ deliberately" \
+  "$out" "0 1"
+
+# ...and the chain survives `set -u`. This is the second half of Omarchy being
+# absent, and it only became reachable when the env tier stopped hand-rolling
+# the OMARCHY_PATH block: the hand-rolled version exported a path
+# unconditionally, so the variable was always set and an unguarded read of it
+# could not fail. Upstream's env-bootstrap is sourced through a guard, so on a
+# machine without Omarchy the variable is legitimately UNSET — and under
+# `set -u` an unguarded `$OMARCHY_PATH` read is not a false guard handing on a
+# 1, it is an aborted shell. Bash prints "OMARCHY_PATH: unbound variable" and
+# nothing below it in the drop-in chain runs at all. `${OMARCHY_PATH:-}` in the
+# rc tier's guard is what holds this. Both tiers, in crumb's order.
+out=$(env -u OMARCHY_PATH HOME="$home" bash -c \
+  "set -u; source '$home/env.sh'; source '$home/rc.sh'; echo SEAM-SURVIVED" 2>/dev/null)
+assert_equals "seam: the drop-in chain survives set -u with OMARCHY_PATH unset" \
+  "$out" "SEAM-SURVIVED"
+# Surviving is not enough: an abort inside a sourced file writes to stderr, and
+# so does an unguarded read that somehow does not abort. Nothing may reach it.
+err=$(env -u OMARCHY_PATH HOME="$home" bash -c \
+  "set -u; source '$home/env.sh'; source '$home/rc.sh'" 2>&1 >/dev/null)
+assert_equals "seam: the drop-in chain is silent under set -u with OMARCHY_PATH unset" \
+  "$err" ""
+# The rc tier on its own, so a regression names the tier that owns the read
+# rather than pointing at the whole chain. Whether Omarchy's rc exists is not
+# the variable here — the variable is whether the guard can be evaluated at all.
+err=$(env -u OMARCHY_PATH HOME="$home" bash -c "set -u; source '$home/rc.sh'" 2>&1 >/dev/null)
+assert_equals "seam: the rc tier's guard evaluates with OMARCHY_PATH unset" \
+  "$err" ""
+
+# The board resolves a manifest path against either checkout. Every entry used
+# to be a plugins-repo path, so a rice-repo path read as missing from the repo.
+home=$(make_home)
+mkdir -p "$home/shokupan/.config/bash"
+echo "# drop-in" >"$home/shokupan/.config/bash/50-omarchy-rc.sh"
+echo "upstream v1" >"$home/upstream-rc"
+printf '.config/bash/50-omarchy-rc.sh %s %s watch\n' "$home/upstream-rc" \
+  "$(sha256sum "$home/upstream-rc" | awk '{print $1}')" \
+  >"$home/shokupan/packages/forks"
+out=$(loaf_run "$home" forks)
+status=$?
+assert_not_contains "forks: finds a manifest path in the rice repo" \
+  "$out" "missing from the repo"
+assert_equals "forks: a rice-repo watch exits 0" "$status" "0"
+
+
+# ---------------------------------------------------------
+# post-update drift warning
+# ---------------------------------------------------------
+
+# The gap this closes: 10-loaf-heal deliberately does not run doctor, and fork
+# drift is the one red with no symptom of its own, so an update that moved
+# upstream under a fork left no trace anywhere. 20-forks-drift warns and only
+# warns.
+#
+# The TRACKED hook is what runs here, from $ROOT — not a copy written into the
+# fixture. A fixture copy would pass no matter what the installed hook says,
+# the same trap the debloat manifest and .stow-local-ignore both fell into.
+# Invoked with `bash <file>`, which is how omarchy-hook invokes it.
+FORKS_HOOK="$ROOT/.config/omarchy/hooks/post-update.d/20-forks-drift"
+
+hook_run() {
+  local home=$1
+  LOAF_HOME="$home" LOAF_ROOT="$home/shokupan" \
+    PLUGINS_ROOT="$home/.local/share/shokupan-plugins" \
+    PATH="$BUILD/stub:$ROOT/.local/bin:$PATH" \
+    bash "$FORKS_HOOK" 2>&1
+}
+
+# omarchy-hook globs post-update.d/ and runs what it finds in glob order, so the
+# prefixes are the whole ordering contract: heal re-asserts the rice, then the
+# warning reports on what the update moved. Asserted against the tracked
+# directory, since a third hook landing out of order would be silent otherwise.
+mapfile -t post_update_hooks < <(cd "$ROOT/.config/omarchy/hooks/post-update.d" && printf '%s\n' *)
+assert_equals "post-update: heal runs before the drift warning" \
+  "${post_update_hooks[0]} ${post_update_hooks[1]}" "10-loaf-heal 20-forks-drift"
+
+# One implementation of the comparison, not two. The hook must delegate to
+# loaf-forks rather than hash anything itself — a second copy of the comparison
+# is the same defect class as doctor's REPO_ONLY list drifting from
+# .stow-local-ignore, which bit this repo this week.
+assert_contains "post-update: the warning delegates to loaf-forks" \
+  "$(cat "$FORKS_HOOK")" "loaf-forks --drifted"
+assert_not_contains "post-update: the warning does not re-implement the hashing" \
+  "$(cat "$FORKS_HOOK")" "sha256sum"
+
+# A clean board must print nothing. An update that reports on forks every time
+# trains the eye to skip the line, which costs the warning its whole value.
+# Two entries, one of which never moves: with a single-entry board the "does
+# not print the healthy entries" assertion below has no healthy entry to catch
+# and passes on an empty board, which is how a printed ✓ would have got through.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/plugins"
+echo "fork" >"$home/.local/share/shokupan-plugins/plugins/Fork.qml"
+echo "steady" >"$home/.local/share/shokupan-plugins/plugins/Steady.qml"
+echo "upstream v1" >"$home/upstream.qml"
+echo "steady upstream" >"$home/steady-upstream.qml"
+{
+  printf 'plugins/Fork.qml %s %s\n' "$home/upstream.qml" \
+    "$(sha256sum "$home/upstream.qml" | awk '{print $1}')"
+  printf 'plugins/Steady.qml %s %s\n' "$home/steady-upstream.qml" \
+    "$(sha256sum "$home/steady-upstream.qml" | awk '{print $1}')"
+} >"$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_equals "post-update: silent when nothing drifted" "$out" ""
+assert_equals "post-update: exits 0 when nothing drifted" "$status" "0"
+
+# Drift names the file. "forks: 1 drifted" sends him hunting, so the path has to
+# be in the output, and so does what to do about it.
+echo "upstream v2 - a fix the fork never got" >"$home/upstream.qml"
+out=$(hook_run "$home")
+status=$?
+assert_contains "post-update: warns when upstream moved under a fork" \
+  "$out" "Upstream moved under files the rice copies or watches"
+assert_contains "post-update: names the drifted file" "$out" "plugins/Fork.qml"
+assert_contains "post-update: says what to do about it" "$out" "loaf forks"
+assert_equals "post-update: never fails the update on drift" "$status" "0"
+# Warning, not board: the ✓ lines and the per-entry detail belong to
+# `loaf forks`, and this prints after every single update.
+assert_not_contains "post-update: does not print the healthy entries" \
+  "$out" "plugins/Steady.qml"
+assert_not_contains "post-update: does not print the detail lines" \
+  "$out" "re-diff, carry the fix across"
+
+# A watch is reported too, in its own words — the coupling usually survives, so
+# the ask is a re-verify and not a re-diff.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/bar/modules"
+echo "hosts upstream" >"$home/.local/share/shokupan-plugins/bar/modules/hosted.qml"
+echo "upstream v1" >"$home/hosted-upstream.qml"
+printf 'bar/modules/hosted.qml %s deadbeef watch\n' "$home/hosted-upstream.qml" \
+  >"$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_contains "post-update: warns on a changed watch" "$out" "watched upstream file changed"
+assert_contains "post-update: names the drifted watch" "$out" "bar/modules/hosted.qml"
+assert_equals "post-update: never fails the update on watch drift" "$status" "0"
+
+# No ledger at all. Nothing to report, and above all nothing to crash on — a
+# machine that never recorded a fork still runs this hook after every update.
+home=$(make_home)
+rm -f "$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_equals "post-update: silent with no fork ledger" "$out" ""
+assert_equals "post-update: exits 0 with no fork ledger" "$status" "0"
+
+# A recorded upstream file that is gone entirely — an upstream rename, which is
+# worse than a change and must still not fail the update.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/plugins"
+echo "fork" >"$home/.local/share/shokupan-plugins/plugins/Fork.qml"
+printf 'plugins/Fork.qml %s deadbeef\n' "$home/renamed-away.qml" \
+  >"$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_contains "post-update: reports an upstream file that is gone" "$out" "no longer exists"
+assert_equals "post-update: never fails the update on a renamed upstream" "$status" "0"
+
+# And the recorded rice file gone from the repo, the other half of that pair.
+home=$(make_home)
+echo "upstream v1" >"$home/upstream.qml"
+printf 'plugins/NeverExisted.qml %s deadbeef\n' "$home/upstream.qml" \
+  >"$home/shokupan/packages/forks"
+out=$(hook_run "$home")
+status=$?
+assert_contains "post-update: reports a rice file missing from the repo" \
+  "$out" "missing from the repo"
+assert_equals "post-update: never fails the update on a missing rice file" "$status" "0"
+
+# loaf-forks' own --drifted contract, asserted directly rather than only through
+# the hook, so a regression names the side that broke.
+# Two entries again, for the same reason: the omission assertions need a
+# healthy entry present to be capable of catching one.
+home=$(make_home)
+mkdir -p "$home/.local/share/shokupan-plugins/plugins"
+echo "fork" >"$home/.local/share/shokupan-plugins/plugins/Fork.qml"
+echo "steady" >"$home/.local/share/shokupan-plugins/plugins/Steady.qml"
+echo "upstream v1" >"$home/upstream.qml"
+echo "steady upstream" >"$home/steady-upstream.qml"
+{
+  printf 'plugins/Fork.qml %s %s\n' "$home/upstream.qml" \
+    "$(sha256sum "$home/upstream.qml" | awk '{print $1}')"
+  printf 'plugins/Steady.qml %s %s\n' "$home/steady-upstream.qml" \
+    "$(sha256sum "$home/steady-upstream.qml" | awk '{print $1}')"
+} >"$home/shokupan/packages/forks"
+out=$(loaf_run "$home" forks --drifted)
+status=$?
+assert_equals "forks: --drifted prints nothing on a clean board" "$out" ""
+assert_equals "forks: --drifted exits 0 on a clean board" "$status" "0"
+
+echo "upstream v2" >"$home/upstream.qml"
+out=$(loaf_run "$home" forks --drifted)
+status=$?
+assert_contains "forks: --drifted names the drifted entry" "$out" "plugins/Fork.qml"
+assert_not_contains "forks: --drifted omits the healthy entries" \
+  "$out" "plugins/Steady.qml"
+assert_not_contains "forks: --drifted omits the detail lines" \
+  "$out" "re-diff, carry the fix across"
+assert_equals "forks: --drifted exits non-zero on drift" "$status" "1"
+
+# --drifted keeps quiet about a missing manifest where a bare run says so: the
+# hook's silence when there is no board depends on this.
+rm -f "$home/shokupan/packages/forks"
+out=$(loaf_run "$home" forks --drifted)
+assert_equals "forks: --drifted is silent with no manifest" "$out" ""
+out=$(loaf_run "$home" forks)
+assert_contains "forks: a bare run still reports a missing manifest" \
+  "$out" "no fork manifest"
+
+# ---------------------------------------------------------
 # lint
 # ---------------------------------------------------------
 #
@@ -894,6 +1797,56 @@ else
   # Not a silent skip: an absent linter should be visible in the output.
   printf '# skip - shellcheck not installed, %d checks not run\n' 1
 fi
+
+# ---------------------------------------------------------
+# herdr config tracking (shokupan ADR-0050)
+# ---------------------------------------------------------
+#
+# .config/herdr/config.toml is a plain tracked file, not a forks/watch entry
+# (ADR-0050) — the hazard it faces is `omarchy refresh herdr` overwriting the
+# live symlink with a real copy of upstream's template, and the generic
+# "symlinks replaced by real files" check (already exercised above against
+# looknfeel.conf) covers that the moment the file is tracked at all. This
+# proves it does so for herdr specifically, against the REAL repo rather than
+# make_home's fixture: the fixture repo never carries this file, so a fixture
+# stow would say nothing about it either way.
+
+herdr_stow_home=$(mktemp -d "$BUILD/herdrhome-XXXXXX")
+stow --no-folding -d "$(dirname "$ROOT")" -t "$herdr_stow_home" \
+  "$(basename "$ROOT")" >/dev/null 2>&1
+
+assert_symlink "herdr config: stow installs it as a symlink" \
+  "$herdr_stow_home/.config/herdr/config.toml"
+
+out=$(LOAF_ROOT="$ROOT" loaf_run "$herdr_stow_home" doctor)
+assert_not_contains "herdr config: doctor reports no displacement while stowed" \
+  "$out" "replaced by real files"
+
+# Simulate exactly what `omarchy refresh herdr` does: drop the symlink, write a
+# plain file in its place (the shape of upstream's overwrite, prefix and all).
+rm "$herdr_stow_home/.config/herdr/config.toml"
+cat >"$herdr_stow_home/.config/herdr/config.toml" <<'EOF'
+[keys]
+prefix = "ctrl+space"
+EOF
+
+out=$(LOAF_ROOT="$ROOT" loaf_run "$herdr_stow_home" doctor)
+status=$?
+assert_contains "herdr config: doctor detects the clobber" \
+  "$out" "replaced by real files"
+assert_contains "herdr config: doctor names the herdr config specifically" \
+  "$out" ".config/herdr/config.toml"
+assert_equals "herdr config: doctor exits non-zero on the clobber" "$status" "1"
+
+# Restore by re-stowing, the same recovery `loaf heal` performs.
+rm "$herdr_stow_home/.config/herdr/config.toml"
+stow --no-folding -d "$(dirname "$ROOT")" -t "$herdr_stow_home" \
+  "$(basename "$ROOT")" >/dev/null 2>&1
+assert_symlink "herdr config: re-stowing restores the symlink" \
+  "$herdr_stow_home/.config/herdr/config.toml"
+out=$(LOAF_ROOT="$ROOT" loaf_run "$herdr_stow_home" doctor)
+assert_not_contains "herdr config: doctor is clean again after restore" \
+  "$out" "replaced by real files"
 
 # ---------------------------------------------------------
 

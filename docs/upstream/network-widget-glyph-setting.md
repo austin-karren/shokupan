@@ -1,7 +1,8 @@
 # Draft issue: the network bar widget hardcodes its ethernet glyph
 
-**Status: draft — not posted.** Per ADR-0044 rule 5: issue first, PR only
-after upstream's temperature is known, nothing posted without an explicit go.
+**Status: draft — not posted.** Per shokupan-plugins ADR-0044 rule 5: issue
+first, PR only after upstream's temperature is known, nothing posted without an
+explicit go.
 
 ## Title
 
@@ -29,7 +30,7 @@ Happy to PR either shape if there's interest.
 
 ## Rice context (not for the issue)
 
-Current carrier: `.config/omarchy/plugins/austinkarren.network/`, one
-`// SHOKUPAN:` line in Model.js, fork line in `packages/forks` (ADR-0029,
-"Wired shows a globe, not a port"). If upstream lands a setting, the clone is
-deleted and the setting goes in `shell.json`.
+Current carrier: `.config/omarchy/plugins/austinkarren.network/`, one `//
+SHOKUPAN:` line in Model.js, fork line in `packages/forks` (shokupan-plugins
+ADR-0029, "Wired shows a globe, not a port"). If upstream lands a setting, the
+clone is deleted and the setting goes in `shell.json`.

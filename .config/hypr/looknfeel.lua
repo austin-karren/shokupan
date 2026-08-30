@@ -1,5 +1,5 @@
--- Change the default Omarchy look'n'feel.
--- Ported from looknfeel.conf at the quattro migration (ADR-0033). Loaded after
+-- Change the default Omarchy look'n'feel. Ported from looknfeel.conf at the
+-- quattro migration (omarchy-desktop-on-cachyos ADR-0033). Loaded after
 -- Omarchy's defaults, so every hl.config() call here overrides theirs.
 
 -- https://wiki.hypr.land/Configuring/Basics/Variables/#general
@@ -75,22 +75,21 @@ end
 
 -- Special workspaces drop in from the TOP and retract back up into the bar,
 -- instead of the default of rising from the bottom. Makes the calendar popup
--- (ADR-0006, special:calendar) read as emerging from the bar that launched it.
--- Ported from looknfeel.conf on request, 2026-08-10 — the earlier revision of
--- this file deferred it to ADR-0006, which kept GNOME Calendar, so the popup
--- exists and deserves its motion back.
---
--- THE DIRECTION ARGUMENT MEANS OPPOSITE THINGS ON THE TWO TREES (measured in
--- the .conf era by slowing the animation to 5s and tracking the bounding box):
+-- (shokupan-plugins ADR-0006, special:calendar) read as emerging from the bar
+-- that launched it. Ported from looknfeel.conf on request, 2026-08-10 — the
+-- earlier revision of this file deferred it to shokupan-plugins ADR-0006, which
+-- kept GNOME Calendar, so the popup exists and deserves its motion back. THE
+-- DIRECTION ARGUMENT MEANS OPPOSITE THINGS ON THE TWO TREES (measured in the
+-- .conf era by slowing the animation to 5s and tracking the bounding box):
 -- `top` on In slides DOWN from the top; on Out it also slides DOWN. So the
--- retract-upward exit needs `bottom` on Out. Do not "fix" this to match.
---
--- These are global animation trees — no per-workspace override exists, so the
--- SUPER+S scratchpad moves the same way. Speed 3 (=300ms) and easeOutQuint
--- kept from Omarchy's default so the popup matches the desktop's motion.
+-- retract-upward exit needs `bottom` on Out. Do not "fix" this to match. These
+-- are global animation trees — no per-workspace override exists, so the
+-- SUPER+S scratchpad moves the same way. Speed 3 (=300ms) and easeOutQuint kept
+-- from Omarchy's default so the popup matches the desktop's motion.
 hl.animation({ leaf = "specialWorkspaceIn", enabled = true, speed = 3, bezier = "easeOutQuint", style = "slidevert top" })
 hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 3, bezier = "easeOutQuint", style = "slidevert bottom" })
 
 -- The single-window zen aspect ratio lives here in spirit but NOT in this file:
 -- ratio-toggle writes it to ~/.local/state/omarchy/toggles/hypr/ so it can be
--- switched off. Setting it here would make it permanent. See ADR-0026.
+-- switched off. Setting it here would make it permanent. See shokupan-plugins
+-- ADR-0026.

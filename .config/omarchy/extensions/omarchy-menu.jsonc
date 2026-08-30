@@ -67,10 +67,11 @@
 
   // OVERRIDE. Upstream's row is labelled "1-Window Ratio" and calls
   // omarchy-hyprland-window-single-square-aspect-toggle, which hardcodes 1:1.
-  // This machine runs 6:5 (ADR-0026), so upstream's row applies the wrong value.
-  // Same two edits the old menu.sh made - a label word and the dispatch - and the
-  // same reason they cannot be made by shadowing PATH: Omarchy's bin directory
-  // precedes ~/.local/bin. Icon f2d0 is upstream's own, kept deliberately.
+  // This machine runs 6:5 (shokupan-plugins ADR-0026), so upstream's row
+  // applies the wrong value. Same two edits the old menu.sh made - a label word
+  // and the dispatch - and the same reason they cannot be made by shadowing
+  // PATH: Omarchy's bin directory precedes ~/.local/bin. Icon f2d0 is
+  // upstream's own, kept deliberately.
   "trigger.toggle.one-window-ratio": {"icon":"","label":"1-Window Zen Ratio","keywords":"square zen aspect ratio single window","action":"/home/austinkarren/.local/bin/ratio-toggle"},
 
   // Monitor scaling. Upstream has no menu row for this at all - it is reachable
@@ -105,13 +106,14 @@
   "trigger.emoji": {"icon":"󰇲","label":"Emoji & Symbols","keywords":"emoji symbol unicode character glyph","action":"omarchy-shell shell toggle omarchy.emojis"},
   "trigger.clipboard": {"icon":"󰅍","label":"Clipboard History","keywords":"clipboard paste history copy","action":"omarchy-shell shell toggle omarchy.clipboard"},
 
-  // Update System sits beside upstream's "Update > Omarchy" rather than replacing
-  // it, and the pair is the whole point: omarchy-update pulls the desktop and
-  // then updates system packages too, while system-update deliberately touches
-  // only the base - CachyOS, Arch, the AUR and Flatpaks - so a problem afterwards
-  // is attributable to one layer rather than two (ADR-0034). Upstream's row is
-  // already named "Omarchy", so no rename is needed to tell them apart here.
-  // Icon f021 refresh, the old palette's for this entry.
+  // Update System sits beside upstream's "Update > Omarchy" rather than
+  // replacing it, and the pair is the whole point: omarchy-update pulls the
+  // desktop and then updates system packages too, while system-update
+  // deliberately touches only the base - CachyOS, Arch, the AUR and Flatpaks -
+  // so a problem afterwards is attributable to one layer rather than two
+  // (omarchy-desktop-on-cachyos ADR-0034). Upstream's row is already named
+  // "Omarchy", so no rename is needed to tell them apart here. Icon f021
+  // refresh, the old palette's for this entry.
   "update.system": {"icon":"","label":"System","keywords":"upgrade cachyos arch pacman aur flatpak base packages","action":"omarchy-launch-floating-terminal-with-presentation /home/austinkarren/.local/bin/system-update"},
 
   // OVERRIDE. Quattro's row opens the image grid with no names and no
@@ -122,13 +124,14 @@
   // per mechanism 1; icon f03e is upstream's own.
   "style.background": {"icon":"","label":"Background","aliases":["background","wallpaper"],"keywords":"wallpaper backgrounds picker named search","action":"/home/austinkarren/.local/bin/wallpaper-menu"},
 
-  // Calendar. ADR-0006 keeps GNOME Calendar because it holds the synced
-  // online-accounts events; r1744's clock DOES have a popup with a month grid,
-  // but that grid is a read-out of the system clock with no event data, so it
-  // does not replace the app. The primary entry point is now that popup — day
-  // cells and the hero date open GNOME Calendar on the clicked day through the
-  // austinkarren.clock clone; this row is the keyboard-free alternative. No
-  // chord is bound. Icon f00ed is the glyph the retired bar module used.
+  // Calendar. shokupan-plugins ADR-0006 keeps GNOME Calendar because it holds
+  // the synced online-accounts events; r1744's clock DOES have a popup with a
+  // month grid, but that grid is a read-out of the system clock with no event
+  // data, so it does not replace the app. The primary entry point is now that
+  // popup — day cells and the hero date open GNOME Calendar on the clicked
+  // day through the austinkarren.clock clone; this row is the keyboard-free
+  // alternative. No chord is bound. Icon f00ed is the glyph the retired bar
+  // module used.
   "trigger.calendar": {"icon":"󰃭","label":"Calendar","keywords":"calendar meetings schedule agenda gnome","action":"/home/austinkarren/.local/bin/calendar-toggle"},
 
   // Default Browser: Helium. Upstream's Setup > Default Browser submenu lists

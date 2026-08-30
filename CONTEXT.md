@@ -11,6 +11,19 @@ to mean different things, and three of the menus are one keystroke apart.
 The proper name of this rice — this specific set of deviations, this repo. A
 rice can be named anything; 食パン is Japanese milk bread, which has nothing to
 do with the generic term below beyond the joke.
+
+Briefly untrue: the 2026-08-18 split gave the name to the plugins repo and
+called this one `dotfiles-arch`, which made this entry — and `loaf`, defined
+below as the CLI that maintains Shokupan — describe nothing that existed. The
+2026-08-19 rename put it back.
+
+**Shokupan Plugins**:
+The publishable half, extracted 2026-08-18 to
+`github.com/austin-karren/shokupan-plugins` and consumed here by `loaf
+plugins`: the Quickshell plugins, the bar modules they need, the four scripts
+they shell out to, and the Tokyo Night bar override. A separate repo because
+any Omarchy user can install it and nobody else can use the rest of this one.
+_Avoid_: shokupan (that is the rice), the plugins repo (say the name)
 _Avoid_: the rice (ambiguous once there are others), dotfiles, shokupan-arch
 
 **Loaf**:
@@ -21,16 +34,24 @@ beat eight. Also deliberately not `pan`, which is a real package (a Usenet
 newsreader) in `cachyos-extra-znver4` and would collide if ever installed.
 _Avoid_: rice (the old name), shokupan (that is the rice, not the tool)
 
-**Omarchy**:
-The upstream desktop layer, installed as distro packages at `/usr/share/omarchy` —
-`omarchy-dev` and `omarchy-settings-dev` from the `[omarchy]` repo (ADR-0035).
-`~/.local/share/omarchy` is now just a symlink to it, left over from when it was a
-git checkout. Read-only to us, and **source material rather than an authority**: what
-upstream ships is adopted when it is worth adopting, so this desktop lags Omarchy's
-releases by however long porting takes (ADR-0034). Mirroring closely is the default,
-not an obligation.
-_Avoid_: the distro, upstream, the desktop (Shokupan is the desktop; Omarchy is what
-it is made from)
+**Crumb**:
+The dev config that travels — shell, git, mise, Zed — extracted 2026-08-19 to a
+separate `crumb` repo and stowed separately (ADR-0002); public and MIT since
+2026-08-20. Defined by what it may
+*not* know: no Omarchy, no Hyprland, no theme path, because it has to work on a
+machine with no desktop. It owns `.bashrc` and provides the two drop-in tiers
+this rice fills; it is not managed by `loaf`.
+_Avoid_: dotfiles, the shell repo, the portable half (say the name)
+
+**Omarchy**: The upstream desktop layer, installed as distro packages at
+`/usr/share/omarchy` — `omarchy-dev` and `omarchy-settings-dev` from the
+`[omarchy]` repo (omarchy-desktop-on-cachyos ADR-0035). `~/.local/share/omarchy`
+is now just a symlink to it, left over from when it was a git checkout.
+Read-only to us, and **source material rather than an authority**: what upstream
+ships is adopted when it is worth adopting, so this desktop lags Omarchy's
+releases by however long porting takes (omarchy-desktop-on-cachyos ADR-0034).
+Mirroring closely is the default, not an obligation. _Avoid_: the distro,
+upstream, the desktop (Shokupan is the desktop; Omarchy is what it is made from)
 
 **Rice**:
 The set of deliberate deviations from a stock Omarchy install — everything this
@@ -46,15 +67,18 @@ _Avoid_: local, untracked, ignored
 **Identity file**:
 A machine-side file holding a name or email address, included by a tracked file
 that itself contains no identity. `~/.gitconfig.local` is the reference example;
-`~/.bashrc.local` is the same pattern for the shell.
+`~/.bashrc.local` is the same pattern for the shell. Both are included from
+Crumb's tracked files rather than this repo's since 2026-08-19; `~/.XCompose.local`
+is the rice's own instance of the term.
 _Avoid_: secrets file, private config
 
-**Base**:
-CachyOS: the kernel, the znver4 repos, the bootloader and snapper. The bottom of
-the three layers, and **not Omarchy's to manage** (ADR-0034). Layered onto by the
-bridge repo when this machine was built (ADR-0001); that bridge is retired going
-forward and the install path becomes this repo's (ADR-0035).
-_Avoid_: distro, system, OS (each is ambiguous between the base and Omarchy)
+**Base**: CachyOS: the kernel, the znver4 repos, the bootloader and snapper. The
+bottom of the three layers, and **not Omarchy's to manage**
+(omarchy-desktop-on-cachyos ADR-0034). Layered onto by the bridge repo when this
+machine was built (omarchy-desktop-on-cachyos ADR-0001); that bridge is retired
+going forward and the install path becomes this repo's
+(omarchy-desktop-on-cachyos ADR-0035). _Avoid_: distro, system, OS (each is
+ambiguous between the base and Omarchy)
 
 **Bridge**:
 [mroboff/omarchy-on-cachyos][bridge], which patches Omarchy's installer so it
@@ -290,79 +314,79 @@ _Avoid_: stash, shelf, drawer
 ## Bar behaviour
 
 > **Waybar removed 2026-08-09.** The bar is quattro's Quickshell surface now,
-> configured by `.config/omarchy/shell.json` (ADR-0029, ADR-0033). Second-click
-> dismissal is native there, so the Toggle wrapper term below is on its way out;
-> the dismissal *behaviour* is what the vocabulary is protecting.
+> configured by `.config/omarchy/shell.json` (shokupan-plugins ADR-0029,
+> omarchy-desktop-on-cachyos ADR-0033). Second-click dismissal is native there,
+> so the Toggle wrapper term below is on its way out; the dismissal *behaviour*
+> is what the vocabulary is protecting.
 
-**Hover-reveal group**:
-The quiet modules at the centre of the bar, which collapse to zero width until
-the centre section is hovered. Upstream's indicators live there, and so does
-the zen aspect-ratio toggle (ADR-0013). Active members jump to the left of the cluster
-and show unprompted; inactive ones sit right and only hover-reveal — the ratio
-gets that natively now, as `Ratio.qml` inside the indicators fork
-(`bar/indicators/`); the retired `ratio`/`ratio-on` two-faced module pair that
-used to fake membership is gone. Everything in the group is a single
-caption-sized switch glyph; ADR-0039 removed the one text-bearing member for
-exactly that reason. (The calendar bracket that used to sit static beside the
-date — half of ADR-0029's bracket — was retired 2026-08-15: date clicks live
-inside the cloned clock's popup now, ADR-0006 addendum. The bar-settings gear
-that used to sit after the workspaces went with `barcfg` at r1744.) A module
-joins the group by binding to the bar's `centerSectionRevealHeld`, which is why
-joining it requires a QML module rather than a Command module.
-_Avoid_: tray, overflow, drawer (the tray drawer is a different thing on the right)
+**Hover-reveal group**: The quiet modules at the centre of the bar, which
+collapse to zero width until the centre section is hovered. Upstream's
+indicators live there, and so does the zen aspect-ratio toggle (shokupan-plugins
+ADR-0013). Active members jump to the left of the cluster and show unprompted;
+inactive ones sit right and only hover-reveal — the ratio gets that natively
+now, as `Ratio.qml` inside the indicators fork (`bar/indicators/`); the retired
+`ratio`/`ratio-on` two-faced module pair that used to fake membership is gone.
+Everything in the group is a single caption-sized switch glyph; shokupan-plugins
+ADR-0039 removed the one text-bearing member for exactly that reason. (The
+calendar bracket that used to sit static beside the date — half of
+shokupan-plugins ADR-0029's bracket — was retired 2026-08-15: date clicks live
+inside the cloned clock's popup now, shokupan-plugins ADR-0006 addendum. The
+bar-settings gear that used to sit after the workspaces went with `barcfg` at
+r1744.) A module joins the group by binding to the bar's
+`centerSectionRevealHeld`, which is why joining it requires a QML module rather
+than a Command module. _Avoid_: tray, overflow, drawer (the tray drawer is a
+different thing on the right)
 
-**Command module**:
-A bar entry that shells out on an interval and reads plain text or Waybar-style
-JSON back — `{"id":…, "type":"command", "exec":…}`. Always visible; it has no
-way to hide. No current members: `apexshot` was the last, before it became a
-QML module and then the `shokupan.apexshot` Plugin (ADR-0044 wave 1).
-_Avoid_: custom module (ambiguous with the QML kind), script module
+**Command module**: A bar entry that shells out on an interval and reads plain
+text or Waybar-style JSON back — `{"id":…, "type":"command", "exec":…}`.
+Always visible; it has no way to hide. No current members: `apexshot` was the
+last, before it became a QML module and then the `shokupan.apexshot` Plugin
+(shokupan-plugins ADR-0044 wave 1). _Avoid_: custom module (ambiguous with the
+QML kind), script module
 
-**QML module**:
-A bar entry backed by a `.qml` file in `.config/omarchy/bar/modules/`, which
-receives the bar root and can therefore do what a Command module cannot — hide
-itself, animate, read live bar state, or host an upstream widget. Since the
-r1744 upgrade only the `indicators` fork remains (it carries the zen aspect-ratio
-toggle the retired `ratio`/`ratio-on` pair used to fake, one control with two
-faces); `barcfg` and the Hosted widgets were deleted — absorbed or regressed
-to stock (ADR-0044 addendum). ADR-0044's wave 1 converted `calendar`, `omenu`
-and `apexshot` into `shokupan.*` Plugins. New files here
-register only at shell startup: `omarchy-restart-shell` after adding one, plain
-edits hot-reload. Since ADR-0044 this is the legacy form: new bar work is born
-a Plugin, and the remaining modules convert wave by wave.
-_Avoid_: plugin (a Plugin has a manifest; a QML module is the manifest-less
-older form)
+**QML module**: A bar entry backed by a `.qml` file in
+`.config/omarchy/bar/modules/`, which receives the bar root and can therefore do
+what a Command module cannot — hide itself, animate, read live bar state, or
+host an upstream widget. Since the r1744 upgrade only the `indicators` fork
+remains (it carries the zen aspect-ratio toggle the retired `ratio`/`ratio-on`
+pair used to fake, one control with two faces); `barcfg` and the Hosted widgets
+were deleted — absorbed or regressed to stock (shokupan-plugins ADR-0044
+addendum). shokupan-plugins ADR-0044's wave 1 converted `calendar`, `omenu` and
+`apexshot` into `shokupan.*` Plugins. New files here register only at shell
+startup: `omarchy-restart-shell` after adding one, plain edits hot-reload. Since
+shokupan-plugins ADR-0044 this is the legacy form: new bar work is born a
+Plugin, and the remaining modules convert wave by wave. _Avoid_: plugin (a
+Plugin has a manifest; a QML module is the manifest-less older form)
 
-**Plugin**:
-Quattro's packaging unit for shell code — a directory holding a
-`manifest.json` that declares an id, a kind (`bar-widget`, `service`,
-`overlay`, `panel`, `menu`, `bar`) and entry points. Upstream's own widgets
-and panels are first-party plugins; ours are third-party, live one directory
-deep in `.config/omarchy/plugins/<name>/`, and take ids under `shokupan.*`
-(the `omarchy.` namespace is reserved). One exception, and only one: a
-**Clone** of an upstream plugin keeps the id `omarchy plugin clone` gives it —
+**Plugin**: Quattro's packaging unit for shell code — a directory holding a
+`manifest.json` that declares an id, a kind (`bar-widget`, `service`, `overlay`,
+`panel`, `menu`, `bar`) and entry points. Upstream's own widgets and panels are
+first-party plugins; ours are third-party, live one directory deep in
+`.config/omarchy/plugins/<name>/`, and take ids under `shokupan.*` (the
+`omarchy.` namespace is reserved). One exception, and only one: a **Clone** of
+an upstream plugin keeps the id `omarchy plugin clone` gives it —
 `<username>.<plugin>`, so `austinkarren.clock` and `austinkarren.network` —
 because that id is what routes the bar entry and upstream's IPC to the clone
-(ADR-0041 addendum). Authored-from-nothing plugins stay `shokupan.*`. No longer only upstream's word: since
-ADR-0044 this rice authors plugins as its default shape for new shell work,
-written portable so they can be published.
-_Avoid_: extension, addon, QML module (the manifest is the difference),
-provider (Elephant's dead vocabulary)
+(shokupan-plugins ADR-0041 addendum). Authored-from-nothing plugins stay
+`shokupan.*`. No longer only upstream's word: since shokupan-plugins ADR-0044
+this rice authors plugins as its default shape for new shell work, written
+portable so they can be published. _Avoid_: extension, addon, QML module (the
+manifest is the difference), provider (Elephant's dead vocabulary)
 
-**Hosted widget**:
-A QML module whose body is upstream's own widget, loaded by absolute path and
-handed the three properties the bar host would inject — the module owns only
-visibility, upstream owns everything else, and upstream's fixes keep arriving.
-None are mounted since the r1744 upgrade — `microphone` was absorbed upstream
-and `network` lost its hooks to the panel restructure (ADR-0044 addendum);
-`model-usage` proved the pattern before ADR-0039 took it off the bar. The
-pattern itself stays current for the next deviation. A hosted widget with its own
-panel must also carry the **popout identity block** (see `network.qml`): the
-bar lights a slot's open-panel underline by identity with the slot's item, and
-without the block the underline never lights — the one parity gap the pattern
-introduces. The alternative, copying the widget's source into the rice, is
-what this term exists to argue against.
-_Avoid_: wrapper (says nothing about who owns the body), clone, fork
+**Hosted widget**: A QML module whose body is upstream's own widget, loaded by
+absolute path and handed the three properties the bar host would inject — the
+module owns only visibility, upstream owns everything else, and upstream's fixes
+keep arriving. None are mounted since the r1744 upgrade — `microphone` was
+absorbed upstream and `network` lost its hooks to the panel restructure
+(shokupan-plugins ADR-0044 addendum); `model-usage` proved the pattern before
+shokupan-plugins ADR-0039 took it off the bar. The pattern itself stays current
+for the next deviation. A hosted widget with its own panel must also carry the
+**popout identity block** (see `network.qml`): the bar lights a slot's
+open-panel underline by identity with the slot's item, and without the block the
+underline never lights — the one parity gap the pattern introduces. The
+alternative, copying the widget's source into the rice, is what this term exists
+to argue against. _Avoid_: wrapper (says nothing about who owns the body),
+clone, fork
 
 **Indicator dress**:
 The styling contract a module adopts to sit among the built-in indicators:
@@ -379,14 +403,13 @@ double-click gesture. Native to quattro's bar; the term survives from the Waybar
 era, when it had to be built by hand (ADR-0004, historical).
 _Avoid_: double click, click toggle
 
-**Toggle wrapper**:
-Historical (Waybar era): a script standing between a bar module and the command
-it launched, added solely to give that module Second-click dismissal. Retired
-under quattro, whose bar dismisses natively (ADR-0033) — with one survivor:
-`calendar-toggle` stayed, not as a dismissal wrapper but because showing the
-calendar means moving a window between workspaces, which is a real job
-(ADR-0006). `window-toggle` and `menu-toggle` are gone.
-_Avoid_: handler, launcher script
+**Toggle wrapper**: Historical (Waybar era): a script standing between a bar
+module and the command it launched, added solely to give that module
+Second-click dismissal. Retired under quattro, whose bar dismisses natively
+(omarchy-desktop-on-cachyos ADR-0033) — with one survivor: `calendar-toggle`
+stayed, not as a dismissal wrapper but because showing the calendar means moving
+a window between workspaces, which is a real job (shokupan-plugins ADR-0006).
+`window-toggle` and `menu-toggle` are gone. _Avoid_: handler, launcher script
 
 **Dismiss**:
 To make a window go away, without specifying whether it was closed or merely
@@ -448,17 +471,17 @@ _Avoid_: exit, close (Close belongs to the ladder)
 ## Launcher internals
 
 > **Stack removed 2026-08-09, and these terms are now history.** Walker and
-> Elephant are uninstalled and their configs deleted (ADR-0033). ADR-0027 has since
-> been ported, and the merged list it described was **withdrawn** rather than
-> rebuilt — quattro's launcher takes applications and nothing else. So the shape
-> these words named no longer exists to be kept: there is no front-end/backend
-> split to speak about, and no set of entry sources to compose.
->
-> Kept only for reading the pre-quattro ADRs and git history. Do not reach for them
-> to describe how the desktop works now; the Launcher and the Omarchy Menu above
-> are the live vocabulary. **Frecency** is the one term here still worth having —
-> quattro's launcher ranks purely on match quality with no usage history at all,
-> which is a real difference worth being able to name.
+> Elephant are uninstalled and their configs deleted (omarchy-desktop-on-cachyos
+> ADR-0033). ADR-0027 has since been ported, and the merged list it described
+> was **withdrawn** rather than rebuilt — quattro's launcher takes
+> applications and nothing else. So the shape these words named no longer exists
+> to be kept: there is no front-end/backend split to speak about, and no set of
+> entry sources to compose. Kept only for reading the pre-quattro ADRs and git
+> history. Do not reach for them to describe how the desktop works now; the
+> Launcher and the Omarchy Menu above are the live vocabulary. **Frecency** is
+> the one term here still worth having — quattro's launcher ranks purely on
+> match quality with no usage history at all, which is a real difference worth
+> being able to name.
 
 **Walker**:
 The launcher front-end. Owns the window, the theme and the list widget.

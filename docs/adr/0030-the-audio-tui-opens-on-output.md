@@ -16,11 +16,12 @@ status: superseded
 > the record of why the preference mattered and what adopting the config file
 > cost.
 
-> **Implementation deleted 2026-08-09.** `wiremix` is uninstalled — the upgrade
-> itself does `rm -rf ~/.config/wiremix` — and `wiremix.toml` is deleted with it.
-> ADR-0033 replaces the TUI with `omarchy.audio`, so the open question is whether
-> that surface has an equivalent of "start on Output", not how to set `tab`. Old
-> file: tag `omarchy-v3.8.4-prequattro`.
+> **Implementation deleted 2026-08-09.** `wiremix` is uninstalled — the
+> upgrade itself does `rm -rf ~/.config/wiremix` — and `wiremix.toml` is
+> deleted with it. omarchy-desktop-on-cachyos ADR-0033 replaces the TUI with
+> `omarchy.audio`, so the open question is whether that surface has an
+> equivalent of "start on Output", not how to set `tab`. Old file: tag
+> `omarchy-v3.8.4-prequattro`.
 
 wiremix starts on the Output Devices tab instead of Playback. One line of config:
 
@@ -44,10 +45,10 @@ config.
 ## Why the file had to be adopted first
 
 `~/.config/wiremix/wiremix.toml` already existed and was **byte-identical to
-Omarchy's** `config/wiremix/wiremix.toml`, as an untracked regular file. Editing it
-in place would have worked until the next `omarchy update` rewrote it — the exact
-displacement failure ADR-0028 exists to catch, and one that leaves no trace in
-`git status` because the file was never ours.
+Omarchy's** `config/wiremix/wiremix.toml`, as an untracked regular file. Editing
+it in place would have worked until the next `omarchy update` rewrote it — the
+exact displacement failure omarchy-desktop-on-cachyos ADR-0028 exists to catch,
+and one that leaves no trace in `git status` because the file was never ours.
 
 So it moved into the rice as a tracked file and is now stowed like everything else,
 which is what makes the single line above durable. Everything in it except `tab` is

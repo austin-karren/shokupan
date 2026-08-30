@@ -55,6 +55,7 @@ cups
 cups-browsed
 cups-filters
 cups-pdf
+ddcutil
 device-mapper
 diffutils
 direnv
@@ -109,7 +110,6 @@ git-delta
 git-lfs
 github-cli
 glances
-gnome-calculator
 gnome-calendar
 gnome-control-center
 gnome-disk-utility
@@ -130,6 +130,7 @@ gvfs-nfs
 gvfs-smb
 hdparm
 helium-browser-bin
+herdr
 hplip
 hwdetect
 hwinfo
@@ -147,9 +148,9 @@ jfsutils
 jq
 kdenlive
 kernel-modules-hook
-kvantum-qt5
 lazydocker
 lazygit
+lemonade-server
 less
 lib32-mesa
 lib32-opencl-mesa
@@ -161,6 +162,7 @@ libpulse
 libqalculate
 libreoffice-fresh
 libsecret
+libvips
 libvirt
 libyaml
 limine
@@ -210,6 +212,7 @@ noto-fonts-emoji
 nss-mdns
 obs-studio
 obsidian
+omacalc
 omacut
 omarchy-dev
 omarchy-keyring
@@ -242,11 +245,10 @@ python-packaging
 python-poetry-core
 python-pyqt5
 python-reportlab
-python-terminaltexteffects
 qemu-desktop
 qemu-user-static-binfmt
 qt5-wayland
-quickshell
+quickshell-git
 realtime-privileges
 rebuild-detector
 reflector
@@ -293,6 +295,7 @@ ttf-jetbrains-mono-nerd-basic
 ttf-liberation
 ttf-meslo-nerd
 ttf-opensans
+ttfx
 typora
 tzupdate
 udiskie

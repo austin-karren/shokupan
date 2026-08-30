@@ -4,12 +4,12 @@ status: proposed
 
 # Loaf must re-assert the quattro rice without hands
 
-The quattro port was done by hand — five agents, a day, sixty commits. ADR-0028's
-contract is that this never happens twice: after an upstream update, `loaf heal`
-re-asserts the rice. The trigger half of that contract survived the upgrade,
-measured: quattro's `omarchy-update` line 79 still runs `omarchy-hook post-update`,
-the hook directory convention is unchanged, and `10-loaf-heal` is installed. Heal
-will run.
+The quattro port was done by hand — five agents, a day, sixty commits.
+omarchy-desktop-on-cachyos ADR-0028's contract is that this never happens twice:
+after an upstream update, `loaf heal` re-asserts the rice. The trigger half of
+that contract survived the upgrade, measured: quattro's `omarchy-update` line 79
+still runs `omarchy-hook post-update`, the hook directory convention is
+unchanged, and `10-loaf-heal` is installed. Heal will run.
 
 Heal *running* is no longer heal *sufficing*. The quattro rice contains things a
 symlink pass cannot re-assert, and each is a way the next `omarchy update` breaks
@@ -52,10 +52,11 @@ the desktop while doctor stays green. In order of blast radius:
 
 Working as designed, listed so nobody "fixes" them: `packages/omarchy.pin` is
 updated by hand per verified upgrade — that is the version-lag contract
-(ADR-0034), not a gap. And the generated launcher entries
-(`shokupan-launcher-cmds`) regenerate on demand rather than on heal, which is
-acceptable until upstream churn proves otherwise. *(2026-08-15: the generator
-and its entries are deleted with ADR-0027's supersession — no longer a case.)*
+(omarchy-desktop-on-cachyos ADR-0034), not a gap. And the generated launcher
+entries (`shokupan-launcher-cmds`) regenerate on demand rather than on heal,
+which is acceptable until upstream churn proves otherwise. *(2026-08-15: the
+generator and its entries are deleted with ADR-0027's supersession — no longer
+a case.)*
 
 This ADR is the work list for making loaf quattro-complete. It stays proposed
 until the four wants above exist and a real `omarchy update` has been survived
@@ -89,8 +90,8 @@ Still owed before `accepted`: want 4's adoption pass, and a real
 ## Addendum, 2026-08-11 — watched upstream files
 
 The upstream-friction audit found two gaps in want 1 as shipped. First, the
-`shell.toml.tpl` template copy (ADR-0009) was never recorded — the one fork
-`loaf forks` didn't cover. Now recorded.
+`shell.toml.tpl` template copy (shokupan-plugins ADR-0009) was never recorded
+— the one fork `loaf forks` didn't cover. Now recorded.
 
 Second, want 2's existence check was too weak for the hosted-widget couplings.
 The bar modules that host upstream QML (`network.qml`, `audio.qml`,
@@ -109,9 +110,9 @@ couplings (four panels/widgets plus `Bar.qml`'s gear guard) are recorded as
 watches.
 
 *(Note 2026-08-12: `audio.qml` and its watch are gone — the wrapper reverted
-to stock `omarchy.audio` per ADR-0044 after the 2026-08-09 update broke its
-rebind. Four watched couplings remain: `network.qml`, `microphone.qml`, and
-`barcfg.qml`'s two.)*
+to stock `omarchy.audio` per shokupan-plugins ADR-0044 after the 2026-08-09
+update broke its rebind. Four watched couplings remain: `network.qml`,
+`microphone.qml`, and `barcfg.qml`'s two.)*
 
 *(Note 2026-08-15: no watched couplings remain at all — the r1744 upgrade
 removed the last hosted widgets, as `packages/forks` records. The watch

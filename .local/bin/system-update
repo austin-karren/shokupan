@@ -1,25 +1,20 @@
 #!/bin/bash
 
-# Update everything — CachyOS and Arch packages, the AUR, and Flatpaks — while
-# watching it happen.
-#
-# This used to be "the base, without touching Omarchy", the other half of a base /
-# desktop split (ADR-0034). Under quattro that split is gone: Omarchy is distro
-# packages now (ADR-0035), so `pacman -Syu` upgrades omarchy-dev like anything
-# else, and `omarchy update` no longer pulls a checkout — it IS a full system
-# upgrade with migrations and hooks attached.
-#
-# What still separates the two is attendance, and that is why this one survives.
-# Omarchy's updater runs `pacman -Syu --noconfirm` with 25 `--overwrite` paths
-# through /etc, including sddm.conf.d, sudoers.d and mkinitcpio.conf.d. This runs
-# interactively, so replacements and .pacnew warnings are on screen where someone
-# can read them — which is the whole point on a machine whose base was installed
-# by somebody other than Omarchy.
-#
-# It skips omarchy-migrate and the post-update hooks; `loaf heal` at the end is
-# this side's equivalent.
-#
-# Launch it from the System Palette ("Update System"), which wraps it in Omarchy's
+# Update everything — CachyOS and Arch packages, the AUR, and Flatpaks —
+# while watching it happen. This used to be "the base, without touching
+# Omarchy", the other half of a base / desktop split (omarchy-desktop-on-cachyos
+# ADR-0034). Under quattro that split is gone: Omarchy is distro packages now
+# (omarchy-desktop-on-cachyos ADR-0035), so `pacman -Syu` upgrades omarchy-dev
+# like anything else, and `omarchy update` no longer pulls a checkout — it IS
+# a full system upgrade with migrations and hooks attached. What still separates
+# the two is attendance, and that is why this one survives. Omarchy's updater
+# runs `pacman -Syu --noconfirm` with 25 `--overwrite` paths through /etc,
+# including sddm.conf.d, sudoers.d and mkinitcpio.conf.d. This runs
+# interactively, so replacements and .pacnew warnings are on screen where
+# someone can read them — which is the whole point on a machine whose base was
+# installed by somebody other than Omarchy. It skips omarchy-migrate and the
+# post-update hooks; `loaf heal` at the end is this side's equivalent. Launch it
+# from the System Palette ("Update System"), which wraps it in Omarchy's
 # floating terminal presentation.
 
 set -uo pipefail
@@ -55,18 +50,19 @@ fi
 failed=()
 
 step "Update system packages"
-# Quattro installs 00-omarchy-update-guard.hook, a PreTransaction pacman hook with
-# AbortOnFail that refuses a direct `pacman -Syu` unless OMARCHY_ALLOW_DIRECT_PACMAN=1
-# (ADR-0035). That hook is installed on this machine now, so this is load-bearing
-# rather than a precaution — without it, every step below is unreachable.
+# Quattro installs 00-omarchy-update-guard.hook, a PreTransaction pacman hook
+# with AbortOnFail that refuses a direct `pacman -Syu` unless
+# OMARCHY_ALLOW_DIRECT_PACMAN=1 (omarchy-desktop-on-cachyos ADR-0035). That hook
+# is installed on this machine now, so this is load-bearing rather than a
+# precaution — without it, every step below is unreachable.
 if sudo env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -Syu; then :; else failed+=("pacman"); fi
 
-# Boot contract (ADR-0047): when omarchy's hooks file selects the busybox
-# `encrypt` flavour, every cmdline in the rendered boot menu must carry
-# cryptdevice= or the next boot cannot unlock root — the r1744 upgrade proved
-# it with a live-USB recovery. The menu is root-only, so this deep half of
-# `loaf doctor`'s no-sudo check lives here, where sudo is already warm and a
-# kernel/initramfs rebuild may just have happened.
+# Boot contract (omarchy-desktop-on-cachyos ADR-0047): when omarchy's hooks file
+# selects the busybox `encrypt` flavour, every cmdline in the rendered boot menu
+# must carry cryptdevice= or the next boot cannot unlock root — the r1744
+# upgrade proved it with a live-USB recovery. The menu is root-only, so this
+# deep half of `loaf doctor`'s no-sudo check lives here, where sudo is already
+# warm and a kernel/initramfs rebuild may just have happened.
 if grep -qE '^HOOKS=.*[( ]encrypt[ )]' /etc/mkinitcpio.conf.d/omarchy_hooks.conf 2>/dev/null &&
   grep -qE 'rd\.luks\.uuid=|root=/dev/mapper/' /proc/cmdline; then
   step "Verify the boot menu can unlock LUKS"
@@ -76,7 +72,7 @@ if grep -qE '^HOOKS=.*[( ]encrypt[ )]' /etc/mkinitcpio.conf.d/omarchy_hooks.conf
     echo "all $cmdlines_total menu cmdline(s) carry cryptdevice="
   else
     failed+=("boot-contract")
-    printf '\e[31m%s of %s boot menu cmdlines lack cryptdevice= — do NOT reboot until fixed (ADR-0047)\e[0m\n' \
+    printf '\e[31m%s of %s boot menu cmdlines lack cryptdevice= — do NOT reboot until fixed (omarchy-desktop-on-cachyos ADR-0047)\e[0m\n' \
       "$((cmdlines_total - cmdlines_ok))" "$cmdlines_total"
   fi
 fi
@@ -98,8 +94,9 @@ else
 fi
 
 # The rice sits on top of all of it, and a package update can displace a symlink
-# (ADR-0028). Re-assert it here so the update ends with the desktop in a known
-# state rather than leaving it to the next `omarchy update` hook.
+# (omarchy-desktop-on-cachyos ADR-0028). Re-assert it here so the update ends
+# with the desktop in a known state rather than leaving it to the next `omarchy
+# update` hook.
 if command -v loaf &>/dev/null; then
   step "Re-assert the rice"
   loaf heal

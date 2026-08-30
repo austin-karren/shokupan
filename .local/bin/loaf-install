@@ -3,19 +3,17 @@
 # loaf:summary=Bootstrap the rice onto a fresh CachyOS + Omarchy machine
 # loaf:args=[--force]
 
-# The install path ADR-0035 says this repo owes: take a machine that already has
-# the two base layers — CachyOS installed normally, quattro layered onto it per
-# the lab's patched upgrade script — and put everything this repo decides on top:
-# chosen packages, flatpaks, the stowed config, the debloat list, migrations.
-#
-# It BINDS to the Omarchy version in packages/omarchy.pin. The rice reaches into
-# upstream's files (bar modules, menu overrides, window rules), so "does this
-# work" is only answerable against the version it was verified on. A different
-# installed version is a hard stop unless --force says the mismatch is accepted.
-#
-# Deliberately an orchestrator: every step below is an existing loaf command or
-# a pacman call, so a partial run is resumed by simply running it again — each
-# step is idempotent.
+# The install path omarchy-desktop-on-cachyos ADR-0035 says this repo owes: take
+# a machine that already has the two base layers — CachyOS installed normally,
+# quattro layered onto it per the lab's patched upgrade script — and put
+# everything this repo decides on top: chosen packages, flatpaks, the stowed
+# config, the debloat list, migrations. It BINDS to the Omarchy version in
+# packages/omarchy.pin. The rice reaches into upstream's files (bar modules,
+# menu overrides, window rules), so "does this work" is only answerable against
+# the version it was verified on. A different installed version is a hard stop
+# unless --force says the mismatch is accepted. Deliberately an orchestrator:
+# every step below is an existing loaf command or a pacman call, so a partial
+# run is resumed by simply running it again — each step is idempotent.
 
 set -uo pipefail
 
@@ -31,6 +29,12 @@ PATH="$(dirname "$(realpath "$0")"):$PATH"
 # after the first stow pass. Measured in the lab: heal silently skipped debloat.
 PATH="$(dirname "$(realpath "$0")"):$PATH"
 PACMAN_CONF="${PACMAN_CONF:-/etc/pacman.conf}"
+# The udev rules paths step 4a reasons about. Injectable for the same reason
+# $PACMAN_CONF is: they live under /etc and /usr, neither of which a test may
+# write, and both of which differ per machine.
+QMK_RULES="${QMK_RULES:-/etc/udev/rules.d/50-qmk.rules}"
+QMK_PKG_RULES="${QMK_PKG_RULES:-/usr/lib/udev/rules.d/50-qmk.rules}"
+QMK_EXTRA_RULES="${QMK_EXTRA_RULES:-/etc/udev/rules.d/51-qmk-extra.rules}"
 
 force=false
 [[ ${1:-} == --force ]] && force=true
@@ -57,12 +61,16 @@ printf '\033[1mInstalling the rice from %s\033[0m\n' "$LOAF_ROOT"
 
 step "Base (CachyOS)"
 
-[[ -d $LOAF_ROOT/.git ]] || die "$LOAF_ROOT is not a git checkout" \
-  "clone https://github.com/austin-karren/shokupan there first"
+# `.git` is a directory in a normal checkout but a file holding a `gitdir:`
+# pointer in a linked worktree, so ask git rather than testing for a directory
+# — every lane of a worktree-based workflow installs from one.
+git -C "$LOAF_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 ||
+  die "$LOAF_ROOT is not a git checkout" \
+    "clone https://github.com/austin-karren/shokupan there first"
 
 grep -q '^\[cachyos' "$PACMAN_CONF" 2>/dev/null ||
   die "no CachyOS repos in $PACMAN_CONF" \
-    "the base layer is not CachyOS — install it first (ADR-0034, ADR-0035)" \
+    "the base layer is not CachyOS — install it first (omarchy-desktop-on-cachyos ADR-0034, ADR-0035)" \
     "lab/quattro-vm documents the settings that matter"
 say "CachyOS repos present"
 
@@ -89,7 +97,7 @@ step "Desktop (Omarchy)"
 omarchy_version=$(pacman -Q omarchy 2>/dev/null | awk '{print $2}')
 [[ -n $omarchy_version ]] ||
   die "no omarchy package installed" \
-    "layer quattro onto the base first — lab/omarchy-upgrade-to-quattro.patched (ADR-0035)"
+    "layer quattro onto the base first — lab/omarchy-upgrade-to-quattro.patched (omarchy-desktop-on-cachyos ADR-0035)"
 
 PIN_FILE="$LOAF_ROOT/packages/omarchy.pin"
 [[ -f $PIN_FILE ]] || die "no packages/omarchy.pin — nothing records the verified version"
@@ -106,7 +114,8 @@ else
 fi
 
 # ---------------------------------------------------------
-# 3. Boot contract: LUKS cmdline vs Omarchy's initramfs hooks (ADR-0047)
+# 3. Boot contract: LUKS cmdline vs Omarchy's initramfs hooks
+#    (omarchy-desktop-on-cachyos ADR-0047)
 # ---------------------------------------------------------
 
 step "Boot contract"
@@ -156,7 +165,7 @@ done
 if ((${#missing[@]})); then
   say "installing ${#missing[@]} chosen package(s)"
   # OMARCHY_ALLOW_DIRECT_PACMAN: quattro's pacman hook refuses a direct call
-  # without it (ADR-0035).
+  # without it (omarchy-desktop-on-cachyos ADR-0035).
   $SUDO env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -S --needed --noconfirm "${missing[@]}" ||
     die "package install failed" "re-run 'loaf install' once fixed — every step resumes"
 else
@@ -166,6 +175,103 @@ fi
 if command -v flatpak &>/dev/null && [[ -f $LOAF_ROOT/packages/chosen.flatpaks ]]; then
   loaf-flatpaks --quiet || loaf-flatpaks --install
   say "flatpaks reconciled"
+fi
+
+# ---------------------------------------------------------
+# 4a. Keyboard flashing access
+# ---------------------------------------------------------
+
+step "Keyboard"
+
+# The QMK CLI can talk to a board over raw HID as any user, but putting it into
+# its bootloader to flash needs a udev rule — without one the device appears
+# root-only and `qmk flash` fails with a permissions error that reads like a
+# missing device.
+#
+# qmk 1.2.0-3 ships such a rule at /usr/lib/udev/rules.d/50-qmk.rules, and udev
+# resolves same-named files by directory precedence: anything in
+# /etc/udev/rules.d SHADOWS /usr/lib/udev/rules.d entirely. The old gate ("write
+# our full copy to /etc if /etc has nothing") therefore manufactured a file
+# owned by no package that overrode pacman's — on every fresh machine, and on
+# this one (measured 2026-08-21: 4402 bytes in /etc, unowned, over a 3698-byte
+# packaged copy).
+#
+# But the packaged file is not a substitute either: it is a strict SUBSET of
+# QMK upstream, missing 7 bootloader ids including the Raspberry Pi RP2040 /
+# RP2350 BOOTSEL, which is what this machine's board flashes through. Simply
+# deleting the shadow would have traded an ownership bug for silently losing
+# the ability to flash. So the two cases are separated:
+#
+#   packaged rule present  →  pacman owns 50-, we add only what it lacks as
+#                             51-qmk-extra.rules (packages/qmk-udev-extra.rules)
+#   packaged rule absent   →  nothing provides the rules, so the rice supplies
+#                             the whole file (packages/qmk-udev.rules)
+#
+# Gated on the packaged FILE, not on `pacman -Qq qmk`. The question is "does
+# something already provide this", and the file existing IS that condition; the
+# package is only a proxy for it, and a wrong one in both directions — qmk
+# installed with its rule deleted, or a qmk that ships none, would each send us
+# down the wrong branch. It also matches how the rest of this script reasons:
+# `pacman -Qq` answers "should I install this package" (steps 1 and 4), while
+# every question about a file on disk — step 3's LUKS drop-in, and this step's
+# own /etc checks — tests the path.
+qmk_full=$LOAF_ROOT/packages/qmk-udev.rules
+qmk_extra=$LOAF_ROOT/packages/qmk-udev-extra.rules
+
+if [[ -f $QMK_PKG_RULES ]]; then
+  # pacman ships and owns 50-qmk.rules, so that basename is never ours to
+  # write. Add only the bootloaders it lacks, under a name pacman does not use
+  # — 51- sorts after 50-, and udev unions files with distinct basenames.
+  # Refreshed whenever it differs, unlike the 50- fallback below: this name is
+  # unambiguously the rice's, so there is no hand-tuning to preserve.
+  if [[ -f $qmk_extra ]]; then
+    if cmp -s "$qmk_extra" "$QMK_EXTRA_RULES"; then
+      say "qmk supplemental udev rules current"
+    else
+      say "installing $QMK_EXTRA_RULES"
+      if $SUDO install -m 644 "$qmk_extra" "$QMK_EXTRA_RULES"; then
+        $SUDO udevadm control --reload-rules
+        $SUDO udevadm trigger
+      else
+        say "could not install the supplemental qmk udev rules"
+        say "flashing an RP2040/AT32/GD32V/APM32/WB32 board will need sudo"
+      fi
+    fi
+  fi
+  # The pre-2026-08-21 installer's output, if this machine ran it. Not removed
+  # here: it needs root and it is not this script's call.
+  if [[ -f $QMK_RULES ]]; then
+    say "$QMK_RULES shadows the packaged rule at $QMK_PKG_RULES"
+    say "with $QMK_EXTRA_RULES in place it is redundant: sudo rm $QMK_RULES"
+  fi
+elif [[ -f $qmk_full ]]; then
+  # Nothing packaged provides the rules, so the rice supplies the whole file.
+  # Only ever written when absent: a hand-tuned rule here is left alone.
+  if [[ -f $QMK_RULES ]]; then
+    say "qmk udev rule already present"
+  else
+    say "installing $QMK_RULES"
+    if $SUDO install -m 644 "$qmk_full" "$QMK_RULES"; then
+      $SUDO udevadm control --reload-rules
+      $SUDO udevadm trigger
+    else
+      say "could not install the qmk udev rule — flashing will need sudo"
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------
+# 4b. The plugins repo
+# ---------------------------------------------------------
+
+step "Plugins"
+
+# Split out on 2026-08-18: publishable on its own, so a fresh machine fetches it
+# rather than carrying it here. loaf-plugins is idempotent and owns the layout.
+if command -v loaf-plugins &>/dev/null; then
+  loaf-plugins || die "plugins install failed" "re-run 'loaf install' once fixed"
+else
+  say "loaf-plugins not on PATH yet — the stow pass below installs it; re-run"
 fi
 
 # ---------------------------------------------------------

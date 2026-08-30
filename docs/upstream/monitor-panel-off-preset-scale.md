@@ -1,7 +1,8 @@
 # Draft issue: the monitor panel shows no scale when the current scale is off-preset
 
-**Status: draft — not posted.** Per ADR-0044 rule 5: issue first, PR only
-after upstream's temperature is known, nothing posted without an explicit go.
+**Status: draft — not posted.** Per shokupan-plugins ADR-0044 rule 5: issue
+first, PR only after upstream's temperature is known, nothing posted without an
+explicit go.
 
 ## Title
 
@@ -33,8 +34,8 @@ scale is set.
 ## Rice context (not for the issue)
 
 This is the deliberate 200/120 rung documented in `.config/hypr/monitors.lua`;
-snapping the pin to 1.6 was rejected (a whole rung smaller UI), and cloning
-the monitor panel for a cosmetic highlight was rejected (durability bar,
-ADR-0044). ADR-0029's final addendum records the investigation. Until
-upstream shows off-preset scales, the panel showing no selection on this
-machine is expected behaviour.
+snapping the pin to 1.6 was rejected (a whole rung smaller UI), and cloning the
+monitor panel for a cosmetic highlight was rejected (durability bar,
+shokupan-plugins ADR-0044). shokupan-plugins ADR-0029's final addendum records
+the investigation. Until upstream shows off-preset scales, the panel showing no
+selection on this machine is expected behaviour.

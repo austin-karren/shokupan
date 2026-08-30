@@ -33,4 +33,6 @@ its behaviour is established here.
   that writes per-repo or per-tree git config should not be allowed to reintroduce
   an email into a tracked file.
 - **Where it gets recorded.** If this becomes part of the workflow it belongs in
-  `~/.config/git/config` aliases or the package list, so a rebuilt machine has it.
+  the package list here, or in `~/.config/git/config`'s aliases — which is
+  `crumb`'s file since 2026-08-19, not this repo's (ADR-0003 amendment) — so a
+  rebuilt machine has it.

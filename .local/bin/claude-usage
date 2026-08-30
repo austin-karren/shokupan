@@ -1,17 +1,16 @@
 #!/bin/bash
 
-# The Claude usage Reading, as a notification (ADR-0039, option 1).
-#
-# The bar chip is gone; this is what the launcher's "Claude Usage" entry runs.
-# Since r1744 it reuses upstream's collector — omarchy-agent-usage-claude, the
-# same record the omarchy.agents bar widget reads (a widget this rice does not
-# mount, per ADR-0039) — and renders it with notify-send. The old model-usage
-# scanner this wrapped was deleted in the r1744 rename to "agents".
-#
-# The collector's record is a superset of the old scanner's: today's tokens by
-# model, sessions, prompts, the seven-day history, AND the plan-limit
-# percentages from the OAuth side — the part ADR-0039 wrote off as not worth
-# reimplementing in bash. Upstream did it, so the notification shows it.
+# The Claude usage Reading, as a notification (shokupan-plugins ADR-0039, option
+# 1). The bar chip is gone; this is what the launcher's "Claude Usage" entry
+# runs. Since r1744 it reuses upstream's collector —
+# omarchy-agent-usage-claude, the same record the omarchy.agents bar widget
+# reads (a widget this rice does not mount, per shokupan-plugins ADR-0039) —
+# and renders it with notify-send. The old model-usage scanner this wrapped was
+# deleted in the r1744 rename to "agents". The collector's record is a superset
+# of the old scanner's: today's tokens by model, sessions, prompts, the
+# seven-day history, AND the plan-limit percentages from the OAuth side — the
+# part shokupan-plugins ADR-0039 wrote off as not worth reimplementing in bash.
+# Upstream did it, so the notification shows it.
 
 set -uo pipefail
 

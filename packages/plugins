@@ -1,0 +1,44 @@
+# The rice's own Omarchy shell plugins, each published as a standalone public
+# repo so `omarchy plugin add` can install it (shokupan-plugins ADR-0044
+# rule 3/4). One line per plugin:
+#
+#   <id> <git-url>
+#
+# <id>       the plugin id from its manifest.json — what shell.json's bar.layout
+#            and Omarchy's IPC routing use. NEVER rename these: austinkarren.*
+#            ids come from `omarchy plugin clone` and are what make the clone
+#            take over upstream's bar slot; shokupan.* is our third-party
+#            namespace (`omarchy.*` is reserved and rejected).
+# <git-url>  the plugin's own repo. `omarchy plugin add` clones the URL and
+#            reads manifest.json at the REPO ROOT, which is why these are seven
+#            repos and not one — see omarchy-plugin-add, and the layout note in
+#            the shokupan-plugins README.
+#
+# The repos are named `omarchy-<function>`, the convention the plugin directory's
+# own docs use, because that is what a stranger searches. The ids did not change
+# with them: repo name and plugin id are deliberately different here.
+#
+# Development still happens in the shokupan-plugins monorepo under `plugins/`;
+# these repos are the published edge. A change lands there first and is
+# republished — so after editing a plugin, push the split repo too or the
+# directory serves stale code.
+#
+# `loaf plugins` links the monorepo checkout into ~/.config/omarchy, which is
+# what this machine runs. This manifest is for anyone installing them the
+# public way, and for re-deriving the list after a rename.
+#
+# A plugin that is retired comes OFF this list and its source moves out of the
+# monorepo's `plugins/` directory, into `retired/`. Both halves are needed:
+# dropping the line alone leaves a shipped-but-unpublished plugin, which
+# `loaf plugins --index` calls red, and moving the source alone leaves a
+# published repo this monorepo no longer backs. `shokupan.notifications` was
+# retired that way on 2026-08-24 — see shokupan-plugins ADR-0044's addendum for
+# why.
+
+shokupan.omenu           https://github.com/austin-karren/omarchy-menu-power-glyph.git
+shokupan.apexshot        https://github.com/austin-karren/omarchy-apexshot.git
+shokupan.capture         https://github.com/austin-karren/omarchy-capture-button.git
+shokupan.dpms-guard      https://github.com/austin-karren/omarchy-dpms-guard.git
+austinkarren.clock       https://github.com/austin-karren/omarchy-clock-calendar.git
+austinkarren.network     https://github.com/austin-karren/omarchy-network-globe.git
+austinkarren.notifications https://github.com/austin-karren/omarchy-notification-desktop-entry.git

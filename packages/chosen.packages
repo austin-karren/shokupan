@@ -46,13 +46,23 @@ pnpm
 aws-cli-v2
 terraform
 
-# per-directory environment loading, hooked in .bashrc
+# per-directory environment loading, hooked in crumb's .bashrc tier-2 drop-ins
 direnv
 
 # Language runtimes are deliberately absent: mise owns those, pinned per-project
-# in ~/.config/mise/config.toml, not pacman.
+# in ~/.config/mise/config.toml (crumb's file), not pacman.
 
 # The KDE Breeze cursor, this machine's pointer since before quattro. Tracked
 # because the theme has to exist before .icons/default/index.theme and
 # uwsm/env.d/30-cursor-theme can point at it (2026-08-18).
 breeze-cursors
+
+# Keyboard firmware tooling. The Freebird75 is a QMK/VIA board, so the keymap is
+# part of this machine's configuration even though it lives in the keyboard's
+# own EEPROM. Earned its place diagnosing a bent switch pin on 2026-08-19: the
+# exported layout ruled out macros and layers, which is what proved the fault
+# was electrical rather than software.
+#
+# Prefer this over the uv/pip install: `uv tool install qmk` puts a second qmk
+# in ~/.local/bin that shadows this one and is invisible to `loaf packages`.
+qmk

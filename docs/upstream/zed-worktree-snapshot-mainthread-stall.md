@@ -1,8 +1,8 @@
 # Draft upstream issue — zed-industries/zed
 
 Status: DRAFT — not posted. Austin reviews, edits, and posts from his own
-account (ADR-0044 decision 5; Zed's CONTRIBUTING.md expects the human in the
-loop to own the report, so the submit click is his).
+account (shokupan-plugins ADR-0044 decision 5; Zed's CONTRIBUTING.md expects the
+human in the loop to own the report, so the submit click is his).
 
 Structured to match Zed's bug template (`10_bug_report.yml`). Specs and log
 excerpts are filled in from the real machine. Provenance note: the 25s-stall

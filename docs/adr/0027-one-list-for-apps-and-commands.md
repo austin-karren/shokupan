@@ -209,12 +209,12 @@ What remains in `~/.config/omarchy/extensions/omarchy-menu.jsonc`:
 
 | Entry | Why it survives |
 |---|---|
-| 1-Window Zen Ratio | **Override.** Upstream's row hardcodes 1:1; this machine runs 6:5 (ADR-0026) |
+| 1-Window Zen Ratio | **Override.** Upstream's row hardcodes 1:1; this machine runs 6:5 (shokupan-plugins ADR-0026) |
 | Monitor Scaling ↑/↓ | No upstream row at all — keybinding only. `-cycle` was deleted, so one row became two |
 | Switch to Light / Dark | No upstream row. Two rows gated on `when:` reproduce the old dynamic label |
 | Emoji & Symbols, Clipboard History | Native overlays with keybindings but no menu row |
-| Update System | Deliberately distinct from upstream's "Update > Omarchy" (ADR-0034) |
-| Calendar | ADR-0006 — and its bar entry point died with Waybar |
+| Update System | Deliberately distinct from upstream's "Update > Omarchy" (omarchy-desktop-on-cachyos ADR-0034) |
+| Calendar | shokupan-plugins ADR-0006 — and its bar entry point died with Waybar |
 
 ### The naming rule survived; the ordering machinery did not
 
@@ -242,10 +242,10 @@ row-alignment measurements in this ADR are now historical only.
 
 Two claims made when the upgrade landed did not survive being checked:
 
-- ADR-0033 said the palette was "a mechanical rewrite into the plugin's config
-  language". It was not mechanical — 21 entries were redundant and one had lost its
-  underlying command.
-- The chord collision was resolved in favour of upstream; see below.
+- omarchy-desktop-on-cachyos ADR-0033 said the palette was "a mechanical rewrite
+  into the plugin's config language". It was not mechanical — 21 entries were
+  redundant and one had lost its underlying command. - The chord collision was
+  resolved in favour of upstream; see below.
 
 ### The chord collision, resolved
 
@@ -319,11 +319,12 @@ scoring ranks all entries — the block is the resting order, search is search.
 `FixedOrder = true` became eleven lines of comparator.
 
 Verified three ways: a screenshot of the running plugin showing the block on top
-(Screensaver → Nightlight → Idle Lock → Notifications → Top Bar → Workspace
-Layout, glyphs rendering in the icon slot); the fork's `sortedEntries` run under
-node against a shuffled mix, asserting contiguous-block, defined order,
-alphabetical apps and no interleave; and activation through the launcher's own
-`gtk-launch` path flipping the zen-ratio flag (ADR-0026) off and on.
+(Screensaver → Nightlight → Idle Lock → Notifications → Top Bar →
+Workspace Layout, glyphs rendering in the icon slot); the fork's `sortedEntries`
+run under node against a shuffled mix, asserting contiguous-block, defined
+order, alphabetical apps and no interleave; and activation through the
+launcher's own `gtk-launch` path flipping the zen-ratio flag (shokupan-plugins
+ADR-0026) off and on.
 
 ### What is still open
 
@@ -348,9 +349,10 @@ apps menu lists applications only. Commands are reached via the Omarchy Menu
 (`SUPER+ALT+SPACE`), which quattro made searchable from the root — the
 discovery half of the original ask, upstream's to maintain.
 
-The history argued for this: the entries duplicated quattro's own menu (21 of
-27 were already upstream rows when the port landed), and the merge regressed
-twice across upgrades — first when quattro deleted Elephant's provider system,
-then when r1744 deleted the launcher plugin the rebuild forked. A list that
-dies with every upstream restructure is a maintenance contract, not a feature.
-`claude-usage` (the script, ADR-0039) survives; only its launcher entry goes.
+The history argued for this: the entries duplicated quattro's own menu (21 of 27
+were already upstream rows when the port landed), and the merge regressed twice
+across upgrades — first when quattro deleted Elephant's provider system, then
+when r1744 deleted the launcher plugin the rebuild forked. A list that dies with
+every upstream restructure is a maintenance contract, not a feature.
+`claude-usage` (the script, shokupan-plugins ADR-0039) survives; only its
+launcher entry goes.

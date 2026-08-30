@@ -7,8 +7,9 @@ superseded-by: 0033
 
 > **Mechanism deleted 2026-08-09.** `config.jsonc`, which carried the `on-click`
 > entries, went with Waybar. The wrappers themselves are deleted from
-> `.local/bin/` — quattro dismisses natively (ADR-0033), so the behaviour is
-> what survives, not the wrappers. Old file: tag `omarchy-v3.8.4-prequattro`.
+> `.local/bin/` — quattro dismisses natively (omarchy-desktop-on-cachyos
+> ADR-0033), so the behaviour is what survives, not the wrappers. Old file: tag
+> `omarchy-v3.8.4-prequattro`.
 
 Omarchy's bar modules call `omarchy-launch-*` / `omarchy-launch-or-focus-tui`,
 which by design *focus* an existing window instead of dismissing it. Since Waybar
@@ -21,13 +22,13 @@ through a Toggle wrapper that makes the second click a dismissal.
 Each wrapper decides for itself whether "dismiss" means close or hide, based on
 restart cost — this is deliberately not uniform:
 
-- `window-toggle <class> <cmd…>` **closes**. Used for `bluetooth` and `network`.
-  bluetui and impala are cheap to restart and poll live hardware, so a stale
-  hidden copy would be worse than a fresh one.
-- `calendar-toggle` **hides**, on a dedicated `calendar` special workspace.
-  GNOME Calendar talks to evolution-data-server on startup, so a cold launch
-  costs seconds, and hiding also preserves the scrolled-to month. See ADR-0006.
-- `menu-toggle` closes, and additionally needs a 400 ms grace window.
+- `window-toggle <class> <cmd…>` **closes**. Used for `bluetooth` and
+  `network`. bluetui and impala are cheap to restart and poll live hardware, so
+  a stale hidden copy would be worse than a fresh one. - `calendar-toggle`
+  **hides**, on a dedicated `calendar` special workspace. GNOME Calendar talks
+  to evolution-data-server on startup, so a cold launch costs seconds, and
+  hiding also preserves the scrolled-to month. See shokupan-plugins ADR-0006. -
+  `menu-toggle` closes, and additionally needs a 400 ms grace window.
 
 That grace window is the subtle part. Waybar dispatches `on-click` from a GTK
 gesture that completes on button **release**, while Walker can already be tearing

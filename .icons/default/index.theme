@@ -3,8 +3,8 @@
 # /usr/share/icons/default/index.theme inherits Adwaita, and that is the system
 # fallback every toolkit consults when nothing more specific is set. This
 # user-level file outranks it, which is why the cursor belongs here rather than
-# in a patched /usr/share file (ADR-0034's layer rule: never edit what a package
-# owns).
+# in a patched /usr/share file (omarchy-desktop-on-cachyos ADR-0034's layer
+# rule: never edit what a package owns).
 #
 # Three mechanisms have to agree or the pointer changes as it crosses windows,
 # and each answers a different consumer:

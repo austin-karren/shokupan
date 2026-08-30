@@ -96,11 +96,12 @@ knob with an obvious direction to adjust, not a correctness question.
 
 ## Addendum: ported to quattro, 2026-08-09
 
-This ADR came through the quattro migration (ADR-0033) more cheaply than any other in
-the window-management set, because it was never anything but settings. The four values
-are unchanged; only the file and the syntax moved, from a `general { }` block in
-`looknfeel.conf` to an `hl.config({ general = { … } })` call in `looknfeel.lua`. Nested
-`snap` survives as a nested Lua table, so even the shape is the same.
+This ADR came through the quattro migration (omarchy-desktop-on-cachyos
+ADR-0033) more cheaply than any other in the window-management set, because it
+was never anything but settings. The four values are unchanged; only the file
+and the syntax moved, from a `general { }` block in `looknfeel.conf` to an
+`hl.config({ general = { … } })` call in `looknfeel.lua`. Nested `snap`
+survives as a nested Lua table, so even the shape is the same.
 
 Re-confirmed by `hyprctl getoption` after `hyprctl reload`, all four plus the gaps they
 depend on:

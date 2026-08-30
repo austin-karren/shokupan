@@ -49,11 +49,12 @@ wallpaper is a one-line revert.
 
 ## Heal and doctor close the loop
 
-`loaf heal` runs `loaf-wallpapers --offline` on every pass (ADR-0028), so the
-pool re-asserts after upstream updates without the post-update hook ever
-touching the network — present files re-link, missing downloads wait for a
-manual `loaf wallpapers`. `loaf doctor` asserts the claim read-only: pool dir
-exists, every manifest entry's file is on disk, no dangling symlinks.
+`loaf heal` runs `loaf-wallpapers --offline` on every pass
+(omarchy-desktop-on-cachyos ADR-0028), so the pool re-asserts after upstream
+updates without the post-update hook ever touching the network — present files
+re-link, missing downloads wait for a manual `loaf wallpapers`. `loaf doctor`
+asserts the claim read-only: pool dir exists, every manifest entry's file is on
+disk, no dangling symlinks.
 
 ## Consequences
 

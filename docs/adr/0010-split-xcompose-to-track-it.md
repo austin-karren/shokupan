@@ -16,11 +16,12 @@ XCompose's own home expansion, rather than a hard-coded path.
 
 ## The open questions, settled by implementing (2026-08-09)
 
-**Whether the tracked remainder is worth a file** — yes, and not for the reason
-proposed. The tracked file is what makes `loaf heal` defend the config: the
-quattro upgrade rewrote `~/.XCompose` on 2026-08-09 and blanked both identity
-expansions to `""`, exactly the silent-overwrite failure ADR-0028 exists for.
-Untracked, nothing noticed. Tracked, the displacement check would have flagged it.
+**Whether the tracked remainder is worth a file** — yes, and not for the
+reason proposed. The tracked file is what makes `loaf heal` defend the config:
+the quattro upgrade rewrote `~/.XCompose` on 2026-08-09 and blanked both
+identity expansions to `""`, exactly the silent-overwrite failure
+omarchy-desktop-on-cachyos ADR-0028 exists for. Untracked, nothing noticed.
+Tracked, the displacement check would have flagged it.
 
 **Whether a missing `~/.XCompose.local` fails loudly** — worse than predicted,
 and measured rather than assumed. The proposal guessed "dead keybind". In fact

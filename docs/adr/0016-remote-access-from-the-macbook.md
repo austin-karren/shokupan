@@ -91,9 +91,9 @@ below stands.
 ## Where this is recorded
 
 `tailscaled`'s enablement and the `--ssh` flag are systemd/daemon state, not
-dotfiles — Stow cannot express them and `loaf doctor` does not currently assert
-them. This ADR is the record. If remote access ever breaks silently, the checks
-worth adding to doctor are `tailscale debug prefs | grep RunSSH` and
+dotfiles — Stow cannot express them and `loaf doctor` does not currently
+assert them. This ADR is the record. If remote access ever breaks silently, the
+checks worth adding to doctor are `tailscale debug prefs | grep RunSSH` and
 `systemctl is-active tailscaled`; they were left out for now because a check
-should earn its slot by a failure actually observed (ADR-0028), and none has
-been.
+should earn its slot by a failure actually observed (omarchy-desktop-on-cachyos
+ADR-0028), and none has been.

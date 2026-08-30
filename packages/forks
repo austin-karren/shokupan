@@ -10,30 +10,107 @@
 #                                         re-verify the coupling still holds.
 #
 # Re-stamp after re-verifying: loaf forks --record
-.config/omarchy/bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml f64fc3a122d71e6cc1f9a8b8284416df29cac070306fa6df55e9f1053fe4cf65
-# ADR-0006 addendum: the clock clone (austinkarren.clock, upstream's sanctioned
-# plugin-clone shape). Panel.qml is the only patched file — day/hero clicks run
-# calendar-toggle --date, each divergence marked // SHOKUPAN:. BarWidget.qml is
-# ALSO patched (its left click runs clock-click, so a second click closes the
-# popup) — re-diff both, never re-clone them, or the dialog behaviour is lost.
-# Model.js is a verbatim copy and manifest.json is the clone tool's own jq
-# rewrite: refresh those two by re-cloning.
-.config/omarchy/plugins/austinkarren.clock/Panel.qml /usr/share/omarchy/shell/plugins/panels/clock/Panel.qml ce59ce0674dbf22c24ff83c6eeeb827f95d922f5cb5863da94f4bab5c4d1430b
-.config/omarchy/plugins/austinkarren.clock/BarWidget.qml /usr/share/omarchy/shell/plugins/panels/clock/BarWidget.qml cfcdaeedc4ae5832b37271a84bb92ee762301022e2443a0f769992fa792acf28
-# ADR-0029 addendum (2026-08-15): the network clone (austinkarren.network,
-# same sanctioned plugin-clone shape as the clock). Model.js is the only
-# patched file — connectionIcon()'s ethernet arm returns the globe "\u{f059f}"
-# instead of upstream's RJ45 "\u{f0200}", marked // SHOKUPAN:. Panel.qml is a
-# verbatim copy and manifest.json is the clone tool's own jq rewrite — refresh
-# those two by re-cloning, not by re-diffing. This re-lives the wired-globe
-# section that regressed at r1744; the durable end state is still an upstream
-# glyph setting (draft in docs/upstream/).
-.config/omarchy/plugins/austinkarren.network/Model.js /usr/share/omarchy/shell/plugins/panels/network/Model.js 864f658384438e319d6051bf95a18384fee1c6512686dc8cb9df18888c1760a1
-# ADR-0029 addendum (2026-08-15): shokupan.omenu is back on the bar (kept
-# identity deviation, user's word). Its BarWidget.qml is our own QML, but the
-# two click actions (the omarchy-shell IPC toggle and xdg-terminal-exec) are
-# copied verbatim from upstream's menu button — if upstream renames the IPC
-# route or the WidgetButton API, the button goes dead. Watch, not fork.
-.config/omarchy/plugins/shokupan-omenu/BarWidget.qml /usr/share/omarchy/shell/plugins/menu/BarWidget.qml ad201156483711ba77ec97303183bc02922248e97ac0c0b8ea30d250e57cd0af watch
+#
+# Paths are relative to whichever checkout holds them — the plugins repo for
+# hosted QML, this repo for the rice's own files.
+bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml f64fc3a122d71e6cc1f9a8b8284416df29cac070306fa6df55e9f1053fe4cf65
+# shokupan-plugins ADR-0006 addendum: the clock clone (austinkarren.clock,
+# upstream's sanctioned plugin-clone shape). Panel.qml is the only patched file
+# — day/hero clicks run calendar-toggle --date, each divergence marked //
+# SHOKUPAN:. BarWidget.qml is ALSO patched (its left click runs clock-click, so
+# a second click closes the popup) — re-diff both, never re-clone them, or the
+# dialog behaviour is lost. Model.js is a verbatim copy and manifest.json is the
+# clone tool's own jq rewrite: refresh those two by re-cloning.
+plugins/austinkarren.clock/Panel.qml /usr/share/omarchy/shell/plugins/panels/clock/Panel.qml ce59ce0674dbf22c24ff83c6eeeb827f95d922f5cb5863da94f4bab5c4d1430b
+plugins/austinkarren.clock/BarWidget.qml /usr/share/omarchy/shell/plugins/panels/clock/BarWidget.qml cfcdaeedc4ae5832b37271a84bb92ee762301022e2443a0f769992fa792acf28
+# shokupan-plugins ADR-0029 addendum (2026-08-15): the network clone
+# (austinkarren.network, same sanctioned plugin-clone shape as the clock).
+# Model.js is the only patched file — connectionIcon()'s ethernet arm returns
+# the globe "\u{f059f}" instead of upstream's RJ45 "\u{f0200}", marked //
+# SHOKUPAN:. Panel.qml is a verbatim copy and manifest.json is the clone tool's
+# own jq rewrite — refresh those two by re-cloning, not by re-diffing. This
+# re-lives the wired-globe section that regressed at r1744; the durable end
+# state is still an upstream glyph setting (draft in docs/upstream/).
+plugins/austinkarren.network/Model.js /usr/share/omarchy/shell/plugins/panels/network/Model.js 864f658384438e319d6051bf95a18384fee1c6512686dc8cb9df18888c1760a1
+# shokupan-plugins ADR-0044 addendum (2026-08-24): the notification-service
+# clone (austinkarren.notifications, the same sanctioned plugin-clone shape as
+# the clock and the network panel — but a `service` kind, so enabling it swaps
+# out the daemon that receives notifications rather than a bar widget).
+#
+# The fork carries TWO independent patches, both to how an entry's identity is
+# stored, and they retire on different triggers — do not assume removing one
+# empties the plugin out:
+#
+#   1. The desktop-entry fallback. Reads the `desktop-entry` hint that
+#      upstream's `app: n.appName || ""` discards, so a sender that supplied no
+#      app_name still gets a name and an icon. Retires if upstream takes it.
+#   2. The slot shift (2026-08-24). When a summary is exactly the app's own
+#      name and there is a body under it, the body's first line is promoted
+#      into the summary slot. It exists because OSC 9 carries a body and no
+#      title, so Ghostty hardcodes "Ghostty" as the summary of every
+#      terminal-delivered notification and the real message sits one slot low.
+#      This is NOT an Omarchy bug and is not in the upstream draft: it is a
+#      workaround for a transport that loses titles, and it retires when herdr
+#      can emit OSC 777. It is a heuristic — see the plugin README, which is
+#      where its provisional nature and its retirement condition are recorded.
+#
+# Two files are patched and both are recorded:
+#
+#   Service.qml           — four added lines and three changed, all marked
+#                           // SHOKUPAN:. It is upstream's 1,062-line service;
+#                           re-diff it, never re-clone it, or the fallback's
+#                           three call sites go back to upstream's arity and the
+#                           name silently stops being recovered.
+#   NotificationLogic.js  — both patches, plus the body of snapshotOf rewritten
+#                           to route through them. Every divergence is marked
+#                           // SHOKUPAN:.
+#
+# components/NotificationCard.qml is a verbatim copy and manifest.json is the
+# clone tool's own jq rewrite with the metadata edited: refresh the card by
+# re-cloning, not by re-diffing. It is recorded as a fork anyway, because it is
+# a copy of a file upstream keeps changing and a stale card is exactly the drift
+# this board exists to catch. DesktopEntryLookup.qml is ours and has no upstream.
+#
+# The durable end state for patch 1 is upstream taking the fallback (draft in
+# docs/upstream/notification-desktop-entry-fallback.md). Patch 2 survives that,
+# so upstream saying yes shrinks this fork rather than deleting it.
+plugins/austinkarren.notifications/Service.qml /usr/share/omarchy/shell/plugins/notifications/Service.qml f806759a6ccb27a19d39ab9884d438b69af392256cae7b760d944619738f2726
+plugins/austinkarren.notifications/NotificationLogic.js /usr/share/omarchy/shell/plugins/notifications/NotificationLogic.js d45dc8debd8946a48a909a126dd755ba9f95846382a85afdd6fd1e8921f5d131
+plugins/austinkarren.notifications/components/NotificationCard.qml /usr/share/omarchy/shell/plugins/notifications/components/NotificationCard.qml 3ffb66ebc065886fc05b6215bd6fff9cd9e5769fac15f807748d550c91efc2f4
+# shokupan-plugins ADR-0029 addendum (2026-08-15): shokupan.omenu is back on the
+# bar (kept identity deviation, user's word). Its BarWidget.qml is our own QML,
+# but the two click actions (the omarchy-shell IPC toggle and xdg-terminal-exec)
+# are copied verbatim from upstream's menu button — if upstream renames the
+# IPC route or the WidgetButton API, the button goes dead. Watch, not fork.
+plugins/shokupan-omenu/BarWidget.qml /usr/share/omarchy/shell/plugins/menu/BarWidget.qml ad201156483711ba77ec97303183bc02922248e97ac0c0b8ea30d250e57cd0af watch
 # The r1744 upgrade absorbed the microphone wrapper's fixed-width pin into
 # upstream's own BarIconButton behaviour (deviation deleted, not regressed).
+# ADR-0042: the bash seam. The rice's Omarchy arm was split out of .bashrc so
+# the .bashrc could go desktop-agnostic in crumb (which now owns it), and split
+# again across crumb's two tiers the way upstream's own default/bashrc divides
+# them: the OMARCHY_PATH block in .config/bash/env.d/00-omarchy.sh above the
+# interactivity guard, and the rc source in .config/bash/50-omarchy-rc.sh below
+# it.
+#
+# The watch is recorded against 50-omarchy-rc.sh, the file that actually
+# sources /usr/share/omarchy/default/bash/rc. It depends on that path existing
+# and on rc staying the aggregator that pulls in envs / shell / aliases /
+# functions / init. Watch, not fork: nothing is copied. This is the first
+# .bashrc-side dependency ever recorded here, which is why its drift from
+# upstream went unnoticed while the board read clean. Drift means re-check that
+# rc still is what we source and that our guard still matches upstream's shape.
+#
+# 00-omarchy.sh now carries a watch too. It used to hand-roll the OMARCHY_PATH
+# block against /etc/omarchy.conf — machine state, not a packaged upstream file,
+# so there was nothing to watch. It now sources
+# /usr/share/omarchy/default/bash/env-bootstrap instead, upstream's own single
+# source of truth for OMARCHY_PATH + PATH. Watch, not fork: nothing is copied,
+# but the env tier depends on that path existing and on what the file
+# establishes — OMARCHY_PATH, the dev-link $OMARCHY_PATH/bin prepend, and the
+# appended ~/.local/share/mise/shims and ~/.local/bin. Drift means re-diff the
+# resulting environment and PATH order, not just re-read the file: an upstream
+# switch from append to prepend would silently reorder every non-interactive
+# shell on this machine. Keep it in sync with upstream's own PAM PATH line in
+# install/config/ssh-command-path.sh, which covers the same directories.
+.config/bash/50-omarchy-rc.sh /usr/share/omarchy/default/bash/rc f5abfe8652e3df79de7d247f72a7f3b663a6521a8135609b04b839fc6ac2bfda watch
+.config/bash/env.d/00-omarchy.sh /usr/share/omarchy/default/bash/env-bootstrap 54b43c059d028c8332b7a7bda9b53f5dafdbfdc9c64c4f1dda73d5959a64e5e9 watch

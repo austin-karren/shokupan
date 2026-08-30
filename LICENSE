@@ -1,0 +1,104 @@
+MIT License
+
+This repository contains work derived from the Omarchy project
+(https://github.com/basecamp/omarchy), which is MIT licensed, alongside
+original work. Because the mix differs per file, the derivation is named
+per path rather than claimed in one blanket sentence. Line counts are
+against Omarchy 4.0.0.r1744 unless noted.
+
+`packages/forks` is this repo's own record of the upstream files the rice
+copies or couples to, with the SHA-256 each carried when the dependency was
+last verified. It is the authority on what is derived and is kept current by
+`loaf forks --record`; this notice names the paths but does not restate it.
+
+Upstream Omarchy's work, carried verbatim
+-----------------------------------------
+
+  .config/hypr/xdph.conf
+      Byte-identical to config/hypr/xdph.conf (4 lines). Tracked so `loaf
+      heal` catches its displacement, not to change anything in it.
+
+  .config/hypr/hyprsunset.conf
+      Upstream's config/hypr/hyprsunset.conf (14 lines), carried as it stood
+      before the quattro migration. The only lines that differ from the
+      installed copy are a stale comment about autostarting hyprsunset; no
+      setting differs.
+
+Upstream Omarchy's work, with modifications by Austin Karren
+------------------------------------------------------------
+
+Each file below began as upstream's and was modified in place: the comment
+scaffold and the shape are upstream's, the values and additions are this
+rice's.
+
+  .config/hypr/input.conf
+      From upstream's stock user input config (54 lines). Upstream's are the
+      structure, the commented-out examples and the prose. Modified: the
+      settings actually enabled (compose:caps, repeat rate and delay,
+      clickfinger, touchpad scroll factor) and three added lines — the
+      per-terminal scroll_touchpad window rules.
+
+  .config/hypr/hyprland.lua
+      From config/hypr/hyprland.lua (43 lines). Upstream's are the bootstrap
+      `dofile`, the `require("default.hypr.omarchy")` load and the
+      override-require shape that makes personal files load after the
+      defaults. Modified: the require list names this repo's own modules,
+      including windows.lua, which stock quattro has no counterpart for, and
+      a trailing block pins the single-window aspect ratio to 6:5 while
+      leaving upstream's toggle mechanism entirely alone (shokupan-plugins
+      ADR-0026).
+
+  .config/chromium-flags.conf
+      The four flag lines are upstream's, adopted verbatim when the file was
+      brought into the repo (20 lines total, the rest being the comment that
+      explains why it is tracked — ADR-0036).
+
+Original work by Austin Karren
+------------------------------
+
+Written for this repository, overriding Omarchy through the extension points
+it documents rather than copying its implementations:
+
+  .local/bin/                    (the `loaf` CLI)
+  .config/hypr/bindings.lua      .config/hypr/looknfeel.lua
+  .config/hypr/windows.lua       .config/hypr/monitors.lua
+  .config/hypr/autostart.lua     .config/omarchy/hooks/
+  .config/uwsm/env.d/            .config/bash/
+  .local/share/applications/     .config/omarchy/extensions/
+  migrations/                    packages/
+  docs/                          test/
+  README.md                      .XCompose
+
+Two of these borrow a shape without copying content, and are recorded in
+`packages/forks` as watches rather than forks:
+`.config/bash/50-omarchy-rc.sh` and `.config/bash/env.d/00-omarchy.sh` each
+carry the guard shape from upstream's own `default/bashrc` and
+`/etc/skel/.bashrc` so the two stay comparable (ADR-0042). Every glyph
+codepoint in `.config/omarchy/extensions/omarchy-menu.jsonc` was extracted
+from upstream's menu or the pre-quattro palette rather than retyped, and its
+overrides restate the upstream fields they keep because upstream's
+mergeMenuSources() copies keys rather than merging them.
+
+The original copyright notice is retained below as the license requires.
+
+Copyright (c) David Heinemeier Hansson
+Copyright (c) 2026 Austin Karren (modifications and original work)
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

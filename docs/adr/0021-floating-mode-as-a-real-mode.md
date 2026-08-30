@@ -88,15 +88,16 @@ not the hard part; having them at all is.
 
 ## What the decision depends on
 
-- Whether **Floating mode** is per-workspace or global. Per-workspace is more useful
-  (one scratch space for floating work) and matches how the Calendar special
-  workspace already behaves (ADR-0006); global is what "toggle in the bar" implies.
-- Interaction with the **single-window zen aspect ratio** (ADR-0013, ADR-0026, glossary). `single_window_aspect_ratio`
-  only applies to a lone *tiled* window, so it silently stops mattering in Floating
-  mode. Two toggles on the bar where one quietly disables the other needs a decision,
-  not a surprise.
-- Whether `SUPER+T` survives. If a whole mode exists, floating one window inside
-  tiling mode may stop being useful — or become the more common action.
+- Whether **Floating mode** is per-workspace or global. Per-workspace is more
+  useful (one scratch space for floating work) and matches how the Calendar
+  special workspace already behaves (shokupan-plugins ADR-0006); global is what
+  "toggle in the bar" implies. - Interaction with the **single-window zen aspect
+  ratio** (shokupan-plugins ADR-0013, shokupan-plugins ADR-0026, glossary).
+  `single_window_aspect_ratio` only applies to a lone *tiled* window, so it
+  silently stops mattering in Floating mode. Two toggles on the bar where one
+  quietly disables the other needs a decision, not a surprise. - Whether
+  `SUPER+T` survives. If a whole mode exists, floating one window inside tiling
+  mode may stop being useful — or become the more common action.
 
 ## Decision: rejected, 2026-08-09
 
@@ -111,19 +112,21 @@ work *inside tiling*, with no mode to enter or leave. The reported position afte
 it is that the desktop feels more mature without a mode, which is the outcome the ADR
 above expected if the diagnosis was right.
 
-That left the two things a mode would still have added, and quattro (ADR-0033) has since
-moved both:
+That left the two things a mode would still have added, and quattro
+(omarchy-desktop-on-cachyos ADR-0033) has since moved both:
 
-- **Floating as the default for new windows.** Still not wanted. It is also the half with
-  the unsolved problem the ADR flagged and never answered — round-tripping the layout,
-  since window rules only apply at window open, so the mode needs a one-shot pass over
-  existing windows *and* somewhere to keep geometry if float → tile → float does not
-  restore cleanly. That is a large step up in complexity for the least-wanted half.
-- **GNOME-style window buttons.** Unchanged and still the expensive item: Hyprland has no
-  server-side decorations, so the only route is `hyprbars` via `hyprpm`, rebuilt against
-  every Hyprland release. On a machine whose update story is one command, that is a
-  standing breakage. Quattro makes this *worse*, not better — it is package-backed now
-  (ADR-0033), so Hyprland moves when the package moves.
+- **Floating as the default for new windows.** Still not wanted. It is also the
+  half with the unsolved problem the ADR flagged and never answered —
+  round-tripping the layout, since window rules only apply at window open, so
+  the mode needs a one-shot pass over existing windows *and* somewhere to keep
+  geometry if float → tile → float does not restore cleanly. That is a large
+  step up in complexity for the least-wanted half. - **GNOME-style window
+  buttons.** Unchanged and still the expensive item: Hyprland has no server-side
+  decorations, so the only route is `hyprbars` via `hyprpm`, rebuilt against
+  every Hyprland release. On a machine whose update story is one command, that
+  is a standing breakage. Quattro makes this *worse*, not better — it is
+  package-backed now (omarchy-desktop-on-cachyos ADR-0033), so Hyprland moves
+  when the package moves.
 
 Quattro also narrowed what a mode would be for. `SUPER+O` (`omarchy-hyprland-window-pop`)
 floats **and** pins a window at a set size natively, which covers the "get one window out
@@ -131,19 +134,21 @@ of the layout and keep it there" case that was part of the original motivation.
 
 **Consequences of rejecting:**
 
-- `SUPER+T` survives unchanged as Hyprland's `togglefloating` — the question of whether it
-  stops being useful was contingent on the mode existing, so it lapses.
-- The **Floating mode** entry in `CONTEXT.md` stays, marked rejected. It is still worth a
-  glossary line precisely because the term is ambiguous — it needs to keep pointing at
-  the distinction from floating a single window with `SUPER+T`, which does exist.
-- The interaction this ADR worried about — a Floating mode silently disabling the
-  single-window zen aspect ratio (ADR-0013/0026), since `single_window_aspect_ratio` only
-  applies to a lone *tiled* window — does not arise. Two bar toggles where one quietly
-  disables the other was a real trap and it is now avoided by not building the toggle.
-- If floating-as-default is ever wanted again, it should be a **new** ADR against
-  quattro's Lua API, not a revival of this one. `hl.window_rule` and `hl.get_windows()`
-  make the one-shot pass over existing windows tractable in a way the `.conf` era did not,
-  so the cost analysis above would need redoing rather than inheriting.
+- `SUPER+T` survives unchanged as Hyprland's `togglefloating` — the question
+  of whether it stops being useful was contingent on the mode existing, so it
+  lapses. - The **Floating mode** entry in `CONTEXT.md` stays, marked rejected.
+  It is still worth a glossary line precisely because the term is ambiguous —
+  it needs to keep pointing at the distinction from floating a single window
+  with `SUPER+T`, which does exist. - The interaction this ADR worried about —
+  a Floating mode silently disabling the single-window zen aspect ratio
+  (shokupan-plugins ADR-0013/0026), since `single_window_aspect_ratio` only
+  applies to a lone *tiled* window — does not arise. Two bar toggles where one
+  quietly disables the other was a real trap and it is now avoided by not
+  building the toggle. - If floating-as-default is ever wanted again, it should
+  be a **new** ADR against quattro's Lua API, not a revival of this one.
+  `hl.window_rule` and `hl.get_windows()` make the one-shot pass over existing
+  windows tractable in a way the `.conf` era did not, so the cost analysis above
+  would need redoing rather than inheriting.
 
 ADR-0024 and ADR-0025 are unaffected — they were always independent of this, and this ADR
 is not their parent despite having proposed them first.

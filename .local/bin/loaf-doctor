@@ -3,13 +3,12 @@
 # loaf:summary=Check the three layers for drift, without changing anything
 
 # This machine is three layers deep: CachyOS is the base, Omarchy is the desktop
-# layered on top of it as distro packages (ADR-0035), and the rice sits on top of
-# both. Each layer updates on its own schedule and can quietly undo the one above
-# it, so this asserts what should be true and reports what is not.
-#
-# Read-only by construction: it never writes, never sudos, and never touches the
-# network. `loaf heal` is the half that fixes things. Exits non-zero if anything
-# is wrong, so it can gate a hook.
+# layered on top of it as distro packages (omarchy-desktop-on-cachyos ADR-0035),
+# and the rice sits on top of both. Each layer updates on its own schedule and
+# can quietly undo the one above it, so this asserts what should be true and
+# reports what is not. Read-only by construction: it never writes, never sudos,
+# and never touches the network. `loaf heal` is the half that fixes things.
+# Exits non-zero if anything is wrong, so it can gate a hook.
 
 set -uo pipefail
 
@@ -26,15 +25,32 @@ PATH="$(dirname "$(realpath "$0")"):$PATH"
 # Tracked paths that are repo furniture, not config, and so must never be
 # symlinked into the home directory. This has to agree with .stow-local-ignore
 # — they answer the same question from opposite ends, and when they disagree
-# doctor reports a file as missing that stow was never going to install. The
-# test suite asserts they stay in step.
-REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|CONTEXT|packages\.txt|\.gitignore|\.stow-local-ignore)'
+# doctor reports a file as missing that stow was never going to install.
+#
+# DUPLICATED, deliberately and awkwardly: the same literal lives in loaf-heal,
+# and .stow-local-ignore states the same policy a third time in Stow's own
+# regex dialect. Deriving this FROM .stow-local-ignore is not tractable —
+# that dialect matches bare names against every path segment but slashed
+# patterns against the whole path, and an entry for a directory (^/docs$) has
+# to become the `docs/` prefix `git ls-files` actually emits, which needs a
+# stat rather than a regex. A half-right translation either invents missing
+# files or silently drops a real config file from the census.
+#
+# So the coupling stays, and the SUITE enforces it: test/loaf-test.sh stows the
+# real repo into a throwaway home and asserts that what stow declines to
+# install is exactly what this list excludes. Adding an entry to
+# .stow-local-ignore without adding it here fails that test. It went unnoticed
+# once — LICENSE landed in .stow-local-ignore only, and doctor reported
+# `✗ symlinks  1 not installed  LICENSE` on 2026-08-21 with the whole suite
+# green, because the old check only understood `^/name$` lines.
+REPO_ONLY='^(lab/|docs/|packages/|migrations/|test/|README|LICENSE|COPYING|CONTEXT|CLAUDE|packages\.txt|\.gitignore|\.stow-local-ignore)'
 STATE_DIR="${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/loaf"
 
 # Omarchy is package-backed at a fixed path now, so this is a constant rather
 # than something to discover. $OMARCHY_PATH is still read, because `omarchy dev
 # link` repoints it at a source checkout — a legitimate state, but one where the
 # installed package is not what is live.
+PLUGINS_ROOT="${PLUGINS_ROOT:-$LOAF_HOME/.local/share/shokupan-plugins}"
 OMARCHY_PKG_ROOT=/usr/share/omarchy
 OMARCHY_ROOT="${OMARCHY_PATH:-$OMARCHY_PKG_ROOT}"
 
@@ -65,31 +81,28 @@ warn() { printf '  \033[33m!\033[0m %-14s %s\n' "$1" "$2"; }
 # Base — CachyOS
 # ---------------------------------------------------------
 
-# The bridge that originally put Omarchy on this base is retired (ADR-0035), and
-# its three sentinels went with it: `bridge patch` and `stale clone` guarded an
-# installer that will never run again, and `walker hold` guarded a Walker that
-# quattro does not ship. Deleted rather than left warning, per ADR-0028 —
-# tolerated noise stops being read.
-#
-# What replaces them is `mirrorlist`, which guards the one thing measured to
-# actually destroy this base.
+# The bridge that originally put Omarchy on this base is retired
+# (omarchy-desktop-on-cachyos ADR-0035), and its three sentinels went with it:
+# `bridge patch` and `stale clone` guarded an installer that will never run
+# again, and `walker hold` guarded a Walker that quattro does not ship. Deleted
+# rather than left warning, per omarchy-desktop-on-cachyos ADR-0028 —
+# tolerated noise stops being read. What replaces them is `mirrorlist`, which
+# guards the one thing measured to actually destroy this base.
 
 layer "Base (CachyOS)"
 
 # Omarchy is a DESKTOP layer here and nothing more. The base is CachyOS, and the
-# base is not Omarchy's to manage -- see ADR-0034.
-#
-# The specific hazard: `omarchy-channel-set` calls `omarchy-refresh-pacman`, which
-# does `cp -f $OMARCHY_PATH/default/pacman/pacman-<channel>.conf /etc/pacman.conf`
-# and then `pacman -Syyuu --noconfirm`. That replaces the repo list with Omarchy's
-# vanilla-Arch one and the second `u` permits DOWNGRADES, so every znver4-optimised
-# package rolls back to stock Arch and linux-cachyos loses its repo. It nearly ran
-# on this machine on 2026-08-08 and was stopped only by an unrelated failure
-# short-circuiting the `&&`.
-#
-# A PATH shim cannot guard this: Omarchy's bin sits ahead of ~/.local/bin in PATH
-# (index 2 vs 14), so a same-named script here would never be reached. Hence a
-# check, which at least makes the damage loud and immediate.
+# base is not Omarchy's to manage -- see omarchy-desktop-on-cachyos ADR-0034.
+# The specific hazard: `omarchy-channel-set` calls `omarchy-refresh-pacman`,
+# which does `cp -f $OMARCHY_PATH/default/pacman/pacman-<channel>.conf
+# /etc/pacman.conf` and then `pacman -Syyuu --noconfirm`. That replaces the repo
+# list with Omarchy's vanilla-Arch one and the second `u` permits DOWNGRADES, so
+# every znver4-optimised package rolls back to stock Arch and linux-cachyos
+# loses its repo. It nearly ran on this machine on 2026-08-08 and was stopped
+# only by an unrelated failure short-circuiting the `&&`. A PATH shim cannot
+# guard this: Omarchy's bin sits ahead of ~/.local/bin in PATH (index 2 vs 14),
+# so a same-named script here would never be reached. Hence a check, which at
+# least makes the damage loud and immediate.
 
 if [[ -f $PACMAN_CONF ]]; then
   cachyos_repos=$(grep -c '^\[cachyos' "$PACMAN_CONF" 2>/dev/null || echo 0)
@@ -102,18 +115,19 @@ if [[ -f $PACMAN_CONF ]]; then
   fi
 fi
 
-# The measured root cause of the quattro upgrade's near-miss (ADR-0035). Omarchy's
-# `configure_pacman_channel` overwrites the mirrorlist with a single
-# `Server = https://stable-mirror.omarchy.org/...`, which is a FROZEN Arch snapshot.
-# CachyOS tracks Arch rolling, so pinning core/extra to that snapshot puts the two
-# halves of the system into permanent version skew and pacman starts refusing
-# partial downgrades. It presented as an unrelated aquamarine ABI conflict and was
-# not; restoring the rolling mirrorlist collapsed the whole thing.
-#
-# Unguarded until now, and — alongside omarchy-channel-set — the remaining way the
-# base gets destroyed. `[cachyos*]` surviving in pacman.conf does not imply the
-# mirrorlist did: the upgrade's pacman.conf edit is a surgical awk that leaves the
-# repo list alone while the mirrorlist is replaced wholesale.
+# The measured root cause of the quattro upgrade's near-miss
+# (omarchy-desktop-on-cachyos ADR-0035). Omarchy's `configure_pacman_channel`
+# overwrites the mirrorlist with a single `Server =
+# https://stable-mirror.omarchy.org/...`, which is a FROZEN Arch snapshot.
+# CachyOS tracks Arch rolling, so pinning core/extra to that snapshot puts the
+# two halves of the system into permanent version skew and pacman starts
+# refusing partial downgrades. It presented as an unrelated aquamarine ABI
+# conflict and was not; restoring the rolling mirrorlist collapsed the whole
+# thing. Unguarded until now, and — alongside omarchy-channel-set — the
+# remaining way the base gets destroyed. `[cachyos*]` surviving in pacman.conf
+# does not imply the mirrorlist did: the upgrade's pacman.conf edit is a
+# surgical awk that leaves the repo list alone while the mirrorlist is replaced
+# wholesale.
 if [[ -f $MIRRORLIST ]]; then
   if grep -qE '^[[:space:]]*Server[[:space:]]*=[[:space:]]*https?://[a-z-]*mirror\.omarchy\.org/' \
     "$MIRRORLIST" 2>/dev/null; then
@@ -125,22 +139,19 @@ if [[ -f $MIRRORLIST ]]; then
   fi
 fi
 
-# NetworkManager delegates wifi to a backend it does not itself provide, and says
-# nothing when the one it was told to use is absent — the device simply reports
-# `unavailable` and scans nothing. On a machine that lives on ethernet that is
-# invisible.
-#
-# This is the check ADR-0034 wrote as "warns if wifi.backend=iwd is gone", which
-# quattro made not merely stale but actively misleading: it went on reporting ✓
-# after quattro's `pacman -Rns` removed iwd on 2026-08-09, because the stanza
-# naming iwd was still there. It asserted a bridge side effect rather than
-# anything true about this machine.
-#
-# So it neither inverts nor goes. Inverting — warning when iwd IS set — would
-# assert quattro's preference and nag a machine where iwd was deliberately
-# reinstalled and works. The invariant that survives either resolution is that
-# the configured backend exists. Backend names match their package names for the
-# two NetworkManager accepts (`iwd`, `wpa_supplicant`).
+# NetworkManager delegates wifi to a backend it does not itself provide, and
+# says nothing when the one it was told to use is absent — the device simply
+# reports `unavailable` and scans nothing. On a machine that lives on ethernet
+# that is invisible. This is the check omarchy-desktop-on-cachyos ADR-0034 wrote
+# as "warns if wifi.backend=iwd is gone", which quattro made not merely stale
+# but actively misleading: it went on reporting ✓ after quattro's `pacman
+# -Rns` removed iwd on 2026-08-09, because the stanza naming iwd was still
+# there. It asserted a bridge side effect rather than anything true about this
+# machine. So it neither inverts nor goes. Inverting — warning when iwd IS set
+# — would assert quattro's preference and nag a machine where iwd was
+# deliberately reinstalled and works. The invariant that survives either
+# resolution is that the configured backend exists. Backend names match their
+# package names for the two NetworkManager accepts (`iwd`, `wpa_supplicant`).
 if [[ -f $NM_CONF ]]; then
   wifi_backend=$(sed -n 's/^[[:space:]]*wifi\.backend[[:space:]]*=[[:space:]]*//p' "$NM_CONF" | head -1)
   if [[ -z $wifi_backend ]]; then
@@ -170,15 +181,15 @@ else
   warn "kernel" "running $kernel_running — not a CachyOS kernel"
 fi
 
-# The measured root cause of the r1744 boot failure (ADR-0047; recovery runbook
-# linked there). Omarchy's omarchy_hooks.conf REPLACES the HOOKS array with the
-# udev/busybox flavour, whose `encrypt` hook ignores the sd-encrypt-style
-# rd.luks.uuid= parameter this CachyOS install boots with — so root never
-# unlocks. The trap detonates at the NEXT initramfs rebuild (usually a kernel
-# bump), not when the hooks file changes; this check fires in the window
-# between the two. /proc/cmdline is the running boot's truth and needs no sudo;
-# the real subject (/boot/limine.conf) is root-only, so system-update verifies
-# the rendered menu where sudo is already in play.
+# The measured root cause of the r1744 boot failure (omarchy-desktop-on-cachyos
+# ADR-0047; recovery runbook linked there). Omarchy's omarchy_hooks.conf
+# REPLACES the HOOKS array with the udev/busybox flavour, whose `encrypt` hook
+# ignores the sd-encrypt-style rd.luks.uuid= parameter this CachyOS install
+# boots with — so root never unlocks. The trap detonates at the NEXT initramfs
+# rebuild (usually a kernel bump), not when the hooks file changes; this check
+# fires in the window between the two. /proc/cmdline is the running boot's truth
+# and needs no sudo; the real subject (/boot/limine.conf) is root-only, so
+# system-update verifies the rendered menu where sudo is already in play.
 OMARCHY_HOOKS_CONF="${OMARCHY_HOOKS_CONF:-/etc/mkinitcpio.conf.d/omarchy_hooks.conf}"
 CRYPT_DROPIN="${CRYPT_DROPIN:-/etc/limine-entry-tool.d/luks-cryptdevice.conf}"
 luks_root=false
@@ -190,7 +201,7 @@ elif ! $luks_root; then
 elif ! grep -q 'cryptdevice=' /proc/cmdline; then
   bad "boot contract" "encrypt hook active but the running cmdline has no cryptdevice=" \
     "the next initramfs rebuild will produce an image that cannot unlock root — the machine will not boot" \
-    "write $CRYPT_DROPIN (see ADR-0047), then rebuild: echo all | sudo /usr/share/libalpm/scripts/limine-mkinitcpio-install && sudo limine-update"
+    "write $CRYPT_DROPIN (see omarchy-desktop-on-cachyos ADR-0047), then rebuild: echo all | sudo /usr/share/libalpm/scripts/limine-mkinitcpio-install && sudo limine-update"
 else
   luks_uuid=$(sed -n 's/.*rd\.luks\.uuid=\([0-9a-fA-F-]*\).*/\1/p' /proc/cmdline)
   if [[ -f $CRYPT_DROPIN ]] && { [[ -z $luks_uuid ]] || grep -q "cryptdevice=UUID=$luks_uuid" "$CRYPT_DROPIN"; }; then
@@ -198,7 +209,7 @@ else
   else
     bad "boot contract" "cmdline carries cryptdevice= but $CRYPT_DROPIN is missing or names a different UUID" \
       "the next limine menu regeneration drops cryptdevice= and the boot after that cannot unlock root" \
-      "restore the drop-in with the root LUKS UUID (see ADR-0047)"
+      "restore the drop-in with the root LUKS UUID (see omarchy-desktop-on-cachyos ADR-0047)"
   fi
 fi
 
@@ -210,8 +221,9 @@ layer "Desktop (Omarchy)"
 
 # Omarchy used to be a git checkout at ~/.local/share/omarchy, and this asked
 # whether that checkout was intact. Under quattro it is distro packages at
-# /usr/share/omarchy (ADR-0035), so there is no tree to describe, nothing to be
-# dirty, and no `git pull` to revert a local edit. Three checks went with it:
+# /usr/share/omarchy (omarchy-desktop-on-cachyos ADR-0035), so there is no tree
+# to describe, nothing to be dirty, and no `git pull` to revert a local edit.
+# Three checks went with it:
 #
 #   `checkout`      — became this, an assertion about the package
 #   the porcelain   — deleted; there is no worktree to have unexpected edits in
@@ -332,6 +344,12 @@ ref_dirs=()
 for d in .config/omarchy .local/bin .local/share/applications; do
   [[ -d $LOAF_ROOT/$d ]] && ref_dirs+=("$LOAF_ROOT/$d")
 done
+# The plugins carry most of the absolute upstream paths (hosted widgets load
+# upstream QML by full path), and they left this repo at the 2026-08-18 split.
+# Scanning only the rice would leave the check passing over an empty set — the
+# omarchy-desktop-on-cachyos ADR-0028 failure mode where a sentinel outlives its
+# subject.
+[[ -d $PLUGINS_ROOT ]] && ref_dirs+=("$PLUGINS_ROOT")
 if ((${#ref_dirs[@]})); then
   broken_refs=()
   checked_refs=0
@@ -383,7 +401,10 @@ fi
 
 layer "Rice ($LOAF_ROOT)"
 
-if [[ ! -d $LOAF_ROOT/.git ]]; then
+# `.git` is a directory in a normal checkout but a file holding a `gitdir:`
+# pointer in a linked worktree, so ask git rather than testing for a directory
+# — every lane of a worktree-based workflow verifies itself through this check.
+if ! git -C "$LOAF_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   bad "repo" "$LOAF_ROOT is not a git checkout"
   exit 1
 fi
@@ -427,6 +448,44 @@ done < <(git -C "$LOAF_ROOT" ls-files |
 ((${#missing[@]})) && bad "symlinks" "${#missing[@]} not installed" "${missing[@]}"
 ((${#stale_copies[@]})) && bad "symlinks" "${#stale_copies[@]} theme file(s) not real in-sync copies" "${stale_copies[@]}" \
   "run loaf heal — theme files must be real files or theme-set stages them broken"
+
+# The plugins moved to their own repo at the 2026-08-18 split, so their presence
+# is no longer implied by the symlink census above. Check the checkout exists and
+# that every plugin it ships is linked into the desktop; a half-installed set is
+# the failure mode (one dead widget id in shell.json, silent at load).
+if [[ ! -d $PLUGINS_ROOT ]]; then
+  bad "plugins" "no checkout at ${PLUGINS_ROOT#"$LOAF_HOME"/}" \
+    "the bar's shokupan.* and austinkarren.* widgets cannot load" \
+    "run: loaf plugins"
+else
+  plugins_missing=()
+  for _d in "$PLUGINS_ROOT"/plugins/*/; do
+    [[ -d $_d ]] || continue
+    [[ -L $LOAF_HOME/.config/omarchy/plugins/$(basename "$_d") ]] ||
+      plugins_missing+=("$(basename "$_d")")
+  done
+  if ((${#plugins_missing[@]})); then
+    bad "plugins" "${#plugins_missing[@]} not linked into the desktop" "${plugins_missing[@]}" \
+      "run: loaf plugins --offline"
+  else
+    ok "plugins" "$(find "$PLUGINS_ROOT/plugins" -maxdepth 1 -mindepth 1 -type d | wc -l) linked from ${PLUGINS_ROOT#"$LOAF_HOME"/}"
+  fi
+fi
+
+# packages/plugins is what DOES track them: the standalone repo each plugin is
+# published from, which is how a stranger installs them and not how this machine
+# runs them. Nothing about the desktop breaks when it drifts — the failure is
+# that the published edge serves a plugin this repo no longer ships, or omits one
+# it does. loaf-plugins --index owns the how. Guarded on the index existing, the
+# same as every other manifest check here.
+if command -v loaf-plugins &>/dev/null && [[ -f $LOAF_ROOT/packages/plugins ]]; then
+  if loaf-plugins --index &>/dev/null; then
+    ok "plugin index" "every published repo in packages/plugins resolves to a shipped plugin"
+  else
+    bad "plugin index" "packages/plugins and the checkout disagree" \
+      "run 'loaf plugins --index' for which"
+  fi
+fi
 
 # The bar's plugin/settings UI appends widget enables to bar.layout's CENTER —
 # even when the widget already sits elsewhere — and it writes through the rice

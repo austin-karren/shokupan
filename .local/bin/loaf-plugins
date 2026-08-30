@@ -1,0 +1,201 @@
+#!/bin/bash
+
+# loaf:summary=Install the shokupan plugins repo and link it into the desktop
+# loaf:args=[--offline] [--dry-run] [--index]
+
+# The rice stopped carrying its own plugins at the 2026-08-18 split. They live
+# in a separate, publishable repo (github.com/austin-karren/shokupan) because a
+# stranger can use them and cannot use this one — and because `omarchy plugin
+# add` is upstream's own consumption path for exactly that shape.
+#
+# What that costs is this script: the machine now has a dependency to fetch and
+# link, where before stow did everything. The layout it installs is identical to
+# what stow produced, so nothing downstream — shell.json ids, absolute paths in
+# bindings, the forks board — had to change.
+#
+#   plugins/*            -> ~/.config/omarchy/plugins/*        symlink
+#   bar/{modules,indicators}/* -> ~/.config/omarchy/bar/...    symlink
+#   bin/*                -> ~/.local/bin/*                     symlink
+#   hooks/theme-set.d/*  -> ~/.config/omarchy/hooks/theme-set.d/*  symlink
+#   themes/*             -> ~/.config/omarchy/themes/*         COPY, not symlink
+#
+# Themes are copied for the reason .stow-local-ignore records: omarchy-theme-set
+# stages a user theme with `cp -r`, which copies a symlink AS a relative symlink
+# and leaves it dangling at the staging path, so the override silently never
+# applies. Real files are what upstream's own theme install produces.
+#
+# --offline re-asserts the links without touching the network, which is what
+# `loaf heal` runs; a missing checkout is then a loud failure rather than a
+# silent clone.
+#
+# --index is the other direction, and does not install anything.
+# packages/plugins records the seven standalone `omarchy-*` repos each plugin
+# is published from (shokupan-plugins ADR-0044 rule 3/4) — the public
+# `omarchy plugin add` path, which is NOT how this machine runs them. It
+# resolves each recorded id against the checkout and reports the publish URL,
+# so a plugin that was renamed, dropped, or never split out is visible instead
+# of being a stale line nobody reads. Read-only, like `loaf packages`: the
+# manifest is the decision and the checkout is the fact.
+
+set -uo pipefail
+
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
+MANIFEST="$LOAF_ROOT/packages/plugins"
+PLUGINS_REPO="${PLUGINS_REPO:-https://github.com/austin-karren/shokupan-plugins.git}"
+PLUGINS_ROOT="${PLUGINS_ROOT:-$LOAF_HOME/.local/share/shokupan-plugins}"
+
+offline=false
+dry_run=false
+index=false
+for arg in "$@"; do
+  case $arg in
+  --offline) offline=true ;;
+  --dry-run) dry_run=true ;;
+  --index) index=true ;;
+  *)
+    echo "usage: loaf plugins [--offline] [--dry-run] [--index]" >&2
+    exit 64
+    ;;
+  esac
+done
+
+say() { printf '%s\n' "$1"; }
+
+# --- index ------------------------------------------------------------------
+# The recorded id is the plugin id from manifest.json, not the directory it sits
+# in: the repos are named `omarchy-<function>` for the plugin directory's own
+# convention while the ids stay `shokupan.*` / `austinkarren.*` because renaming
+# those breaks shell.json's bar.layout and Omarchy's IPC routing. So resolution
+# reads each manifest.json rather than guessing a path from the id.
+if $index; then
+  if [[ ! -f $MANIFEST ]]; then
+    echo "loaf plugins: no index at $MANIFEST" >&2
+    exit 1
+  fi
+
+  # id -> directory, built once from the checkout.
+  declare -A dir_of=()
+  for d in "$PLUGINS_ROOT"/plugins/*/; do
+    [[ -f ${d}manifest.json ]] || continue
+    id=$(sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${d}manifest.json" | head -1)
+    [[ -n $id ]] && dir_of[$id]=${d%/}
+  done
+
+  missing=()
+  total=0
+  while read -r id url; do
+    [[ -n ${url:-} ]] || continue
+    total=$((total + 1))
+    if [[ -n ${dir_of[$id]:-} ]]; then
+      printf '\033[32m✓\033[0m %-24s %s\n' "$id" "$url"
+    else
+      missing+=("$id")
+      printf '\033[31m✗\033[0m %-24s %s\n' "$id" "$url"
+      printf '    recorded in the index but no plugin with that id in the checkout\n'
+    fi
+  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$MANIFEST")
+
+  # The other direction is a failure too, not advisory as in `loaf packages`:
+  # an unpublished plugin is one a stranger following the README cannot install,
+  # which is the whole claim the index makes.
+  unrecorded=()
+  for id in "${!dir_of[@]}"; do
+    grep -qE "^[[:space:]]*${id//./\\.}[[:space:]]" "$MANIFEST" || unrecorded+=("$id")
+  done
+
+  if ((${#unrecorded[@]})); then
+    printf '\n\033[31m✗\033[0m %d plugin(s) in the checkout with no published repo recorded:\n' \
+      "${#unrecorded[@]}"
+    printf '    %s\n' "${unrecorded[@]}"
+    printf '    split it out and add the line, or the index understates what ships\n'
+  fi
+
+  if ((${#missing[@]} == 0 && ${#unrecorded[@]} == 0)); then
+    printf '\n\033[32m✓\033[0m all %d published plugin(s) resolve to the checkout\n' "$total"
+    exit 0
+  fi
+  exit 1
+fi
+
+# --- fetch ------------------------------------------------------------------
+if ! $offline; then
+  if [[ -d $PLUGINS_ROOT && ! -d $PLUGINS_ROOT/.git ]]; then
+    # A directory that is not a checkout is someone's own copy — a dev tree, a
+    # symlink to one, or a fixture. Link it as it is rather than cloning over
+    # the top of it.
+    say "plugins: $PLUGINS_ROOT is not a git checkout — linking it as-is"
+  elif [[ -d $PLUGINS_ROOT/.git ]]; then
+    $dry_run || git -C "$PLUGINS_ROOT" pull --quiet --ff-only || {
+      echo "loaf plugins: pull failed — leaving the checkout alone" >&2
+      exit 1
+    }
+    say "plugins: checkout up to date"
+  else
+    $dry_run || git clone --quiet "$PLUGINS_REPO" "$PLUGINS_ROOT" || {
+      echo "loaf plugins: clone failed" >&2
+      exit 1
+    }
+    say "plugins: cloned $PLUGINS_REPO"
+  fi
+fi
+
+if [[ ! -d $PLUGINS_ROOT ]]; then
+  echo "loaf plugins: no checkout at $PLUGINS_ROOT — run 'loaf plugins' with network" >&2
+  exit 1
+fi
+
+# --- link -------------------------------------------------------------------
+link() {
+  local src=$1 dst=$2
+  [[ -e $src ]] || return 0
+  if [[ -L $dst && $(readlink -f "$dst") == "$(readlink -f "$src")" ]]; then
+    return 0
+  fi
+  if $dry_run; then
+    say "plugins: would link ${dst#"$LOAF_HOME"/}"
+    return 0
+  fi
+  mkdir -p "$(dirname "$dst")"
+  rm -rf "$dst"
+  ln -s "$src" "$dst"
+  say "plugins: linked ${dst#"$LOAF_HOME"/}"
+}
+
+for d in "$PLUGINS_ROOT"/plugins/*/; do
+  [[ -d $d ]] || continue
+  link "${d%/}" "$LOAF_HOME/.config/omarchy/plugins/$(basename "$d")"
+done
+
+for sub in modules indicators; do
+  for f in "$PLUGINS_ROOT/bar/$sub"/*; do
+    [[ -e $f ]] || continue
+    link "$f" "$LOAF_HOME/.config/omarchy/bar/$sub/$(basename "$f")"
+  done
+done
+
+for f in "$PLUGINS_ROOT"/bin/*; do
+  [[ -e $f ]] || continue
+  link "$f" "$LOAF_HOME/.local/bin/$(basename "$f")"
+done
+
+for f in "$PLUGINS_ROOT"/hooks/theme-set.d/*; do
+  [[ -e $f ]] || continue
+  link "$f" "$LOAF_HOME/.config/omarchy/hooks/theme-set.d/$(basename "$f")"
+done
+
+# --- copy themes ------------------------------------------------------------
+while IFS= read -r -d '' src; do
+  rel=${src#"$PLUGINS_ROOT"/themes/}
+  dst="$LOAF_HOME/.config/omarchy/themes/$rel"
+  if [[ -L $dst ]] || ! cmp -s "$src" "$dst" 2>/dev/null; then
+    if $dry_run; then
+      say "plugins: would copy themes/$rel"
+    else
+      mkdir -p "$(dirname "$dst")"
+      rm -f "$dst"
+      cp "$src" "$dst"
+      say "plugins: copied themes/$rel"
+    fi
+  fi
+done < <(find "$PLUGINS_ROOT/themes" -type f -print0 2>/dev/null)

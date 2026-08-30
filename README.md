@@ -4,20 +4,37 @@ My rice: one CachyOS machine running [Omarchy](https://omarchy.org) on Hyprland,
 managed with [GNU Stow](https://www.gnu.org/software/stow/) and maintained by a
 small CLI called `loaf`.
 
+Split three ways on 2026-08-18, renamed 2026-08-19 so the names match the
+glossary again: this repo is **Shokupan**, the rice, and the only one `loaf`
+manages. It consumes two dependencies rather than carrying them — the
+Quickshell plugins and Tokyo Night bar override in
+[shokupan-plugins](https://github.com/austin-karren/shokupan-plugins) (via
+`loaf plugins`), and the CachyOS layer contract in
+[omarchy-desktop-on-cachyos](https://github.com/austin-karren/omarchy-desktop-on-cachyos).
+
 Named for 食パン, Japanese milk bread. A rice can be named anything — "rice" is
 just the term for a customized desktop, so the bread is a joke rather than a
 category error.
 
+The dev config that does **not** need a desktop — shell, git, mise, Zed — left
+this repo on 2026-08-19 for a fourth one,
+[crumb](https://github.com/austin-karren/crumb) (ADR-0002), public and MIT since
+2026-08-20. It stows itself and must work on a machine with no Omarchy at all. If you are looking for
+`.bashrc`, `.config/git/config`, `.config/mise/config.toml` or `.config/zed/`,
+they live there now; `crumb`'s own README documents them. What stayed here is the
+Omarchy half of the shell seam — see "The bash seam" below.
+
 Kept separate from my [macOS dotfiles](https://github.com/austin-karren/dotfiles)
-because the two platforms share almost nothing beyond `.gitconfig`. The shell
-here is bash (Omarchy's), not the zsh setup from that repo.
+because the two platforms share almost nothing: the shell here is bash
+(Omarchy's), not the zsh setup from that repo. The one thing they did overlap on,
+git, is `crumb`'s now rather than either platform repo's.
 
 ## Layout
 
 This is a single flat Stow package: paths mirror `$HOME` directly.
 
 ```
-.bashrc                 -> ~/.bashrc
+.config/bash/*.sh       -> ~/.config/bash/*.sh    (the Omarchy half of the seam)
 .config/hypr/*.lua      -> ~/.config/hypr/*.lua    (quattro; .conf for the rest)
 .local/bin/*            -> ~/.local/bin/*
 ...
@@ -37,8 +54,9 @@ loaf doctor      # confirm all three layers agree
 
 `--adopt` is the first-machine move — it captures a live system into the repo.
 A **fresh** machine goes the other way: install CachyOS normally, layer quattro
-(`lab/`, ADR-0035), then run `.local/bin/loaf-install` from the clone. It
-refuses an Omarchy other than `packages/omarchy.pin` (ADR-0043), installs the
+(`lab/`, omarchy-desktop-on-cachyos ADR-0035), then run
+`.local/bin/loaf-install` from the clone. It refuses an Omarchy other than
+`packages/omarchy.pin` (omarchy-desktop-on-cachyos ADR-0043), installs the
 chosen packages and flatpaks, stows, debloats and migrates — every step
 idempotent, so a failed run resumes by running it again.
 
@@ -56,25 +74,14 @@ which version you actually want.
 
 ## Required: git identity
 
-`.config/git/config` deliberately contains no email. It ends with:
+Set up in `crumb`, not here. `crumb` installs `~/.config/git/config`, which
+carries no name or email and ends with an include of the untracked
+`~/.gitconfig.local` holding both (ADR-0003). A missing include fails
+**silently** — git just rejects commits with "please tell me who you are". See
+`crumb`'s README for the file to create.
 
-```gitconfig
-[include]
-	path = ~/.gitconfig.local
-```
-
-Create that file (it is gitignored, and never committed):
-
-```gitconfig
-[user]
-	email = your.email@example.com
-```
-
-A missing include fails **silently** — git will not warn you, it will just reject
-commits with "please tell me who you are". If you see that, this file is why.
-
-Note: git reads `~/.gitconfig` only when `~/.config/git/config` does not exist.
-Since this repo installs the latter, a stray `~/.gitconfig` is ignored entirely.
+It is still required on this machine: without it, no commit in *this* repo
+works either.
 
 ## Required: compose identity
 
@@ -93,24 +100,36 @@ An empty file is enough to parse. Run `omarchy-restart-xcompose` after edits.
 
 ## Optional: shell identity
 
-`.bashrc` ends with the same pattern, for anything carrying an account name or a
-secret:
+Also `crumb`'s: its `.bashrc` sources `~/.bashrc.local` last, guarded, for
+anything carrying an account name or a secret (ADR-0003, same pattern as the git
+include). Documented in `crumb`'s README. `.bashrc.local` stays in this repo's
+`.gitignore` because the file sits in `$HOME` and both trees stow there.
 
-```bash
-[[ -f ~/.bashrc.local ]] && source ~/.bashrc.local
-```
+## The bash seam
 
-Create that file (gitignored, never committed) with whatever this machine needs —
-currently the AWS profile:
+`crumb`'s `.bashrc` sources two drop-in directories, split by bash's
+interactivity guard, and knows nothing about what lands in them. This repo
+contributes the Omarchy half:
 
-```bash
-export AWS_PROFILE=your-profile
-export AWS_SDK_LOAD_CONFIG=1
-```
+| Drop-in | Tier | What it does |
+|---|---|---|
+| `.config/bash/env.d/00-omarchy.sh` | above the guard | Exports `OMARCHY_PATH`, so non-interactive shells that read `~/.bashrc` see it |
+| `.config/bash/50-omarchy-rc.sh` | below the guard | Sources Omarchy's `default/bash/rc` for interactive shells |
 
-Unlike the git include this one is guarded, so a missing file is harmless: the
-shell starts fine and you simply have no AWS profile. It is sourced **last**, so
-it can also override anything the tracked `.bashrc` set.
+Which tier a piece lands in is load-bearing: something above the guard that
+belongs below runs in non-interactive shells, and something below the guard that
+belongs above is unset in the non-interactive shells that do read `~/.bashrc` —
+a silent failure either way. Those are the shells whose fd 0 is a connected
+socket; `systemd-run --user --pipe` is the measured case.
+
+`ssh box somecommand` is **not** one of them. That path reads no startup file on
+this machine, so neither tier runs and tier placement decides nothing about it —
+`OMARCHY_PATH` is simply unset there, whatever the seam does. It takes two
+build-time conditions in two different packages, and it is accepted rather than
+fixed because remote access here is Tailscale SSH (ADR-0016). ADR-0049 has the
+mechanism and the reasoning; the record used to claim the opposite.
+
+`test/loaf-test.sh` holds both tiers. `crumb` ADR-0001 records the seam itself.
 
 ## What's here
 
@@ -118,23 +137,24 @@ it can also override anything the tracked `.bashrc` set.
 |---|---|
 | `.config/hypr/` | Hyprland: bindings, monitors, looknfeel, windows, idle/lock/sunset |
 | `.config/ghostty/`, `alacritty/`, `foot/` | Terminals. Ghostty sources Omarchy's dynamic theme path, which stays machine-side |
-| `.config/zed/` | Editor + agent settings |
-| `.config/git/config` | Aliases, delta pager, zdiff3, rerere |
 | `.config/uwsm/` | Session env (incl. making snap apps visible to the launcher) |
-| `.config/omarchy/shell.json` | The quickshell bar: layout, module settings, idle timings. Hot-reloaded for bar/layout edits — but the **idle timings need `omarchy-restart-shell`**: hot-reload updates the reported values while the IdleMonitor keeps its old timer, so the chain silently never fires (observed 2026-08-11) |
-| `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express. Since the r1744 upgrade only one remains: the indicators fork carrying the zen aspect-ratio toggle (the hosted network/microphone widgets and the bar-settings gear were deleted — absorbed or regressed to stock, see ADR-0044's addendum). New files here need `omarchy-restart-shell`; edits hot-reload |
-| `.config/omarchy/themes/tokyo-night/shell.bar.toml` | Pins the Tokyo Night bar near-black as system chrome (ADR-0009, scoped to that theme at r1744). A `[bar]` section override spliced into the generated shell.toml, the same mechanism as stock tokyo-night's `shell.lock.toml` — it replaces the whole section, so re-check its keys against upstream's template after an upgrade. Other themes get stock bar colors |
+| `.config/omarchy/shell.json` | The quickshell bar: layout, module settings, idle timings. Hot-reloaded for bar/layout edits — but the **idle timings need `omarchy-restart-shell`**: hot-reload updates the reported values while the IdleMonitor keeps its old timer, so the chain silently never fires (observed 2026-08-11). Also a **standing dirty-tree trap**: it is stowed into `$HOME`, so the live bar writes straight through the symlink into this repo's working tree with no user action (see `9742fcd`) |
+| `.config/btop/btop.conf` | btop's own config. Same standing trap as `shell.json` above: btop is a live application that writes its settings back on exit, through the stow symlink, so a clean tree can go dirty without anyone touching this repo (first landed 2026-08-25) |
+| `.config/omarchy/bar/modules/` | Custom QML bar modules, for behaviour a `type: "command"` entry cannot express. Since the r1744 upgrade only one remains: the indicators fork carrying the zen aspect-ratio toggle (the hosted network/microphone widgets and the bar-settings gear were deleted — absorbed or regressed to stock, see shokupan-plugins ADR-0044's addendum). New files here need `omarchy-restart-shell`; edits hot-reload |
+| `.config/omarchy/themes/tokyo-night/shell.bar.toml` | Pins the Tokyo Night bar near-black as system chrome (shokupan-plugins ADR-0009, scoped to that theme at r1744). A `[bar]` section override spliced into the generated shell.toml, the same mechanism as stock tokyo-night's `shell.lock.toml` — it replaces the whole section, so re-check its keys against upstream's template after an upgrade. Other themes get stock bar colors |
 | `.config/omarchy/extensions/omarchy-menu.jsonc` | Our rows in the Omarchy Menu, and the System Palette's only home since quattro (ADR-0027) — the sanctioned extension point, not a patched Omarchy file. Hot-reloaded. Replaced `menu.sh`, whose bash extension point quattro removed |
-| `.config/starship.toml`, `.config/tmux/` | Prompt, and the general-purpose multiplexer. Agent sessions live in herdr instead — a self-updating binary in `~/.local/bin`, deliberately not in the manifest (ADR-0015) |
-| `.bashrc` | Thin — sources Omarchy's `default/bash/rc` |
+| `.config/starship.toml`, `.config/tmux/` | Prompt, and the general-purpose multiplexer. Agent sessions live in herdr instead (ADR-0015) — herdr is now Omarchy-packaged (`omarchy-base.packages`), not the self-updating `~/.local/bin` binary ADR-0015 described |
+| `.config/herdr/config.toml` | Agent-session multiplexer config. Plain tracked file, not a `packages/forks` entry (ADR-0050) — `omarchy refresh herdr` overwrites it wholesale, which `loaf doctor`'s generic symlink-displacement check catches once it's tracked at all. `keys.prefix = "ctrl+s"` must never become upstream's `ctrl+space`, which collides with tmux's `C-Space` (ADR-0015) |
+| `.config/bash/` | The Omarchy half of the shell seam: `env.d/00-omarchy.sh` above `crumb`'s interactivity guard, `50-omarchy-rc.sh` below it. `crumb` owns the `.bashrc` that sources both and knows nothing about Omarchy — see "The bash seam" above |
 | `.local/bin/` | The `loaf` CLI, plus every script a keybinding or bar module depends on. The npx shims (`codex`, `gemini`, …) stay untracked — they are generated, not config |
 | `.config/omarchy/hooks/post-update.d/` | Runs `loaf heal` after each `omarchy update` — the sanctioned hook directory, not a patched Omarchy file |
 | `.local/share/applications/` | The web apps (`omarchy-launch-webapp` entries) and their icons, plus the Flatpak ref handler. Tracked because a rebuild would otherwise come up with no web apps at all. The `shokupan-cmd-*` command entries and their generator were deleted 2026-08-15 with ADR-0027's supersession — the apps list shows applications only |
 | `.config/omarchy/plugins/shokupan-dpms-guard/` | Service plugin that keeps the display off while locked: the BenQ's USB-C deep sleep hotplugs the connector and Hyprland sometimes wakes the output (ADR-0019 addendum). Polls while locked, re-asserts display-off if the user is still idle |
-| `.config/omarchy/plugins/shokupan-{omenu,apexshot,capture}/` | Bar-widget plugins: the menu button wearing the power glyph (converted from a QML module in ADR-0044's wave 1) and the ApexShot capture button — back on the bar at the user's word 2026-08-15, preferred over the native flow for now (ADR-0044 addendum). `shokupan-capture/` — the same three clicks on the native `omarchy-capture-*` tools — is parked with a DORMANT manifest, the drop-in swap when the native flow improves. Enabled by their `shokupan.*` ids in `shell.json`'s bar layout. `shokupan-calendar/` was deleted 2026-08-15 (git history is the tombstone) — the calendar bracket is off the bar, replaced by the clock clone's date clicks (ADR-0006 addendum) |
-| `.config/omarchy/plugins/austinkarren.clock/` | Clone of upstream's clock plugin via the sanctioned `omarchy plugin clone` shape (`clonedFrom: omarchy.clock` routes the bar entry and IPC automatically). `Panel.qml` and `BarWidget.qml` are patched — marked `// SHOKUPAN:` — so day cells and the hero date open GNOME Calendar through `calendar-toggle --date`, and a second click on the clock closes the popup (ADR-0006 addendum). Both are re-diffed via `packages/forks` at upgrades; `Model.js` and the manifest are refreshed by re-cloning |
-| `.config/omarchy/plugins/austinkarren.network/` | Clone of upstream's network panel, same mechanism, for one glyph: wired shows the globe `󰖟` instead of upstream's hardcoded RJ45 socket (ADR-0029). Only `Model.js`'s `connectionIcon` diverges |
-| `docs/upstream/` | Vetted drafts of issues and PRs for Omarchy and other upstreams — ADR-0044 rule 5: written here for review, posted only on an explicit go, never automatically. Also holds evidence captures too large or personal to version |
+| `.config/omarchy/plugins/shokupan-{omenu,apexshot,capture}/` | Bar-widget plugins: the menu button wearing the power glyph (converted from a QML module in shokupan-plugins ADR-0044's wave 1) and the ApexShot capture button — back on the bar at the user's word 2026-08-15, preferred over the native flow for now (shokupan-plugins ADR-0044 addendum). `shokupan-capture/` — the same three clicks on the native `omarchy-capture-*` tools — is parked with a DORMANT manifest, the drop-in swap when the native flow improves. Enabled by their `shokupan.*` ids in `shell.json`'s bar layout. `shokupan-calendar/` was deleted 2026-08-15 (git history is the tombstone) — the calendar bracket is off the bar, replaced by the clock clone's date clicks (shokupan-plugins ADR-0006 addendum) |
+| `.config/omarchy/plugins/jankeesvw.notification-center/` | **Not ours, and not to be managed from here.** A third-party plugin Austin installed himself with `omarchy plugin add` on 2026-08-24 — a real directory, not a `loaf plugins` symlink, deliberately absent from `packages/plugins`. It holds the bell slot after `omarchy.tailscale` in `shell.json`'s bar layout. It replaced `shokupan.notifications`, our carry-forward of the notification bell upstream deleted in `fc4caf3c`, which stopped displaying history; ours is retired rather than fixed, and its source now sits unlinked and unpublished in `shokupan-plugins`' `retired/` (shokupan-plugins ADR-0044's 2026-08-24 addendum). Do not add it to any manifest here, do not link it, do not re-diff it — a directory in `.config/omarchy/plugins/` that is not a symlink is the signal that it is not ours |
+| `.config/omarchy/plugins/austinkarren.clock/` | Clone of upstream's clock plugin via the sanctioned `omarchy plugin clone` shape (`clonedFrom: omarchy.clock` routes the bar entry and IPC automatically). `Panel.qml` and `BarWidget.qml` are patched — marked `// SHOKUPAN:` — so day cells and the hero date open GNOME Calendar through `calendar-toggle --date`, and a second click on the clock closes the popup (shokupan-plugins ADR-0006 addendum). Both are re-diffed via `packages/forks` at upgrades; `Model.js` and the manifest are refreshed by re-cloning |
+| `.config/omarchy/plugins/austinkarren.network/` | Clone of upstream's network panel, same mechanism, for one glyph: wired shows the globe `󰖟` instead of upstream's hardcoded RJ45 socket (shokupan-plugins ADR-0029). Only `Model.js`'s `connectionIcon` diverges |
+| `docs/upstream/` | Vetted drafts of issues and PRs for Omarchy and other upstreams — shokupan-plugins ADR-0044 rule 5: written here for review, posted only on an explicit go, never automatically. Also holds evidence captures too large or personal to version |
 | `.config/wireplumber/wireplumber.conf.d/` | One `zz-`named drop-in that excludes the LC3-SWB call codec — the MT7925 adapter can't run its eSCO mode, so calls silently died on it — and restores the full Bluetooth auto-connect list (ADR-0045 + addenda). Omarchy's A2DP-only fragment lives in the same real directory; `conf.d` fragments merge in filename order and the later matching rule wins, so this overrides without touching Omarchy's file |
 | `.config/mimeapps.list` | Which application handles what. Load-bearing, not incidental: it is the half of ADR-0032 that actually activates the Flatpak ref handler, and the half of ADR-0036 that decides which browser every web app and browser bind opens |
 | `.config/chromium-flags.conf`, `.config/helium-browser-flags.conf` | Browser flags. Read by each browser's launcher wrapper, which is the only place a flag reaches web-app windows — `.desktop` `Exec=` lines are truncated to their first token (ADR-0036) |
@@ -161,7 +181,7 @@ loaf doctor       # check all three layers for drift — read-only, no sudo
 loaf heal         # re-assert the rice on top, apply pending migrations
 loaf packages     # diff the manifest against what is installed
 loaf flatpaks     # same, for the Flatpak manifest
-loaf debloat      # re-remove the Omarchy defaults decided against (ADR-0043)
+loaf debloat      # re-remove the Omarchy defaults decided against (omarchy-desktop-on-cachyos ADR-0043)
 loaf forks        # check recorded forks and watched upstream files for drift
 loaf wallpapers   # assemble the full Omarchy wallpaper pool under Tokyo Night (ADR-0048)
 loaf widevine     # donate a Widevine CDM into Helium's profile for DRM playback (ADR-0038)
@@ -176,18 +196,19 @@ upstream's new default, usually worth reading first.
 Commands are discovered at run time from `loaf-*` on PATH, so a new script in
 `.local/bin` shows up in the help as soon as it carries a `# loaf:summary=` line.
 
-See [ADR-0028](./docs/adr/0028-the-rice-re-asserts-itself-after-upstream-updates.md)
-for why this exists and why migrations are worth having on a single machine.
+See omarchy-desktop-on-cachyos ADR-0028 for why this exists and why
+migrations are worth having on a single machine.
 
 ## Packages
 
 The manifests in `packages/` each record one kind of decision: `chosen.packages`
 and `chosen.flatpaks` (what was added), `removed.webapps` (which Omarchy default
-launchers were removed — re-asserted by `loaf debloat`, ADR-0043), `forks` (which
-upstream files the rice forks or structurally depends on, and the SHA-256 each
-had at verification — a trailing `watch` marks files referenced rather than
-copied; checked by `loaf forks`, ADR-0042), and `omarchy.pin` (which Omarchy all
-of it was verified against).
+launchers were removed — re-asserted by `loaf debloat`,
+omarchy-desktop-on-cachyos ADR-0043), `forks` (which upstream files the rice
+forks or structurally depends on, and the SHA-256 each had at verification — a
+trailing `watch` marks files referenced rather than copied; checked by `loaf
+forks`, ADR-0042), and `omarchy.pin` (which Omarchy all of it was verified
+against).
 
 Two files, doing different jobs:
 
@@ -218,7 +239,8 @@ exports `MANPAGER="sh -c 'col -bx | bat -l man -p'"` unconditionally, so without
 it `man` pipes into a missing binary in any interactive terminal.
 
 Language runtimes stay out of both files — [mise](https://mise.jdx.dev) owns
-those, pinned per-project in `~/.config/mise/config.toml`.
+those, pinned per-project in `~/.config/mise/config.toml`, which `crumb`
+installs rather than this repo.
 
 ## Which Omarchy a commit was built against
 
@@ -288,19 +310,19 @@ are the to-do list.
 
 | ADR | Decision | Status |
 |---|---|---|
-| [0001](./docs/adr/0001-omarchy-on-cachyos-not-the-omarchy-iso.md) | Omarchy layered onto CachyOS, not the Omarchy ISO — includes the installer path fix | accepted |
-| [0002](./docs/adr/0002-single-flat-stow-package.md) | One flat Stow package, adopted in place | accepted |
-| [0003](./docs/adr/0003-identity-behind-untracked-includes.md) | Identity behind untracked includes | accepted |
+| 0001 | Omarchy layered onto CachyOS, not the Omarchy ISO — includes the installer path fix | accepted — recorded in `omarchy-desktop-on-cachyos` |
+| [0002](./docs/adr/0002-single-flat-stow-package.md) | One flat Stow package per tree, adopted in place | accepted — amended 2026-08-19 |
+| [0003](./docs/adr/0003-identity-behind-untracked-includes.md) | Identity behind untracked includes | accepted — amended 2026-08-19 |
 | [0004](./docs/adr/0004-waybar-modules-dismiss-on-second-click.md) | Bar modules dismiss on a second click | superseded by 0033 |
 | [0005](./docs/adr/0005-waybar-supervised-by-a-userspace-watchdog.md) | Waybar supervised by a polling watchdog | superseded by 0033 |
-| [0006](./docs/adr/0006-calendar-hidden-on-its-own-special-workspace.md) | Calendar on its own special workspace | accepted |
+| 0006 | Calendar on its own special workspace | accepted — recorded in `shokupan-plugins` |
 | [0007](./docs/adr/0007-wallpaper-pinned-independently-of-the-theme.md) | Wallpaper pinned independently of the theme | accepted |
 | [0008](./docs/adr/0008-aether-confined-to-generated-named-themes.md) | Aether may generate themes, not apply them | accepted |
-| [0009](./docs/adr/0009-waybar-stays-dark-in-every-theme.md) | The bar stays dark — scoped to Tokyo Night at r1744 | accepted — rescoped to Tokyo Night 2026-08-15 |
+| 0009 | The bar stays dark — scoped to Tokyo Night at r1744 | accepted — rescoped to Tokyo Night 2026-08-15 — recorded in `shokupan-plugins` |
 | [0010](./docs/adr/0010-split-xcompose-to-track-it.md) | Split `~/.XCompose` so it can be tracked | accepted |
 | [0011](./docs/adr/0011-extend-second-click-dismissal-to-audio-and-cpu.md) | Second-click dismissal for audio and CPU | withdrawn |
 | [0012](./docs/adr/0012-unify-launcher-and-palette-on-elephant-menus.md) | Unify Launcher and System Palette | superseded by 0027 |
-| [0013](./docs/adr/0013-promote-the-ratio-toggle-to-the-bar.md) | Single-window aspect-ratio toggle onto the bar | accepted |
+| 0013 | Single-window aspect-ratio toggle onto the bar | accepted — recorded in `shokupan-plugins` |
 | [0014](./docs/adr/0014-ghostty-split-keybinds.md) | Ghostty split keybinds, and bind `close_surface` | accepted |
 | [0015](./docs/adr/0015-replace-tmux-with-herdr.md) | Herdr for agents, tmux for everything else | accepted |
 | [0016](./docs/adr/0016-remote-access-from-the-macbook.md) | Reach this machine from the MacBook over Tailscale | accepted |
@@ -313,50 +335,50 @@ are the to-do list.
 | [0023](./docs/adr/0023-arrow-modifiers-encode-scope.md) | Arrow-key modifiers encode what you are acting on | accepted |
 | [0024](./docs/adr/0024-floating-placement-keys.md) | Floating windows get placement keys | accepted |
 | [0025](./docs/adr/0025-resize-windows-by-dragging-borders.md) | Resize windows by dragging their borders | accepted |
-| [0026](./docs/adr/0026-zen-ratio-instead-of-a-square.md) | Single-window **zen** aspect ratio, 6:5 not square | accepted |
+| 0026 | Single-window **zen** aspect ratio, 6:5 not square | accepted — recorded in `shokupan-plugins` |
 | [0027](./docs/adr/0027-one-list-for-apps-and-commands.md) | One list for applications and system commands | superseded — stock; cmd entries fully retired 2026-08-15, commands live in the Omarchy Menu |
-| [0028](./docs/adr/0028-the-rice-re-asserts-itself-after-upstream-updates.md) | The rice re-asserts itself after upstream updates | accepted |
-| [0029](./docs/adr/0029-the-bar-is-sorted-by-question-not-by-mechanism.md) | The bar is sorted by the question each module answers | accepted — layout superseded by stock 2026-08-15; power-glyph menu and wired globe kept as identity deviations (omenu plugin, network clone) |
+| 0028 | The rice re-asserts itself after upstream updates | accepted — recorded in `omarchy-desktop-on-cachyos` |
+| 0029 | The bar is sorted by the question each module answers | accepted — layout superseded by stock 2026-08-15; power-glyph menu and wired globe kept as identity deviations (omenu plugin, network clone) — recorded in `shokupan-plugins` |
 | [0030](./docs/adr/0030-the-audio-tui-opens-on-output.md) | The audio TUI opens on Output Devices | superseded — quattro's `omarchy.audio` opens on Output natively |
 | [0031](./docs/adr/0031-the-bar-remembers-the-weather.md) | The bar remembers the weather, so a failed fetch cannot blank it | superseded — stock omarchy.weather covers it |
 | [0032](./docs/adr/0032-flathub-on-the-web-with-a-ref-handler.md) | Flathub on the web, with a ref handler | accepted |
-| [0033](./docs/adr/0033-quattro-is-a-hyprland-rewrite-not-a-bar-swap.md) | Quattro is a Hyprland rewrite, not a bar swap | accepted |
-| [0034](./docs/adr/0034-omarchy-is-clay-cachyos-is-the-base.md) | Omarchy is clay; CachyOS is the base | accepted |
-| [0035](./docs/adr/0035-shokupan-owns-the-install-path.md) | Shokupan owns the install path; the bridge is retired | proposed |
+| 0033 | Quattro is a Hyprland rewrite, not a bar swap | accepted — recorded in `omarchy-desktop-on-cachyos` |
+| 0034 | Omarchy is clay; CachyOS is the base | accepted — recorded in `omarchy-desktop-on-cachyos` |
+| 0035 | Shokupan owns the install path; the bridge is retired | proposed — recorded in `omarchy-desktop-on-cachyos` |
 | [0036](./docs/adr/0036-middle-click-autoscroll-via-the-flags-file.md) | Middle-click autoscroll, set where the browser reads it | accepted |
 | [0037](./docs/adr/0037-the-about-window-is-sized-to-fastfetch.md) | The About window is sized to fastfetch, by measuring the cell | accepted |
 | [0038](./docs/adr/0038-helium-plays-drm-through-a-donated-widevine.md) | Helium plays DRM through a donated Widevine; Chrome is gone | accepted |
-| [0039](./docs/adr/0039-claude-usage-belongs-in-the-launcher-not-on-the-bar.md) | Claude usage belongs in the launcher, not on the bar | accepted |
+| 0039 | Claude usage belongs in the launcher, not on the bar | accepted — recorded in `shokupan-plugins` |
 | [0040](./docs/adr/0040-the-wallpaper-picker-shows-names-and-moves-the-pin.md) | Wallpaper picker shows names and moves the pin | accepted |
-| [0041](./docs/adr/0041-rice-files-out-of-the-omarchy-namespace.md) | Rice files leave the omarchy namespace where upstream's contract allows | proposed |
+| 0041 | Rice files leave the omarchy namespace where upstream's contract allows | proposed — recorded in `shokupan-plugins` |
 | [0042](./docs/adr/0042-loaf-must-reassert-the-quattro-rice-without-hands.md) | Loaf must re-assert the quattro rice without hands | proposed |
-| [0043](./docs/adr/0043-loaf-installs-and-debloats-bound-to-the-pin.md) | Loaf installs and debloats, bound to the Omarchy pin | accepted |
-| [0044](./docs/adr/0044-plugins-are-the-default-shape-for-new-shell-work.md) | Plugins are the default shape for new shell work | accepted |
+| 0043 | Loaf installs and debloats, bound to the Omarchy pin | accepted — recorded in `omarchy-desktop-on-cachyos` |
+| 0044 | Plugins are the default shape for new shell work | accepted — recorded in `shokupan-plugins` |
 | [0045](./docs/adr/0045-headset-profiles-back-in-the-autoconnect-list.md) | Headset profiles go back in the Bluetooth auto-connect list | accepted |
 | [0046](./docs/adr/0046-meet-controls-its-own-pip-popup.md) | Meet controls its own PiP popup, and the main window keeps its border | accepted |
-| [0047](./docs/adr/0047-the-boot-contract-is-guarded-not-assumed.md) | The boot contract is guarded, not assumed | accepted |
+| 0047 | The boot contract is guarded, not assumed | accepted — recorded in `omarchy-desktop-on-cachyos` |
 | [0048](./docs/adr/0048-the-wallpaper-pool-is-a-manifest-not-a-payload.md) | The wallpaper pool is a manifest, not a payload | accepted |
+| [0050](./docs/adr/0050-herdrs-config-lives-in-shokupan-as-a-plain-tracked-file.md) | herdr's config lives in shokupan, as a plain tracked file | accepted |
 
 ## To do
 
-- **Make loaf quattro-complete (ADR-0042)** — the port was done by hand; the four
-  gaps that would make the next `omarchy update` need hands again are listed
-  there: fork drift detection (now guarding `indicators.qml` and the clock
-  clone — the launcher fork that motivated it is gone), upstream path
+- **Make loaf quattro-complete (ADR-0042)** — the port was done by hand; the
+  four gaps that would make the next `omarchy update` need hands again are
+  listed there: fork drift detection (now guarding `indicators.qml` and the
+  clock clone — the launcher fork that motivated it is gone), upstream path
   assertions, heal restarting the shell after module changes, and heal adopting
-  identical foreign real files with truthful reporting
-- Work through the other proposed ADRs above (0017, 0018, 0035, 0041)
-- Teach `loaf doctor` to check that the pinned wallpaper survived the last theme
-  change — an ADR'd behaviour with no assertion behind it. The watchdog half of
-  this item died with Waybar (ADR-0005, ADR-0033)
-- Decide whether `loaf heal` should ever act on `.displaced.*` files, or only
-  ever leave them for a human to read
-- Settle wrap versus clamp for the Size ladder (ADR-0022) after using both, and put
-  the switch in the Toggle Menu. Until then it is the flag file itself:
-  `~/.local/state/omarchy/toggles/window-resize-clamp` (present = clamp) —
-  `window-resize --toggle-mode` went with the script in the quattro port
-- Play one DRM stream in Helium to close ADR-0038's owed verification, then
-  delete the leftover `~/.config/google-chrome/` profile. The presence half is
-  covered — `loaf doctor`'s widevine check asserts the donation is there and
-  version-consistent, and `loaf widevine` reproduces it — but presence says the
-  CDM exists, not that EME negotiates
+  identical foreign real files with truthful reporting - Work through the other
+  proposed ADRs above (0017, 0018, 0035, 0041) - Teach `loaf doctor` to check
+  that the pinned wallpaper survived the last theme change — an ADR'd
+  behaviour with no assertion behind it. The watchdog half of this item died
+  with Waybar (ADR-0005, omarchy-desktop-on-cachyos ADR-0033) - Decide whether
+  `loaf heal` should ever act on `.displaced.*` files, or only ever leave them
+  for a human to read - Settle wrap versus clamp for the Size ladder (ADR-0022)
+  after using both, and put the switch in the Toggle Menu. Until then it is the
+  flag file itself: `~/.local/state/omarchy/toggles/window-resize-clamp`
+  (present = clamp) — `window-resize --toggle-mode` went with the script in
+  the quattro port - Play one DRM stream in Helium to close ADR-0038's owed
+  verification, then delete the leftover `~/.config/google-chrome/` profile. The
+  presence half is covered — `loaf doctor`'s widevine check asserts the
+  donation is there and version-consistent, and `loaf widevine` reproduces it
+  — but presence says the CDM exists, not that EME negotiates
