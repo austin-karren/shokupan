@@ -66,3 +66,9 @@ breeze-cursors
 # Prefer this over the uv/pip install: `uv tool install qmk` puts a second qmk
 # in ~/.local/bin that shadows this one and is invisible to `loaf packages`.
 qmk
+
+# ApexShot's recording backend on wlroots. Not a dependency of the apexshot
+# package, so it was silently absent: every record attempt failed with an
+# error nobody saw (keybind-launched, stderr discarded). Screenshots never
+# needed it; recording always did.
+wf-recorder
