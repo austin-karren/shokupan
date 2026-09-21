@@ -360,6 +360,7 @@ are the to-do list.
 | 0047 | The boot contract is guarded, not assumed | accepted — recorded in `omarchy-desktop-on-cachyos` |
 | [0048](./docs/adr/0048-the-wallpaper-pool-is-a-manifest-not-a-payload.md) | The wallpaper pool is a manifest, not a payload | accepted |
 | [0050](./docs/adr/0050-herdrs-config-lives-in-shokupan-as-a-plain-tracked-file.md) | herdr's config lives in shokupan, as a plain tracked file | accepted |
+| [0051](./docs/adr/0051-airwire-runs-r8152-dkms-not-cdc-ncm.md) | The AirWire runs r8152-dkms, not cdc_ncm | accepted |
 
 ## To do
 

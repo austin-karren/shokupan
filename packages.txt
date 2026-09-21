@@ -59,6 +59,7 @@ ddcutil
 device-mapper
 diffutils
 direnv
+dkms
 dmidecode
 dmraid
 dnsmasq
@@ -249,6 +250,7 @@ qemu-desktop
 qemu-user-static-binfmt
 qt5-wayland
 quickshell-git
+r8152-dkms
 realtime-privileges
 rebuild-detector
 reflector
