@@ -1,0 +1,47 @@
+{
+    "$schema": "./config.schema.json",
+    "defaultStrategy": "performance",
+    "strategyOnDischarging": "",
+    "strategies": {
+        "performance": {
+            "fanSpeedUpdateFrequency": 2,
+            "movingAverageInterval": 15,
+            "speedCurve": [
+                { "temp": 0,  "speed": 12  },
+                { "temp": 50, "speed": 12  },
+                { "temp": 55, "speed": 15  },
+                { "temp": 60, "speed": 20  },
+                { "temp": 65, "speed": 25  },
+                { "temp": 70, "speed": 32  },
+                { "temp": 76, "speed": 42  },
+                { "temp": 82, "speed": 55  },
+                { "temp": 88, "speed": 72  },
+                { "temp": 94, "speed": 100 }
+            ]
+        },
+        "quiet": {
+            "fanSpeedUpdateFrequency": 3,
+            "movingAverageInterval": 15,
+            "speedCurve": [
+                { "temp": 0,  "speed": 12  },
+                { "temp": 58, "speed": 12  },
+                { "temp": 68, "speed": 20  },
+                { "temp": 78, "speed": 32  },
+                { "temp": 86, "speed": 55  },
+                { "temp": 92, "speed": 78  },
+                { "temp": 97, "speed": 100 }
+            ]
+        },
+        "max": {
+            "fanSpeedUpdateFrequency": 2,
+            "movingAverageInterval": 5,
+            "speedCurve": [
+                { "temp": 0,  "speed": 30  },
+                { "temp": 50, "speed": 40  },
+                { "temp": 60, "speed": 55  },
+                { "temp": 70, "speed": 75  },
+                { "temp": 80, "speed": 100 }
+            ]
+        }
+    }
+}

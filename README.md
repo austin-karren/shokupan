@@ -160,6 +160,7 @@ mechanism and the reasoning; the record used to claim the opposite.
 | `.config/chromium-flags.conf`, `.config/helium-browser-flags.conf` | Browser flags. Read by each browser's launcher wrapper, which is the only place a flag reaches web-app windows — `.desktop` `Exec=` lines are truncated to their first token (ADR-0036) |
 | `packages/`, `migrations/` | Repo-only: the package manifests (pacman and Flatpak), and one-shot fixes for state that lives outside the repo |
 | `packages/wallpapers` | The deleted-wallpaper manifest: every image Omarchy has removed from its themes, pinned to the last upstream commit carrying its bytes. `loaf wallpapers` downloads what is missing and assembles the full pool under Tokyo Night (ADR-0048) |
+| `packages/fw-fanctrl.json` | The Framework fan curves — `performance` (default, the middle curve), `quiet`, `max`. fw-fanctrl reads it from `/etc/fw-fanctrl/config.json`, which stow cannot reach, so migration `1790006353` installs it and reloads the daemon |
 
 ### Deliberately not tracked
 
