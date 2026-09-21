@@ -58,7 +58,8 @@
           "id": "omarchy.tailscale"
         },
         {
-          "id": "io.github.dicemans.docker-vms"
+          "id": "io.github.dicemans.docker-vms",
+          "showStats": false
         },
         {
           "id": "jankeesvw.notification-center"
