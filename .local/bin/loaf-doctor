@@ -404,6 +404,32 @@ if [[ -f $HELIUM_THEME_PENDING ]]; then
   warn "helium theme" "Omarchy theme queued — it lands on Helium's next cold start"
 fi
 
+# Which profiles follow and which are the user's is invisible in Helium — a
+# followed profile shows the theme accent as a custom colour, the same as a
+# pick — so say it here. Chromium's grey default is a reset to following,
+# never a resting state (ADR-0053).
+HELIUM_ROOT="${HELIUM_ROOT:-$LOAF_HOME/.config/net.imput.helium}"
+HELIUM_THEME_WRITTEN="${HELIUM_THEME_WRITTEN:-${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/shokupan/helium-theme.json}"
+if [[ -d $HELIUM_ROOT ]] && command -v jq &>/dev/null; then
+  following=()
+  chosen=()
+  for prefs in "$HELIUM_ROOT"/Default/Preferences "$HELIUM_ROOT"/Profile\ */Preferences; do
+    [[ -f $prefs ]] || continue
+    dir=$(basename "$(dirname "$prefs")")
+    name=$(jq -r --arg d "$dir" '.profile.info_cache[$d].name // empty' "$HELIUM_ROOT/Local State" 2>/dev/null)
+    have=$(jq '.browser.theme.user_color2 // 0' "$prefs" 2>/dev/null)
+    ours=$(jq --arg d "$dir" '.[$d] // 0' "$HELIUM_THEME_WRITTEN" 2>/dev/null || echo 0)
+    if [[ $have == 0 || $have == "$ours" ]]; then
+      following+=("${name:-$dir}")
+    else
+      chosen+=("${name:-$dir}")
+    fi
+  done
+  if ((${#following[@]} + ${#chosen[@]})); then
+    ok "helium theme" "follows: ${following[*]:-none} · chosen: ${chosen[*]:-none}"
+  fi
+fi
+
 # ---------------------------------------------------------
 # Rice — this repo
 # ---------------------------------------------------------
