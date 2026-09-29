@@ -114,16 +114,6 @@
   // per mechanism 1; icon f03e is upstream's own.
   "style.background": {"icon":"","label":"Background","aliases":["background","wallpaper"],"keywords":"wallpaper backgrounds picker named search","action":"/home/austinkarren/.local/bin/wallpaper-menu"},
 
-  // Calendar. shokupan-plugins ADR-0006 keeps GNOME Calendar because it holds
-  // the synced online-accounts events; r1744's clock DOES have a popup with a
-  // month grid, but that grid is a read-out of the system clock with no event
-  // data, so it does not replace the app. The primary entry point is now that
-  // popup — day cells and the hero date open GNOME Calendar on the clicked
-  // day through the austinkarren.clock clone; this row is the keyboard-free
-  // alternative. No chord is bound. Icon f00ed is the glyph the retired bar
-  // module used.
-  "trigger.calendar": {"icon":"󰃭","label":"Calendar","keywords":"calendar meetings schedule agenda gnome","action":"/home/austinkarren/.local/bin/calendar-toggle"},
-
   // Default Browser: Helium. Upstream's Setup > Default Browser submenu lists
   // seven browsers, all dispatched through omarchy-default-browser, which
   // hardcodes the same seven — no helium case, and a PATH shim cannot add one

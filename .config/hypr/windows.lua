@@ -3,41 +3,6 @@
 -- (omarchy-desktop-on-cachyos ADR-0033). Quattro's stock config has no user
 -- windows file - hyprland.lua requires this one explicitly.
 --
--- GNOME Calendar as the clock popup's engine (shokupan-plugins ADR-0006) ----
---
--- Restored with the r1744 calendar-clone work: the quattro port dropped these
--- rules on the (wrong) assumption the clock's month grid replaced the app, and
--- without them a cold gnome-calendar opened as a normal tiled window.
---
--- `silent`, UNLIKE the .conf era: autostart.lua now preloads gnome-calendar at
--- login, and a non-silent rule would reveal the popup over whatever boots
--- first. The cost is that calendar-toggle's cold branch must reveal the
--- special workspace itself after launch, which it does.
---
--- Size is monitor-relative via rule EXPRESSIONS, not percent strings. In the
--- lua config provider a size string feeds Hyprland's math-expression parser
--- (variables monitor_w/monitor_h/window_w/... — see the Meet popup rule below
--- and upstream's default/hypr/apps/webcam-overlay.lua, the sanctioned idiom
--- for monitor-relative geometry). That grammar has NO percent syntax: the
--- earlier `"72%"` hit "failed to parse expression" and the size effect was
--- dropped SILENTLY — float/center/workspace still applied (separate rules),
--- `hyprctl configerrors` stayed empty, and the window kept gnome-calendar's
--- own remembered size (gsettings org.gnome.calendar window-size, 768x600).
---
--- 3/5 and 18/25 are 60% and 72% of the LOGICAL monitor: 1382x1106 on the
--- 2304x1536 desktop, a 1.25:1 frame — SLIGHTLY wider than tall, which is what
--- was asked for. The first cut used 72%x62% (1658x952, 1.74:1): wider than
--- tall, but not slightly. Height stays off full-height on purpose. Written as
--- fractions because the expression grammar is plain arithmetic. Expressions evaluate at
--- map time against the window's monitor, so no pixels are hardcoded and the
--- rule beats the client's remembered size: DefaultFloatingAlgorithm warps the
--- floating window to its DESIRED geometry first, then applies the size rule
--- on top (same v0.56.2 order the Meet rule below relies on).
-o.window("org.gnome.Calendar", { float = true })
-o.window("org.gnome.Calendar", { center = true })
-o.window("org.gnome.Calendar", { size = { "(monitor_w*3/5)", "(monitor_h*18/25)" } })
-o.window("org.gnome.Calendar", { workspace = "special:calendar silent" })
-
 -- GNOME Settings (gnome-control-center) -------------------------------------
 -- Floated because it is a dialog-shaped app that tiles badly, but left on the
 -- normal workspace: Online Accounts hands off to a browser for OAuth, and a
@@ -133,8 +98,8 @@ o.window({ tag = "chromium-based-browser", initial_title = "^Meet - .+" }, {
 -- of each side and ~140px clear of top and bottom, well inside the screen on
 -- every axis.
 --
--- Mechanism is the same rule-EXPRESSION grammar the calendar rule above uses,
--- and for the same reason: the grammar has NO percent syntax (`"80%"` hits
+-- Mechanism is Hyprland's rule-EXPRESSION grammar (see upstream's
+-- default/hypr/apps/webcam-overlay.lua): it has NO percent syntax (`"80%"` hits
 -- "failed to parse expression" and the size effect is dropped SILENTLY, with
 -- `hyprctl configerrors` still clean), and its only variables are monitor_w,
 -- monitor_h, window_w, window_h, cursor_x, cursor_y - verified against the
@@ -144,8 +109,8 @@ o.window({ tag = "chromium-based-browser", initial_title = "^Meet - .+" }, {
 --
 -- `size` only, no `center` and no `float`: upstream's own two rules already set
 -- both, they are separate effects, and a later size-only rule overrides just
--- the size while centering recomputes from the new size (the calendar rule
--- above proves the ordering - float/center/size as three rules land correctly).
+-- the size while centering recomputes from the new size (float/center/size as
+-- three separate rules land correctly, in that order).
 -- Steam stays FLOATING deliberately. Tiling it was tested and rejected: a
 -- tiled Steam client forces games into exclusive fullscreen to hold keyboard
 -- focus, and most games now default to windowed-fullscreen, which trades one

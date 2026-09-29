@@ -6,16 +6,6 @@
 local paths = require("default.hypr.paths")
 local home = paths.home
 
--- GNOME Calendar preload (shokupan-plugins ADR-0006): warmed at login so the
--- first calendar click is an instant popup instead of a seconds-long
--- evolution-data-server cold start. The windows.lua rule parks it on
--- special:calendar SILENT, so nothing flashes during boot; calendar-toggle owns
--- the reveal.
-o.launch_on_start("gnome-calendar")
-
--- Click-outside dismissal for that popup: hide special:calendar when focus
--- moves to a non-calendar window (shokupan-plugins ADR-0006 addendum).
-o.launch_on_start(home .. "/.local/bin/calendar-autohide")
 
 -- ApexShot daemon: the tray icon (recording indicator + stop controls in the
 -- bar), the recording UI, and the `record stop` D-Bus endpoint the
