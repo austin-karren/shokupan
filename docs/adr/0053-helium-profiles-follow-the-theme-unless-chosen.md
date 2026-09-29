@@ -2,7 +2,7 @@
 status: accepted
 ---
 
-# Helium profiles follow the Omarchy theme unless pinned
+# Helium profiles follow the Omarchy theme unless chosen
 
 ## Context
 
@@ -38,11 +38,23 @@ What was measured on 2026-09-29, because it decides the design:
 
 Omarchy keeps theming the browser; the rice decides which profiles listen.
 
-1. **`packages/helium.profiles`** lists the profiles that own their colour
-   (ShipTrac). Everything else follows the desktop.
-2. **`helium-theme-apply`** reads Omarchy's published colour
-   (`current/theme/chromium.theme`, `r,g,b`) and writes it into every
-   non-pinned profile's `Preferences`. Cold Helium: applied at once. Running
+1. **What you did in Helium decides.** A profile on the grey default swatch
+   follows the desktop; a profile with a picked colour keeps it; picking the
+   default again resumes following. Since a following profile carries the
+   theme colour and so looks like a pick, every colour written is recorded
+   per profile (`~/.local/state/shokupan/helium-theme.json`) and only a
+   null/zero colour or the recorded one is ever overwritten.
+2. **`helium-theme-apply`** seeds every following profile's `Preferences`
+   with the theme's **accent** (`colors.toml`), not the colour Omarchy
+   publishes for Chromium (`chromium.theme`, the background): `user_color2`
+   is a GM3 seed and Chromium derives the chrome palette from it, so Tokyo
+   Night's near-black background produces a chrome indistinguishable from
+   stock grey (`#1c1c29` vs `#1e2020`) while its accent gives `#181f30`, the
+   theme as a person recognises it. `chromium.theme` is the fallback, and
+   `HELIUM_THEME_SEED=background` asks for it. The write carries the full
+   shape of a pick — `color_variant2`, `is_grayscale2: false` — because a
+   bare colour is cleared on load and the grey "default" swatch is
+   Chromium's grayscale mode, which would desaturate the theme. Cold Helium: applied at once. Running
    Helium: a marker is left, and **`helium-launch`** — named as `Exec` by a
    desktop-entry override so Super+B, the launcher and `xdg-open` all pass
    through it — applies the marker before the next cold start.
@@ -72,9 +84,9 @@ Omarchy keeps theming the browser; the rice decides which profiles listen.
 
 ## Consequences
 
-- The Personal profile shows a chosen colour that equals the theme
-  background, not the grey "default" swatch, and GM3 derives a palette from
-  it — it will not be a flat `#1a1b26`.
+- A following profile shows a chosen colour in Customize Helium, not the
+  grey "default" swatch; choosing grey there is how to hand it back to the
+  desktop, and grey itself is never a resting state for a followed profile.
 - A theme switch reaches an open Helium at its next cold start, not live. Same
   latency the `1786228894` migration accepted; that migration's hard-coded
   colours are now only a first seed, overridden by the hook.

@@ -1877,6 +1877,7 @@ make_helium() {
   printf '{"browser":{"theme":{"user_color2":-14244198}},"extensions":{"theme":{"id":"user_color_theme_id"}}}' \
     >"$root/Profile 1/Preferences"
   printf '26,27,38\n' >"$home/.local/state/omarchy/current/theme/chromium.theme"
+  printf 'accent = "#7aa2f7"\nbackground = "#1a1b26"\n' >"$home/.local/state/omarchy/current/theme/colors.toml"
 }
 
 helium_apply() {
@@ -1891,16 +1892,18 @@ colour_of() { jq '.browser.theme.user_color2' "$1/.config/net.imput.helium/$2/Pr
 # 26,27,38 is 0xFF1A1B26 as an SkColor, -15066330 signed.
 home=$(make_home); make_helium "$home"
 out=$(helium_apply "$home")
-assert_contains "helium: reports the theme colour" "$out" "theme colour -15066330 (26,27,38)"
-assert_equals "helium: a default profile takes the theme colour" "$(colour_of "$home" Default)" "-15066330"
+assert_contains "helium: seeds from the theme accent" "$out" "theme colour -8740105 (122,162,247, from accent #7aa2f7)"
+assert_equals "helium: a default profile takes the accent" "$(colour_of "$home" Default)" "-8740105"
+assert_equals "helium: following clears grayscale mode" "$(jq '.browser.theme.is_grayscale2' "$home/.config/net.imput.helium/Default/Preferences")" "false"
+assert_equals "helium: following carries a colour variant" "$(jq '.browser.theme.color_variant2' "$home/.config/net.imput.helium/Default/Preferences")" "1"
 assert_equals "helium: a chosen colour is kept" "$(colour_of "$home" 'Profile 1')" "-14244198"
 assert_contains "helium: names the profile it left alone" "$out" "chosen in Helium, untouched: Profile 1"
 assert_file_exists "helium: backs up Preferences once" "$home/.config/net.imput.helium/Default/Preferences.pre-theme"
 
 # Theme switch: the colour this script wrote is its own to overwrite.
-printf '36,40,59\n' >"$home/.local/state/omarchy/current/theme/chromium.theme"
+printf 'accent = "#bb9af7"\n' >"$home/.local/state/omarchy/current/theme/colors.toml"
 helium_apply "$home" >/dev/null
-assert_equals "helium: a followed profile follows the next theme" "$(colour_of "$home" Default)" "-14407621"
+assert_equals "helium: a followed profile follows the next theme" "$(colour_of "$home" Default)" "-4482313"
 
 # The user picks a colour in Helium: from then on it is theirs. Back to the
 # default swatch (null) and it follows again.
@@ -1912,7 +1915,14 @@ assert_contains "helium: a picked colour is reported as chosen" "$out" "untouche
 jq '.browser.theme.user_color2 = null' "$home/.config/net.imput.helium/Default/Preferences" >"$home/p.json" &&
   mv "$home/p.json" "$home/.config/net.imput.helium/Default/Preferences"
 helium_apply "$home" >/dev/null
-assert_equals "helium: back on the default swatch, it follows again" "$(colour_of "$home" Default)" "-14407621"
+assert_equals "helium: back on the default swatch, it follows again" "$(colour_of "$home" Default)" "-4482313"
+
+# No colors.toml: Omarchy's own chromium colour is the fallback, and
+# HELIUM_THEME_SEED=background asks for it outright.
+rm "$home/.local/state/omarchy/current/theme/colors.toml"
+out=$(helium_apply "$home")
+assert_contains "helium: falls back to chromium.theme" "$out" "from chromium.theme"
+assert_equals "helium: the fallback is the background colour" "$(colour_of "$home" Default)" "-15066330"
 
 # Running Helium: nothing is written, a marker is left; --if-pending delivers
 # it cold and clears the marker.
@@ -1924,11 +1934,11 @@ assert_file_exists "helium: the marker exists" "$home/.local/state/shokupan/heli
 out=$(loaf_run "$home" doctor)
 assert_contains "doctor: reports a queued Helium theme" "$out" "Omarchy theme queued"
 helium_apply "$home" --if-pending >/dev/null
-assert_equals "helium: --if-pending delivers the queued theme" "$(colour_of "$home" Default)" "-15066330"
+assert_equals "helium: --if-pending delivers the queued theme" "$(colour_of "$home" Default)" "-8740105"
 [[ -f $home/.local/state/shokupan/helium-theme.pending ]] && pending=present || pending=cleared
 assert_equals "helium: --if-pending clears the marker" "$pending" "cleared"
 helium_apply "$home" --if-pending >/dev/null
-assert_equals "helium: --if-pending with no marker is a no-op" "$(colour_of "$home" Default)" "-15066330"
+assert_equals "helium: --if-pending with no marker is a no-op" "$(colour_of "$home" Default)" "-8740105"
 
 # The policy directory. A mandatory theme present is a locked picker until the
 # hook runs; a directory the user cannot write is the hook unable to run at all.
@@ -1957,7 +1967,7 @@ LOAF_HOME="$home" XDG_STATE_HOME="$home/.local/state" HELIUM_RUNNING=0 POLICY_RO
 assert_file_exists "hook: demotes the policy to recommended" "$home/etc/chromium/policies/recommended/color.json"
 [[ -f $home/etc/chromium/policies/managed/color.json ]] && managed=present || managed=gone
 assert_equals "hook: the mandatory copy is gone" "$managed" "gone"
-assert_equals "hook: applies the theme to the default profile" "$(colour_of "$home" Default)" "-15066330"
+assert_equals "hook: applies the theme to the default profile" "$(colour_of "$home" Default)" "-8740105"
 
 printf '\n1..%d\n' "$tests"
 if ((failures)); then

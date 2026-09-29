@@ -30,10 +30,16 @@
 # helium-launch applies it (--if-pending) on the next cold start, and the
 # theme-set hook retries on the next theme change.
 #
-# Colour: Omarchy publishes the theme's chromium colour as "r,g,b" in
-# current/theme/chromium.theme. Chromium stores user_color2 as an SkColor —
-# 0xAARRGGBB, alpha 0xFF — serialised as a SIGNED 32-bit int, which is why
-# every recorded colour in this repo is negative. -14244198 is 0xFF26A69A.
+# Colour: the theme's ACCENT from current/theme/colors.toml, not the colour
+# Omarchy publishes for Chromium (chromium.theme, the background). user_color2
+# is a GM3 seed and Chromium derives the whole chrome palette from it; Tokyo
+# Night's near-black background seeds a chrome that reads as stock grey
+# (measured: #1c1c29 against stock #1e2020), while its accent gives #181f30 —
+# the theme as a person recognises it. chromium.theme is the fallback when a
+# theme ships no colors.toml. HELIUM_THEME_SEED=background asks for Omarchy's
+# own colour instead. Chromium stores the seed as an SkColor — 0xAARRGGBB,
+# alpha 0xFF — serialised as a SIGNED 32-bit int, which is why every recorded
+# colour in this repo is negative. -14244198 is 0xFF26A69A.
 #
 # Usage: helium-theme-apply [--if-pending] [--quiet]
 
@@ -41,7 +47,10 @@ set -uo pipefail
 
 LOAF_HOME="${LOAF_HOME:-$HOME}"
 HELIUM_ROOT="${HELIUM_ROOT:-$LOAF_HOME/.config/net.imput.helium}"
-CHROMIUM_THEME="${CHROMIUM_THEME:-$LOAF_HOME/.local/state/omarchy/current/theme/chromium.theme}"
+THEME_DIR="${OMARCHY_THEME_DIR:-$LOAF_HOME/.local/state/omarchy/current/theme}"
+CHROMIUM_THEME="${CHROMIUM_THEME:-$THEME_DIR/chromium.theme}"
+COLORS_TOML="${COLORS_TOML:-$THEME_DIR/colors.toml}"
+SEED="${HELIUM_THEME_SEED:-accent}"
 STATE_DIR="${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/shokupan"
 PENDING="${HELIUM_THEME_PENDING:-$STATE_DIR/helium-theme.pending}"
 WRITTEN="${HELIUM_THEME_WRITTEN:-$STATE_DIR/helium-theme.json}"
@@ -73,7 +82,21 @@ if $if_pending && [[ ! -f $PENDING ]]; then
 fi
 
 [[ -d $HELIUM_ROOT ]] || { say "no Helium profile directory at $HELIUM_ROOT"; exit 0; }
-[[ -s $CHROMIUM_THEME ]] || { say "no chromium.theme for the current theme — nothing to apply"; exit 0; }
+# Resolve the seed to "r,g,b" once, so the patcher below has one input shape.
+seed_rgb=""
+seed_from=""
+if [[ $SEED == accent && -s $COLORS_TOML ]]; then
+  hex=$(sed -n 's/^[[:space:]]*accent[[:space:]]*=[[:space:]]*"#\([0-9a-fA-F]\{6\}\)".*/\1/p' "$COLORS_TOML" | head -1)
+  if [[ -n $hex ]]; then
+    seed_rgb="$((16#${hex:0:2})),$((16#${hex:2:2})),$((16#${hex:4:2}))"
+    seed_from="accent #$hex"
+  fi
+fi
+if [[ -z $seed_rgb && -s $CHROMIUM_THEME ]]; then
+  seed_rgb=$(tr -d '[:space:]' <"$CHROMIUM_THEME")
+  seed_from="chromium.theme"
+fi
+[[ -n $seed_rgb ]] || { say "no accent or chromium.theme for the current theme — nothing to apply"; exit 0; }
 
 mkdir -p "$STATE_DIR"
 
@@ -83,11 +106,11 @@ if helium_running; then
   exit 0
 fi
 
-result=$(python3 - "$HELIUM_ROOT" "$CHROMIUM_THEME" "$WRITTEN" <<'PY'
+result=$(python3 - "$HELIUM_ROOT" "$seed_rgb" "$WRITTEN" <<'PY'
 import json, os, shutil, sys
 
-root, theme_file, written_file = sys.argv[1:]
-r, g, b = (int(x) for x in open(theme_file).read().strip().split(","))
+root, seed_rgb, written_file = sys.argv[1:]
+r, g, b = (int(x) for x in seed_rgb.split(","))
 colour = (0xFF << 24) | (r << 16) | (g << 8) | b
 if colour >= 1 << 31:
     colour -= 1 << 32
@@ -117,7 +140,7 @@ for name in sorted(os.listdir(root)):
         kept.append(name)
         written.pop(name, None)
         continue
-    if have == colour and ext.get("id") == "user_color_theme_id":
+    if have == colour and ext.get("id") == "user_color_theme_id" and not theme.get("is_grayscale2"):
         current.append(name)
         written[name] = colour
         continue
@@ -125,7 +148,17 @@ for name in sorted(os.listdir(root)):
     backup = path + ".pre-theme"
     if not os.path.exists(backup):
         shutil.copy2(path, backup)
+    # The shape Helium writes for a pick, in full: a colour with no variant is
+    # rejected on load and cleared (measured 2026-09-29 — the profile came
+    # back null after one launch). 1 is kTonalSpot, the picker's default.
     theme["user_color2"] = colour
+    theme.setdefault("color_scheme2", 0)
+    if theme.get("color_variant2") in (None, 0):
+        theme["color_variant2"] = 1
+    # The grey "default" swatch is Chromium's grayscale mode: is_grayscale2
+    # desaturates whatever colour is set, so a followed profile would show the
+    # theme in grey. Following means colour.
+    theme["is_grayscale2"] = False
     ext["id"] = "user_color_theme_id"
     with open(path, "w") as f:
         json.dump(data, f, separators=(",", ":"))
@@ -141,7 +174,7 @@ PY
 
 IFS='|' read -r colour applied kept current <<<"$result"
 rm -f "$PENDING"
-say "theme colour $colour ($(<"$CHROMIUM_THEME"))"
+say "theme colour $colour ($seed_rgb, from $seed_from)"
 [[ -n $applied ]] && say "  applied to: ${applied//,/, }"
 [[ -n $current ]] && say "  already current: ${current//,/, }"
 [[ -n $kept ]] && say "  chosen in Helium, untouched: ${kept//,/, }"
