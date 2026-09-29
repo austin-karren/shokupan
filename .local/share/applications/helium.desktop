@@ -1,0 +1,26 @@
+[Desktop Entry]
+# Overrides /usr/share/applications/helium.desktop by id so every launch path
+# — omarchy-launch-browser (Super+B), the app launcher, xdg-open — goes through
+# helium-launch, which delivers a queued Omarchy theme before the browser holds
+# the profile (ADR-0053). Same Name/Icon/MimeType/Actions as the package's
+# entry; the translations are left out on purpose.
+Version=1.0
+Name=Helium Browser
+GenericName=Web Browser
+Comment=Access the Internet
+Exec=/home/austinkarren/.local/bin/helium-launch %U
+StartupNotify=true
+Terminal=false
+Icon=helium-browser
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=application/pdf;application/rdf+xml;application/rss+xml;application/xhtml+xml;application/xhtml_xml;application/xml;image/gif;image/jpeg;image/png;image/webp;text/html;text/xml;x-scheme-handler/http;x-scheme-handler/https;
+Actions=new-window;new-private-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=/home/austinkarren/.local/bin/helium-launch
+
+[Desktop Action new-private-window]
+Name=New Incognito Window
+Exec=/home/austinkarren/.local/bin/helium-launch --incognito

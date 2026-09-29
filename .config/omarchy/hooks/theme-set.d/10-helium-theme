@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Runs after every `omarchy-theme-set`, via Omarchy's sanctioned hook directory.
+# Two jobs, both about Helium (ADR-0053):
+#
+# 1. Demote the browser policy. omarchy-theme-set-browser writes a MANDATORY
+#    Chromium policy, /etc/chromium/policies/managed/color.json, and Helium reads
+#    Chromium's policy directory (the path is compiled into its binary). A
+#    mandatory theme colour locks every profile's picker with "set by your
+#    Organization". Moving the file to recommended/ unlocks the pickers; Chromium
+#    ignores the colour at that level, so this is purely an unlock. The
+#    directories are user-owned (loaf install chowns them) so no sudo is needed
+#    here — Omarchy writes into them as root and that still works.
+#
+# 2. Apply the theme colour to the non-pinned Helium profiles through their
+#    Preferences, the only place a per-profile colour can be expressed. If
+#    Helium is running the apply is queued; helium-launch delivers it on the
+#    next cold start.
+#
+# Warn, never fail: a theme change must not be blocked by a browser.
+
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+POLICY_ROOT="${POLICY_ROOT:-/etc/chromium/policies}"
+
+if [[ -f $POLICY_ROOT/managed/color.json ]]; then
+  mkdir -p "$POLICY_ROOT/recommended" 2>/dev/null
+  if mv -f "$POLICY_ROOT/managed/color.json" "$POLICY_ROOT/recommended/color.json" 2>/dev/null; then
+    # Nudge a running Helium to re-read policy so the unlock lands without a restart.
+    if command -v helium-browser >/dev/null && pgrep -x helium >/dev/null; then
+      helium-browser --refresh-platform-policy --no-startup-window &>/dev/null &
+    fi
+  else
+    echo "10-helium-theme: could not demote $POLICY_ROOT/managed/color.json — Helium's theme picker stays locked; run 'loaf install' to take ownership of the policy directories"
+  fi
+fi
+
+apply="$LOAF_HOME/.local/bin/helium-theme-apply"
+[[ -x $apply ]] && "$apply" --quiet
+
+exit 0

@@ -380,6 +380,30 @@ if [[ -f $DEBLOAT_MANIFEST ]]; then
   fi
 fi
 
+# Helium theming (ADR-0053). omarchy-theme-set writes a MANDATORY browser
+# policy as root into policies/managed/, which locks every Helium profile's
+# theme picker. The theme-set hook demotes it to recommended/ without sudo,
+# which only works while the directory is the user's — loaf install chowns
+# it, and an Omarchy change that recreates it as root would bring the lock
+# back silently. A managed file that is present right now means the hook has
+# not run since the last write (or could not): the picker is locked until the
+# next theme change. A queued theme is not a problem, only news.
+POLICY_ROOT="${POLICY_ROOT:-/etc/chromium/policies}"
+HELIUM_THEME_PENDING="${HELIUM_THEME_PENDING:-${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/shokupan/helium-theme.pending}"
+if [[ -d $POLICY_ROOT/managed ]]; then
+  if [[ ! -w $POLICY_ROOT/managed ]]; then
+    bad "browser policy" "$POLICY_ROOT/managed is not writable — the theme-set hook cannot unlock Helium's theme picker" \
+      "run 'loaf install' to take ownership of the policy directories (ADR-0053)"
+  elif [[ -f $POLICY_ROOT/managed/color.json ]]; then
+    warn "browser policy" "managed color.json present — Helium's theme picker is locked until the next theme change"
+  else
+    ok "browser policy" "no mandatory browser theme"
+  fi
+fi
+if [[ -f $HELIUM_THEME_PENDING ]]; then
+  warn "helium theme" "Omarchy theme queued — it lands on Helium's next cold start"
+fi
+
 # ---------------------------------------------------------
 # Rice — this repo
 # ---------------------------------------------------------

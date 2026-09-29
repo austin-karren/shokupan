@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Launch Helium, delivering any queued Omarchy theme first (ADR-0053).
+#
+# Chromium only reads Preferences at startup, so a theme change made while
+# Helium was open is parked as a marker by helium-theme-apply. This is the one
+# moment it can land: the browser is about to start and no instance holds the
+# profile. If one is already running this is just another window and the
+# marker waits. The desktop override in .local/share/applications names this as
+# Exec, which is what omarchy-launch-browser and the app launcher both resolve.
+
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+
+if ! pgrep -x helium >/dev/null 2>&1; then
+  apply="$LOAF_HOME/.local/bin/helium-theme-apply"
+  [[ -x $apply ]] && "$apply" --if-pending --quiet
+fi
+
+exec helium-browser "$@"

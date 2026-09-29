@@ -1,0 +1,148 @@
+#!/bin/bash
+
+# Push the current Omarchy theme colour into every Helium profile that has not
+# chosen its own (ADR-0053). The rule is what the user did in Customize Helium:
+#
+#   grey "default" swatch  -> follows the Omarchy theme, re-applied on every switch
+#   a picked colour        -> kept; that colour is how the profiles tell each
+#                             other apart
+#   picked, then back to   -> follows again
+#   default
+#
+# Why this is per-profile Preferences surgery and not a policy: Chromium's
+# BrowserThemeColor policy only takes effect at the MANDATORY level, where it
+# locks every profile's picker ("set by your Organization"); at the recommended
+# level ThemeService ignores it outright (measured 2026-09-29: picker unlocked,
+# chrome still stock grey). A policy can therefore never say "default profiles
+# follow, chosen ones don't". The profile's own user_color2 pref can.
+#
+# Telling "default" from "chosen" once we have written a colour: a profile that
+# follows the theme carries the theme colour in user_color2, which is
+# indistinguishable from a pick. So every colour this script writes is recorded
+# per profile in a state file, and a profile is only ever rewritten when its
+# current colour is null/0 (Chromium's default) or exactly what was last
+# written here. Anything else is the user's and is left alone — and its record
+# is dropped, so a later return to default is seen as such.
+#
+# The constraint that shapes the mechanism: Chromium never re-reads Preferences
+# while running and rewrites the file from memory on exit, so a patch applied
+# under a live Helium is discarded. Cold: patch now. Running: leave a marker;
+# helium-launch applies it (--if-pending) on the next cold start, and the
+# theme-set hook retries on the next theme change.
+#
+# Colour: Omarchy publishes the theme's chromium colour as "r,g,b" in
+# current/theme/chromium.theme. Chromium stores user_color2 as an SkColor —
+# 0xAARRGGBB, alpha 0xFF — serialised as a SIGNED 32-bit int, which is why
+# every recorded colour in this repo is negative. -14244198 is 0xFF26A69A.
+#
+# Usage: helium-theme-apply [--if-pending] [--quiet]
+
+set -uo pipefail
+
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+HELIUM_ROOT="${HELIUM_ROOT:-$LOAF_HOME/.config/net.imput.helium}"
+CHROMIUM_THEME="${CHROMIUM_THEME:-$LOAF_HOME/.local/state/omarchy/current/theme/chromium.theme}"
+STATE_DIR="${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/shokupan"
+PENDING="${HELIUM_THEME_PENDING:-$STATE_DIR/helium-theme.pending}"
+WRITTEN="${HELIUM_THEME_WRITTEN:-$STATE_DIR/helium-theme.json}"
+
+if_pending=false
+quiet=false
+for arg in "$@"; do
+  case $arg in
+    --if-pending) if_pending=true ;;
+    --quiet) quiet=true ;;
+    *) echo "helium-theme-apply: unknown argument $arg" >&2; exit 2 ;;
+  esac
+done
+
+say() { $quiet || echo "$*"; }
+
+# The process is /opt/helium-browser-bin/helium, comm "helium". Injectable so
+# the suite can assert both branches without a browser.
+helium_running() {
+  if [[ -n ${HELIUM_RUNNING:-} ]]; then
+    [[ $HELIUM_RUNNING == 1 ]]
+  else
+    pgrep -x helium >/dev/null 2>&1
+  fi
+}
+
+if $if_pending && [[ ! -f $PENDING ]]; then
+  exit 0
+fi
+
+[[ -d $HELIUM_ROOT ]] || { say "no Helium profile directory at $HELIUM_ROOT"; exit 0; }
+[[ -s $CHROMIUM_THEME ]] || { say "no chromium.theme for the current theme — nothing to apply"; exit 0; }
+
+mkdir -p "$STATE_DIR"
+
+if helium_running; then
+  : >"$PENDING"
+  say "Helium is running — theme queued for its next cold start"
+  exit 0
+fi
+
+result=$(python3 - "$HELIUM_ROOT" "$CHROMIUM_THEME" "$WRITTEN" <<'PY'
+import json, os, shutil, sys
+
+root, theme_file, written_file = sys.argv[1:]
+r, g, b = (int(x) for x in open(theme_file).read().strip().split(","))
+colour = (0xFF << 24) | (r << 16) | (g << 8) | b
+if colour >= 1 << 31:
+    colour -= 1 << 32
+
+try:
+    with open(written_file) as f:
+        written = json.load(f)
+except (OSError, ValueError):
+    written = {}
+
+applied, kept, current = [], [], []
+for name in sorted(os.listdir(root)):
+    if name != "Default" and not name.startswith("Profile "):
+        continue
+    path = os.path.join(root, name, "Preferences")
+    if not os.path.exists(path):
+        continue
+    with open(path) as f:
+        data = json.load(f)
+    theme = data.setdefault("browser", {}).setdefault("theme", {})
+    ext = data.setdefault("extensions", {}).setdefault("theme", {})
+    have = theme.get("user_color2")
+
+    # Chromium's default is a missing key, null, or SK_ColorTRANSPARENT (0).
+    ours = have in (None, 0) or have == written.get(name)
+    if not ours:
+        kept.append(name)
+        written.pop(name, None)
+        continue
+    if have == colour and ext.get("id") == "user_color_theme_id":
+        current.append(name)
+        written[name] = colour
+        continue
+
+    backup = path + ".pre-theme"
+    if not os.path.exists(backup):
+        shutil.copy2(path, backup)
+    theme["user_color2"] = colour
+    ext["id"] = "user_color_theme_id"
+    with open(path, "w") as f:
+        json.dump(data, f, separators=(",", ":"))
+    written[name] = colour
+    applied.append(name)
+
+with open(written_file, "w") as f:
+    json.dump(written, f)
+
+print(f"{colour}|{','.join(applied)}|{','.join(kept)}|{','.join(current)}")
+PY
+) || { echo "helium-theme-apply: could not patch Preferences" >&2; exit 1; }
+
+IFS='|' read -r colour applied kept current <<<"$result"
+rm -f "$PENDING"
+say "theme colour $colour ($(<"$CHROMIUM_THEME"))"
+[[ -n $applied ]] && say "  applied to: ${applied//,/, }"
+[[ -n $current ]] && say "  already current: ${current//,/, }"
+[[ -n $kept ]] && say "  chosen in Helium, untouched: ${kept//,/, }"
+exit 0

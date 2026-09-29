@@ -157,6 +157,28 @@ else
 fi
 
 # ---------------------------------------------------------
+# 3b. Browser policy directories are the user's (ADR-0053)
+# ---------------------------------------------------------
+
+step "Browser policy"
+
+# omarchy-theme-set writes a mandatory BrowserThemeColor policy as root into
+# policies/managed/; the theme-set hook moves it to recommended/ to unlock
+# Helium's theme picker and needs no sudo for that only while the directories
+# are user-owned. Omarchy's own root-side `install` into them keeps working.
+POLICY_ROOT="${POLICY_ROOT:-/etc/chromium/policies}"
+for policy_dir in managed recommended; do
+  if [[ -d $POLICY_ROOT/$policy_dir && -w $POLICY_ROOT/$policy_dir ]]; then
+    say "$POLICY_ROOT/$policy_dir is writable"
+  else
+    say "taking ownership of $POLICY_ROOT/$policy_dir"
+    if ! { $SUDO mkdir -p "$POLICY_ROOT/$policy_dir" && $SUDO chown "$(id -un)" "$POLICY_ROOT/$policy_dir"; }; then
+      die "could not take ownership of $POLICY_ROOT/$policy_dir"
+    fi
+  fi
+done
+
+# ---------------------------------------------------------
 # 4. Chosen packages and flatpaks
 # ---------------------------------------------------------
 

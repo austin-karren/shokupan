@@ -160,6 +160,9 @@ make_home() {
     # what quattro leaves it on and therefore the healthy default here.
     printf '# Configuration file for NetworkManager.\n' \
       >"$home/etc/NetworkManager.conf"
+    # Browser policy directories as loaf install leaves them: present, ours,
+    # and empty — no mandatory theme (ADR-0053).
+    mkdir -p "$home/etc/chromium/policies/managed" "$home/etc/chromium/policies/recommended"
   } >/dev/null 2>&1
 
   echo "$home"
@@ -243,6 +246,8 @@ loaf_run() {
     QMK_RULES="$home/etc/udev/rules.d/50-qmk.rules" \
     QMK_PKG_RULES="$home/usr/lib/udev/rules.d/50-qmk.rules" \
     QMK_EXTRA_RULES="$home/etc/udev/rules.d/51-qmk-extra.rules" \
+    POLICY_ROOT="$home/etc/chromium/policies" \
+    HELIUM_THEME_PENDING="$home/.local/state/shokupan/helium-theme.pending" \
     STUB_ABSENT="${STUB_ABSENT:-}" \
     STUB_LOG="${STUB_LOG:-}" \
     XDG_STATE_HOME="$home/.local/state" \
@@ -1857,6 +1862,102 @@ assert_not_contains "herdr config: doctor is clean again after restore" \
   "$out" "replaced by real files"
 
 # ---------------------------------------------------------
+
+# ---------------------------------------------------------
+# Helium theming (ADR-0053)
+# ---------------------------------------------------------
+
+# A fixture Helium: two profiles, one on Chromium's default (null colour), one
+# with a picked colour, and Omarchy's published theme colour.
+make_helium() {
+  local home=$1
+  local root="$home/.config/net.imput.helium"
+  mkdir -p "$root/Default" "$root/Profile 1" "$home/.local/state/omarchy/current/theme"
+  printf '{"browser":{"theme":{}},"extensions":{}}' >"$root/Default/Preferences"
+  printf '{"browser":{"theme":{"user_color2":-14244198}},"extensions":{"theme":{"id":"user_color_theme_id"}}}' \
+    >"$root/Profile 1/Preferences"
+  printf '26,27,38\n' >"$home/.local/state/omarchy/current/theme/chromium.theme"
+}
+
+helium_apply() {
+  local home=$1
+  shift
+  LOAF_HOME="$home" XDG_STATE_HOME="$home/.local/state" HELIUM_RUNNING="${HELIUM_RUNNING:-0}" \
+    PATH="$ROOT/.local/bin:$PATH" helium-theme-apply "$@" 2>&1
+}
+
+colour_of() { jq '.browser.theme.user_color2' "$1/.config/net.imput.helium/$2/Preferences"; }
+
+# 26,27,38 is 0xFF1A1B26 as an SkColor, -15066330 signed.
+home=$(make_home); make_helium "$home"
+out=$(helium_apply "$home")
+assert_contains "helium: reports the theme colour" "$out" "theme colour -15066330 (26,27,38)"
+assert_equals "helium: a default profile takes the theme colour" "$(colour_of "$home" Default)" "-15066330"
+assert_equals "helium: a chosen colour is kept" "$(colour_of "$home" 'Profile 1')" "-14244198"
+assert_contains "helium: names the profile it left alone" "$out" "chosen in Helium, untouched: Profile 1"
+assert_file_exists "helium: backs up Preferences once" "$home/.config/net.imput.helium/Default/Preferences.pre-theme"
+
+# Theme switch: the colour this script wrote is its own to overwrite.
+printf '36,40,59\n' >"$home/.local/state/omarchy/current/theme/chromium.theme"
+helium_apply "$home" >/dev/null
+assert_equals "helium: a followed profile follows the next theme" "$(colour_of "$home" Default)" "-14407621"
+
+# The user picks a colour in Helium: from then on it is theirs. Back to the
+# default swatch (null) and it follows again.
+jq '.browser.theme.user_color2 = -7558172' "$home/.config/net.imput.helium/Default/Preferences" >"$home/p.json" &&
+  mv "$home/p.json" "$home/.config/net.imput.helium/Default/Preferences"
+out=$(helium_apply "$home")
+assert_equals "helium: a colour picked over ours is kept" "$(colour_of "$home" Default)" "-7558172"
+assert_contains "helium: a picked colour is reported as chosen" "$out" "untouched: Default, Profile 1"
+jq '.browser.theme.user_color2 = null' "$home/.config/net.imput.helium/Default/Preferences" >"$home/p.json" &&
+  mv "$home/p.json" "$home/.config/net.imput.helium/Default/Preferences"
+helium_apply "$home" >/dev/null
+assert_equals "helium: back on the default swatch, it follows again" "$(colour_of "$home" Default)" "-14407621"
+
+# Running Helium: nothing is written, a marker is left; --if-pending delivers
+# it cold and clears the marker.
+home=$(make_home); make_helium "$home"
+out=$(HELIUM_RUNNING=1 helium_apply "$home")
+assert_contains "helium: a running browser queues the theme" "$out" "queued for its next cold start"
+assert_equals "helium: nothing written under a running browser" "$(colour_of "$home" Default)" "null"
+assert_file_exists "helium: the marker exists" "$home/.local/state/shokupan/helium-theme.pending"
+out=$(loaf_run "$home" doctor)
+assert_contains "doctor: reports a queued Helium theme" "$out" "Omarchy theme queued"
+helium_apply "$home" --if-pending >/dev/null
+assert_equals "helium: --if-pending delivers the queued theme" "$(colour_of "$home" Default)" "-15066330"
+[[ -f $home/.local/state/shokupan/helium-theme.pending ]] && pending=present || pending=cleared
+assert_equals "helium: --if-pending clears the marker" "$pending" "cleared"
+helium_apply "$home" --if-pending >/dev/null
+assert_equals "helium: --if-pending with no marker is a no-op" "$(colour_of "$home" Default)" "-15066330"
+
+# The policy directory. A mandatory theme present is a locked picker until the
+# hook runs; a directory the user cannot write is the hook unable to run at all.
+home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
+out=$(loaf_run "$home" doctor)
+assert_contains "doctor: clean fixture has no mandatory browser theme" "$out" "no mandatory browser theme"
+printf '{"BrowserThemeColor": "#1a1b26"}\n' >"$home/etc/chromium/policies/managed/color.json"
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: warns on a mandatory browser theme" "$out" "theme picker is locked"
+assert_equals "doctor: a mandatory theme is only a warning" "$status" "0"
+chmod 555 "$home/etc/chromium/policies/managed"
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: detects an unwritable policy directory" "$out" "is not writable"
+assert_equals "doctor: an unwritable policy directory is a failure" "$status" "1"
+chmod 755 "$home/etc/chromium/policies/managed"
+
+# The hook moves the policy aside and applies the theme.
+home=$(make_home); make_helium "$home"
+printf '{"BrowserThemeColor": "#1a1b26"}\n' >"$home/etc/chromium/policies/managed/color.json"
+mkdir -p "$home/.local/bin"; ln -s "$ROOT/.local/bin/helium-theme-apply" "$home/.local/bin/helium-theme-apply"
+LOAF_HOME="$home" XDG_STATE_HOME="$home/.local/state" HELIUM_RUNNING=0 POLICY_ROOT="$home/etc/chromium/policies" \
+  bash "$ROOT/.config/omarchy/hooks/theme-set.d/10-helium-theme" >/dev/null 2>&1
+assert_file_exists "hook: demotes the policy to recommended" "$home/etc/chromium/policies/recommended/color.json"
+[[ -f $home/etc/chromium/policies/managed/color.json ]] && managed=present || managed=gone
+assert_equals "hook: the mandatory copy is gone" "$managed" "gone"
+assert_equals "hook: applies the theme to the default profile" "$(colour_of "$home" Default)" "-15066330"
 
 printf '\n1..%d\n' "$tests"
 if ((failures)); then
