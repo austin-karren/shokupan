@@ -29,7 +29,6 @@ tmux
 # Shelly ships Flatpak support as a separate backend, and its own Enable Flatpak
 # toggle can only install it from the AUR — which fails here. Installed from the
 # cachyos repo instead; without it the Flatpak tab does not exist.
-shelly-flatpak-backend
 
 # shell banner
 figlet

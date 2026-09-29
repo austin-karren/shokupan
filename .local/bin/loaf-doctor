@@ -78,64 +78,48 @@ bad() {
 warn() { printf '  \033[33m!\033[0m %-14s %s\n' "$1" "$2"; }
 
 # ---------------------------------------------------------
-# Base — CachyOS
+# Base — Omarchy on Arch
 # ---------------------------------------------------------
 
-# The bridge that originally put Omarchy on this base is retired
-# (omarchy-desktop-on-cachyos ADR-0035), and its three sentinels went with it:
-# `bridge patch` and `stale clone` guarded an installer that will never run
-# again, and `walker hold` guarded a Walker that quattro does not ship. Deleted
-# rather than left warning, per omarchy-desktop-on-cachyos ADR-0028 —
-# tolerated noise stops being read. What replaces them is `mirrorlist`, which
-# guards the one thing measured to actually destroy this base.
+# The base was CachyOS until 2026-09-29 (ADR-0034); it is stock Arch on
+# Omarchy's own channel now (ADR-0052), and the checks here inverted with it.
+# `repos` and `mirrorlist` used to guard the CachyOS repos AGAINST Omarchy's
+# channel tooling; they now assert that tooling's result, because the machine
+# is what `omarchy-channel-set` produces and a stray [cachyos*] section is the
+# drift. Deleted rather than left warning, per ADR-0028 — tolerated noise
+# stops being read.
 
-layer "Base (CachyOS)"
+layer "Base (Omarchy on Arch)"
 
-# Omarchy is a DESKTOP layer here and nothing more. The base is CachyOS, and the
-# base is not Omarchy's to manage -- see omarchy-desktop-on-cachyos ADR-0034.
-# The specific hazard: `omarchy-channel-set` calls `omarchy-refresh-pacman`,
-# which does `cp -f $OMARCHY_PATH/default/pacman/pacman-<channel>.conf
-# /etc/pacman.conf` and then `pacman -Syyuu --noconfirm`. That replaces the repo
-# list with Omarchy's vanilla-Arch one and the second `u` permits DOWNGRADES, so
-# every znver4-optimised package rolls back to stock Arch and linux-cachyos
-# loses its repo. It nearly ran on this machine on 2026-08-08 and was stopped
-# only by an unrelated failure short-circuiting the `&&`. A PATH shim cannot
-# guard this: Omarchy's bin sits ahead of ~/.local/bin in PATH (index 2 vs 14),
-# so a same-named script here would never be reached. Hence a check, which at
-# least makes the damage loud and immediate.
-
+# pacman.conf is Omarchy's pacman-<channel>.conf: core/extra/multilib plus the
+# [omarchy] repo that carries the kernel and the limine hooks. A leftover
+# [cachyos*] section would win every tie in repo order and drag znver4 builds
+# back in on the next -Syu.
 if [[ -f $PACMAN_CONF ]]; then
-  cachyos_repos=$(grep -c '^\[cachyos' "$PACMAN_CONF" 2>/dev/null || echo 0)
+  cachyos_repos=$(grep -c '^\[cachyos' "$PACMAN_CONF" 2>/dev/null); cachyos_repos=${cachyos_repos:-0}
   if ((cachyos_repos >= 1)); then
-    ok "repos" "$cachyos_repos CachyOS repo section(s)"
+    bad "repos" "$cachyos_repos CachyOS repo section(s) still in $PACMAN_CONF" \
+      "the base is Omarchy on Arch since 2026-09-29 (ADR-0052) — a CachyOS repo outranks core/extra" \
+      "run omarchy-channel-set <channel> to reset pacman.conf, or delete the [cachyos*] sections"
+  elif grep -q '^\[omarchy\]' "$PACMAN_CONF" 2>/dev/null; then
+    ok "repos" "[omarchy] present, no CachyOS sections"
   else
-    bad "repos" "no CachyOS repos in $PACMAN_CONF" \
-      "the base has been replaced with stock Arch — restore $PACMAN_CONF.bak" \
-      "then re-add the [cachyos*] sections; do NOT run omarchy-channel-set"
+    bad "repos" "no [omarchy] repo in $PACMAN_CONF" \
+      "linux-omarchy and the limine hooks come from it — run omarchy-channel-set <channel>"
   fi
 fi
 
-# The measured root cause of the quattro upgrade's near-miss
-# (omarchy-desktop-on-cachyos ADR-0035). Omarchy's `configure_pacman_channel`
-# overwrites the mirrorlist with a single `Server =
-# https://stable-mirror.omarchy.org/...`, which is a FROZEN Arch snapshot.
-# CachyOS tracks Arch rolling, so pinning core/extra to that snapshot puts the
-# two halves of the system into permanent version skew and pacman starts
-# refusing partial downgrades. It presented as an unrelated aquamarine ABI
-# conflict and was not; restoring the rolling mirrorlist collapsed the whole
-# thing. Unguarded until now, and — alongside omarchy-channel-set — the
-# remaining way the base gets destroyed. `[cachyos*]` surviving in pacman.conf
-# does not imply the mirrorlist did: the upgrade's pacman.conf edit is a
-# surgical awk that leaves the repo list alone while the mirrorlist is replaced
-# wholesale.
+# Omarchy's channel pins the mirrorlist to its own mirror (a frozen Arch
+# snapshot for stable, rolling for edge). Before 2026-09-29 that mirror was the
+# measured cause of a CachyOS/Arch version skew (ADR-0035); with Arch as the
+# base it is simply the channel, and anything else means the mirrorlist was
+# replaced behind the channel's back.
 if [[ -f $MIRRORLIST ]]; then
   if grep -qE '^[[:space:]]*Server[[:space:]]*=[[:space:]]*https?://[a-z-]*mirror\.omarchy\.org/' \
     "$MIRRORLIST" 2>/dev/null; then
-    bad "mirrorlist" "$MIRRORLIST points at an Omarchy mirror" \
-      "that mirror is a frozen Arch snapshot; CachyOS is rolling — the two will skew" \
-      "restore the CachyOS mirrorlist (cachyos-rate-mirrors), then reconcile with pacman -Syu"
+    ok "mirrorlist" "Omarchy channel mirror"
   else
-    ok "mirrorlist" "$(grep -cE '^[[:space:]]*Server' "$MIRRORLIST" 2>/dev/null) mirror(s), none from omarchy.org"
+    warn "mirrorlist" "$MIRRORLIST does not point at an Omarchy mirror — omarchy-channel-set <channel> restores it"
   fi
 fi
 
@@ -168,17 +152,18 @@ if [[ -f $NM_CONF ]]; then
   fi
 fi
 
-# "A CachyOS kernel" is not enough: after the r1744 boot failure this machine
-# came back up on the LTS fallback and this check kept saying ✓ — true, but not
-# the kernel anyone thought was running. Booted-on-fallback while the primary
-# is installed is exactly the state worth surfacing.
+# The kernel is Omarchy's own package (linux-omarchy, from [omarchy]) since
+# ADR-0052. Installed-but-not-running is the state worth surfacing: after the
+# r1744 boot failure this machine ran a fallback kernel for a day while the
+# check said ✓ to "a kernel of the right family".
 kernel_running=$(uname -r)
-if [[ $kernel_running == *cachyos-lts* ]] && pacman -Q linux-cachyos &>/dev/null; then
-  warn "kernel" "on the LTS fallback ($kernel_running) — linux-cachyos $(pacman -Q linux-cachyos | awk '{print $2}') is installed; reboot onto the primary"
-elif [[ $kernel_running == *cachyos* ]]; then
+if ! pacman -Q linux-omarchy &>/dev/null; then
+  bad "kernel" "linux-omarchy is not installed" \
+    "the channel's kernel package (ADR-0052) — sudo pacman -S linux-omarchy linux-omarchy-headers"
+elif [[ $kernel_running == *-omarchy ]]; then
   ok "kernel" "$kernel_running"
 else
-  warn "kernel" "running $kernel_running — not a CachyOS kernel"
+  warn "kernel" "running $kernel_running — linux-omarchy $(pacman -Q linux-omarchy | awk '{print $2}') is installed; reboot onto it"
 fi
 
 # The measured root cause of the r1744 boot failure (omarchy-desktop-on-cachyos

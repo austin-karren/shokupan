@@ -56,10 +56,10 @@ SUDO=""
 printf '\033[1mInstalling the rice from %s\033[0m\n' "$LOAF_ROOT"
 
 # ---------------------------------------------------------
-# 1. The base must be CachyOS
+# 1. The base must be Omarchy on Arch
 # ---------------------------------------------------------
 
-step "Base (CachyOS)"
+step "Base (Omarchy on Arch)"
 
 # `.git` is a directory in a normal checkout but a file holding a `gitdir:`
 # pointer in a linked worktree, so ask git rather than testing for a directory
@@ -68,24 +68,30 @@ git -C "$LOAF_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 ||
   die "$LOAF_ROOT is not a git checkout" \
     "clone https://github.com/austin-karren/shokupan there first"
 
-grep -q '^\[cachyos' "$PACMAN_CONF" 2>/dev/null ||
-  die "no CachyOS repos in $PACMAN_CONF" \
-    "the base layer is not CachyOS — install it first (omarchy-desktop-on-cachyos ADR-0034, ADR-0035)" \
-    "lab/quattro-vm documents the settings that matter"
-say "CachyOS repos present"
+# The base is stock Arch on an Omarchy channel since 2026-09-29 (ADR-0052):
+# pacman.conf is what omarchy-channel-set writes, and the [omarchy] repo is
+# where the kernel and the limine hooks come from. A CachyOS section is the
+# previous base leaking through and outranks core/extra in repo order.
+grep -q '^\[omarchy\]' "$PACMAN_CONF" 2>/dev/null ||
+  die "no [omarchy] repo in $PACMAN_CONF" \
+    "the base is not on an Omarchy channel — run omarchy-channel-set stable first (ADR-0052)"
+! grep -q '^\[cachyos' "$PACMAN_CONF" 2>/dev/null ||
+  die "CachyOS repos still in $PACMAN_CONF" \
+    "the base is not CachyOS any more (ADR-0052) — run omarchy-channel-set stable to reset it"
+say "[omarchy] repo present"
 
-# The kernel is part of the replication contract. On a base installed from the
-# CachyOS ISO it is already there; this covers a base that drifted or was
-# minimal. Installed if missing, but a reboot is the user's to do.
-if pacman -Qq linux-cachyos &>/dev/null; then
-  say "linux-cachyos installed"
+# The kernel is part of the replication contract. Omarchy's channel ships its
+# own; this covers a base that was migrated by hand or drifted. Installed if
+# missing, but a reboot is the user's to do.
+if pacman -Qq linux-omarchy &>/dev/null; then
+  say "linux-omarchy installed"
 else
-  say "installing linux-cachyos"
-  $SUDO env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -S --needed --noconfirm linux-cachyos ||
-    die "could not install linux-cachyos"
+  say "installing linux-omarchy"
+  $SUDO env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -S --needed --noconfirm linux-omarchy linux-omarchy-headers ||
+    die "could not install linux-omarchy"
 fi
-if [[ $(uname -r) != *cachyos* ]]; then
-  say "running $(uname -r) — reboot into linux-cachyos when done"
+if [[ $(uname -r) != *-omarchy ]]; then
+  say "running $(uname -r) — reboot into linux-omarchy when done"
 fi
 
 # ---------------------------------------------------------

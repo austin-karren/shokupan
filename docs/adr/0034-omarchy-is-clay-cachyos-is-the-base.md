@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by 0052
 ---
 
 # Omarchy is clay; CachyOS is the base

@@ -6,7 +6,7 @@
   },
   "bar": {
     "position": "top",
-    "transparent": false,
+    "transparent": true,
     "centerAnchor": "austinkarren.clock",
     "layout": {
       "left": [
@@ -60,9 +60,6 @@
         {
           "id": "io.github.dicemans.docker-vms",
           "showStats": false
-        },
-        {
-          "id": "jankeesvw.notification-center"
         },
         {
           "id": "shokupan.apexshot"

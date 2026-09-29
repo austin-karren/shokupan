@@ -151,10 +151,10 @@ make_home() {
     # Single quotes on purpose: pacman's own config uses $repo and $arch as its
     # literal placeholders, so expanding them here would not be a pacman.conf.
     # shellcheck disable=SC2016
-    printf '[cachyos-znver4]\nServer = https://cdn.cachyos.org/repo/$arch_v4/$repo\n\n[core]\nInclude = /etc/pacman.d/mirrorlist\n' \
+    printf '[core]\nInclude = /etc/pacman.d/mirrorlist\n\n[omarchy]\nServer = https://pkgs.omarchy.org/stable/$arch\n' \
       >"$home/etc/pacman.conf"
     # shellcheck disable=SC2016  # same: pacman's placeholders, not shell variables
-    printf 'Server = https://archlinux.cachyos.org/repo/$repo/os/$arch\n' \
+    printf 'Server = https://stable-mirror.omarchy.org/$repo/os/$arch\n' \
       >"$home/etc/pacman.d/mirrorlist"
     # No [device] stanza: NetworkManager falls back to wpa_supplicant, which is
     # what quattro leaves it on and therefore the healthy default here.
@@ -268,8 +268,8 @@ assert_contains "doctor: reports the installed omarchy package version" \
   "$out" "package        omarchy $STUB_OMARCHY_VERSION"
 assert_contains "doctor: confirms the version pin matches" \
   "$out" "verified against $STUB_OMARCHY_VERSION"
-assert_contains "doctor: confirms the CachyOS repos" "$out" "CachyOS repo section(s)"
-assert_contains "doctor: confirms the mirrorlist is not Omarchy's" "$out" "none from omarchy.org"
+assert_contains "doctor: confirms the Omarchy repo" "$out" "[omarchy] present, no CachyOS sections"
+assert_contains "doctor: confirms the mirrorlist is the channel's" "$out" "Omarchy channel mirror"
 assert_contains "doctor: accepts NetworkManager's default wifi backend" \
   "$out" "NetworkManager default"
 
@@ -403,28 +403,36 @@ status=$?
 assert_contains "doctor: accepts an installed wifi backend" "$out" "wifi backend   iwd"
 assert_equals "doctor: an installed backend is not a problem" "$status" "0"
 
-# The mirrorlist. omarchy-desktop-on-cachyos ADR-0035's measured root cause:
-# Omarchy pins a frozen Arch snapshot, CachyOS is rolling, and the two skew
-# permanently. Note the fixture's pacman.conf still has its [cachyos*] section
-# — the repo list surviving is exactly what makes this failure look fine until
-# pacman starts refusing downgrades.
+# The mirrorlist. The channel pins it to Omarchy's mirror (ADR-0052); anything
+# else was written behind omarchy-channel-set's back. A warning, not a failure
+# — the packages still resolve, they just come from somewhere the channel did
+# not choose.
 home=$(make_home)
+(cd "$home/shokupan" && stow --no-folding -t "$home" . 2>/dev/null)
 # shellcheck disable=SC2016  # pacman's own $repo/$arch placeholders, kept literal
-printf 'Server = https://stable-mirror.omarchy.org/$repo/os/$arch\n' \
+printf 'Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch\n' \
   >"$home/etc/pacman.d/mirrorlist"
 out=$(loaf_run "$home" doctor)
 status=$?
-assert_contains "doctor: detects an Omarchy mirror in the mirrorlist" \
-  "$out" "points at an Omarchy mirror"
-assert_contains "doctor: still sees the CachyOS repos while the mirrorlist is wrong" \
-  "$out" "CachyOS repo section(s)"
-assert_equals "doctor: a frozen mirror is a failure" "$status" "1"
+assert_contains "doctor: warns when the mirrorlist is not the channel's" \
+  "$out" "does not point at an Omarchy mirror"
+assert_equals "doctor: a foreign mirror is only a warning" "$status" "0"
 
-# The base is gone entirely — stock Arch pacman.conf.
+# The previous base leaking through — a [cachyos*] section outranks core/extra.
+home=$(make_home)
+# shellcheck disable=SC2016
+printf '[cachyos-znver4]\nServer = https://cdn.cachyos.org/repo/$arch_v4/$repo\n\n[core]\nInclude = /etc/pacman.d/mirrorlist\n\n[omarchy]\nServer = https://pkgs.omarchy.org/stable/$arch\n' \
+  >"$home/etc/pacman.conf"
+out=$(loaf_run "$home" doctor)
+status=$?
+assert_contains "doctor: detects a leftover CachyOS repo" "$out" "CachyOS repo section(s) still in"
+assert_equals "doctor: a leftover CachyOS repo is a failure" "$status" "1"
+
+# No channel at all — stock Arch pacman.conf without [omarchy].
 home=$(make_home)
 printf '[core]\nInclude = /etc/pacman.d/mirrorlist\n' >"$home/etc/pacman.conf"
 out=$(loaf_run "$home" doctor)
-assert_contains "doctor: detects a base replaced with stock Arch" "$out" "no CachyOS repos"
+assert_contains "doctor: detects a base with no Omarchy channel" "$out" "no [omarchy] repo"
 
 # Read-only by construction: a dirty fixture must be unchanged afterwards.
 home=$(make_home)
@@ -1074,12 +1082,12 @@ assert_contains "install: still refuses a directory that is not a checkout" \
   "$out" "is not a git checkout"
 assert_equals "install: a non-checkout is a hard stop" "$status" "1"
 
-# No CachyOS base, no install.
+# No Omarchy channel, no install.
 home=$(make_home)
 printf '[core]\nInclude = /etc/pacman.d/mirrorlist\n' >"$home/etc/pacman.conf"
 out=$(loaf_run "$home" install)
 status=$?
-assert_contains "install: refuses a base that is not CachyOS" "$out" "not CachyOS"
+assert_contains "install: refuses a base with no Omarchy channel" "$out" "no [omarchy] repo"
 assert_equals "install: a foreign base is a hard stop" "$status" "1"
 
 # ---------------------------------------------------------
