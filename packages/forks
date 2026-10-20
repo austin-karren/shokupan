@@ -20,15 +20,6 @@
 # `loaf forks` goes red if it stops applying or the generated file differs from
 # upstream + patch. Not stamped by --record.
 bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml patch patches/indicators.patch
-# shokupan-plugins ADR-0029 addendum (2026-08-15): the network clone
-# (austinkarren.network, same sanctioned plugin-clone shape as the clock).
-# Model.js is the only patched file — connectionIcon()'s ethernet arm returns
-# the globe "\u{f059f}" instead of upstream's RJ45 "\u{f0200}", marked //
-# SHOKUPAN:. Panel.qml is a verbatim copy and manifest.json is the clone tool's
-# own jq rewrite — refresh those two by re-cloning, not by re-diffing. This
-# re-lives the wired-globe section that regressed at r1744; the durable end
-# state is still an upstream glyph setting (draft in docs/upstream/).
-plugins/austinkarren.network/Model.js /usr/share/omarchy/shell/plugins/panels/network/Model.js 864f658384438e319d6051bf95a18384fee1c6512686dc8cb9df18888c1760a1
 # shokupan-plugins ADR-0029 addendum (2026-08-15): shokupan.omenu is back on the
 # bar (kept identity deviation, user's word). Its BarWidget.qml is our own QML,
 # but the two click actions (the omarchy-shell IPC toggle and xdg-terminal-exec)

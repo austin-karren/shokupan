@@ -365,7 +365,7 @@ first-party plugins; ours are third-party, live one directory deep in
 `.config/omarchy/plugins/<name>/`, and take ids under `shokupan.*` (the
 `omarchy.` namespace is reserved). One exception, and only one: a **Clone** of
 an upstream plugin keeps the id `omarchy plugin clone` gives it —
-`<username>.<plugin>`, so `austinkarren.clock` and `austinkarren.network` —
+`<username>.<plugin>`, so `austinkarren.clock` —
 because that id is what routes the bar entry and upstream's IPC to the clone
 (shokupan-plugins ADR-0041 addendum). Authored-from-nothing plugins stay
 `shokupan.*`. No longer only upstream's word: since shokupan-plugins ADR-0044
