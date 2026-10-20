@@ -9,3 +9,4 @@
 # Secrets / local env
 .env
 docs/upstream/evidence-*/
+.claude/settings.local.json
