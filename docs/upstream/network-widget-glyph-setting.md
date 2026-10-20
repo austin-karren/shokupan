@@ -1,6 +1,8 @@
 # Draft issue: the network bar widget hardcodes its ethernet glyph
 
-**Status: draft — not posted.** Per shokupan-plugins ADR-0044 rule 5: issue
+**Status: superseded by plugin-extensibility.md — do not post.** Folded
+into the general draft [plugin-extensibility.md](plugin-extensibility.md), which
+uses this glyph as its evidence for per-plugin overrides. Originally: per shokupan-plugins ADR-0044 rule 5: issue
 first, PR only after upstream's temperature is known, nothing posted without an
 explicit go.
 
