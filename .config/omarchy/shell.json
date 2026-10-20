@@ -83,6 +83,9 @@
   "plugins": [
     {
       "id": "shokupan.dpms-guard"
+    },
+    {
+      "id": "typecraft.oma-cast"
     }
   ]
 }

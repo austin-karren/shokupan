@@ -41,3 +41,6 @@ do
     hl.config({ layout = { single_window_aspect_ratio = { 6, 5 } } })
   end
 end
+
+-- oma-cast launcher bindings
+require("hypr.oma-cast")
