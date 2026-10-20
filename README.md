@@ -184,6 +184,7 @@ loaf packages     # diff the manifest against what is installed
 loaf flatpaks     # same, for the Flatpak manifest
 loaf debloat      # re-remove the Omarchy defaults decided against (omarchy-desktop-on-cachyos ADR-0043)
 loaf forks        # check recorded forks and watched upstream files for drift
+loaf whatsnew     # digest what the last Omarchy update changed in the bar, bindings and menu
 loaf wallpapers   # assemble the full Omarchy wallpaper pool under Tokyo Night (ADR-0048)
 loaf widevine     # donate a Widevine CDM into Helium's profile for DRM playback (ADR-0038)
 loaf install      # bootstrap a fresh CachyOS + Omarchy machine, bound to the pin

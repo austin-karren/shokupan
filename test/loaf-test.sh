@@ -1969,6 +1969,156 @@ assert_file_exists "hook: demotes the policy to recommended" "$home/etc/chromium
 assert_equals "hook: the mandatory copy is gone" "$managed" "gone"
 assert_equals "hook: applies the theme to the default profile" "$(colour_of "$home" Default)" "-8740105"
 
+# ---------------------------------------------------------
+# loaf whatsnew
+# ---------------------------------------------------------
+
+# A digest that says nothing moved when something did is worse than none, so the
+# fixture is a real pair of packages: tarballs named the way pacman names them,
+# holding a tree under usr/share/omarchy, in a cache dir of their own. The
+# installed side is replayed with --to, which extracts rather than reading the
+# machine's /usr/share/omarchy — the test cannot depend on what is installed.
+# One of every kind of change, plus one that must NOT count: a reworded comment.
+whatsnew_pkg() {
+  local name=$1 ver=$2 tree=$3
+  tar -C "$tree" -czf "$4/$name-$ver-x86_64.pkg.tar.gz" usr
+}
+
+whatsnew_tree() { # <dir> <v1|v2> <omarchy|settings>
+  local share="$1/usr/share/omarchy" v=$2
+  if [[ $3 == omarchy ]]; then
+    mkdir -p "$share/shell/plugins/bar/widgets" "$share/shell/plugins/bar/indicators"
+    echo "spacer" >"$share/shell/plugins/bar/widgets/Spacer.qml"
+    echo "stay-awake" >"$share/shell/plugins/bar/indicators/StayAwake.qml"
+    if [[ $v == v1 ]]; then
+      echo "tray v1" >"$share/shell/plugins/bar/widgets/Tray.qml"
+      echo "gone" >"$share/shell/plugins/bar/widgets/Gone.qml"
+    else
+      echo "tray v2" >"$share/shell/plugins/bar/widgets/Tray.qml"
+      echo "fresh" >"$share/shell/plugins/bar/widgets/Fresh.qml"
+      echo "dnd" >"$share/shell/plugins/bar/indicators/Dnd.qml"
+    fi
+  else
+    mkdir -p "$share/default/hypr/bindings" "$share/default/hypr/toggles" \
+      "$share/default/hypr/apps" "$share/default/omarchy"
+    echo 'o.bind("SUPER + W", "Close window", x)' >"$share/default/hypr/bindings/tiling.lua"
+    echo '-- v1 wording' >"$share/default/hypr/apps/pip.lua"
+    echo 'hl.window_rule({ name = "pip" })' >>"$share/default/hypr/apps/pip.lua"
+    echo '"system.lock": {"icon":"x","label":"Lock","action":"lock"},' >"$share/default/omarchy/omarchy-menu.jsonc"
+    if [[ $v == v1 ]]; then
+      echo 'o.bind("SUPER + J", "Toggle window split", x)' >>"$share/default/hypr/bindings/tiling.lua"
+    else
+      echo 'o.bind("SUPER + J", "Toggle split", x)' >>"$share/default/hypr/bindings/tiling.lua"
+      echo 'o.bind("SUPER + K", "Kill everything", x)' >>"$share/default/hypr/bindings/tiling.lua"
+      echo 'hl.config({})' >"$share/default/hypr/toggles/window-no-gaps.lua"
+      echo '"system.reboot": {"icon":"x","label":"Reboot","action":"reboot"},' >>"$share/default/omarchy/omarchy-menu.jsonc"
+      echo '-- v2 wording, same rule' >"$share/default/hypr/apps/pip.lua"
+      echo 'hl.window_rule({ name = "pip" })' >>"$share/default/hypr/apps/pip.lua"
+    fi
+  fi
+}
+
+home=$(make_home)
+cache="$home/pkg-cache"
+state="$home/state"
+mkdir -p "$cache"
+for v in v1 v2; do
+  for which in omarchy settings; do
+    tree="$home/tree-$which-$v"
+    whatsnew_tree "$tree" "$v" "$which"
+    name=omarchy
+    [[ $which == settings ]] && name=omarchy-settings
+    whatsnew_pkg "$name" "${v/v/}.0-1" "$tree" "$cache"
+  done
+done
+# Packages that share the prefix must not be mistaken for the base package.
+touch "$cache/omarchy-dev-1.5-1-any.pkg.tar.gz" "$cache/omarchy-nvim-1.9-1-any.pkg.tar.gz"
+stub_notified="$home/notified"
+printf '#!/bin/bash\nprintf "%%s\\n" "$*" >>"%s"\n' "$stub_notified" >"$BUILD/stub/notify-send"
+chmod +x "$BUILD/stub/notify-send"
+
+whatsnew_run() {
+  LOAF_HOME="$home" PKG_CACHE="$cache" XDG_STATE_HOME="$state" \
+    PATH="$BUILD/stub:$ROOT/.local/bin:$PATH" loaf-whatsnew "$@" 2>&1
+}
+
+out=$(whatsnew_run --from 1.0-1 --to 2.0-1)
+status=$?
+assert_equals "whatsnew: exits 0" "$status" "0"
+assert_contains "whatsnew: names the version pair" "$out" "Omarchy 1.0-1 → 2.0-1"
+assert_contains "whatsnew: a new widget is new" "$out" "+ widgets/Fresh.qml"
+assert_contains "whatsnew: a removed widget is removed" "$out" "- widgets/Gone.qml"
+assert_contains "whatsnew: an edited widget is changed" "$out" "~ widgets/Tray.qml"
+assert_not_contains "whatsnew: an untouched widget is not listed" "$out" "Spacer.qml"
+assert_contains "whatsnew: a new indicator is new" "$out" "+ indicators/Dnd.qml"
+assert_contains "whatsnew: a new toggle is new" "$out" "+ toggles/window-no-gaps.lua"
+assert_contains "whatsnew: a new binding is new" "$out" "+ SUPER + K — Kill everything"
+assert_contains "whatsnew: a reworded binding is changed" "$out" \
+  "~ SUPER + J — Toggle window split → Toggle split"
+assert_contains "whatsnew: a new menu row is new" "$out" "+ system.reboot — Reboot"
+assert_not_contains "whatsnew: a comment-only edit is not news" "$out" "pip.lua"
+assert_contains "whatsnew: headlines carry counts" "$out" "Bar widgets — 1 new · 1 removed · 1 changed"
+assert_file_exists "whatsnew: saves the digest" "$state/loaf/whatsnew.md"
+assert_contains "whatsnew: the saved digest is the same text" \
+  "$(cat "$state/loaf/whatsnew.md")" "+ SUPER + K — Kill everything"
+assert_equals "whatsnew: a manual run does not notify" "$(cat "$stub_notified" 2>/dev/null)" ""
+
+# Nothing moved: no output, and the saved digest from the last real update stays.
+cp "$state/loaf/whatsnew.md" "$home/saved-before"
+out=$(whatsnew_run --from 2.0-1 --to 2.0-1)
+assert_equals "whatsnew: silent when the versions match" "$out" ""
+# The default picks the newest cached version below the one given.
+out=$(whatsnew_run --to 2.0-1)
+assert_contains "whatsnew: defaults --from to the next older cached package" \
+  "$out" "Omarchy 1.0-1 → 2.0-1"
+out=$(whatsnew_run --to 1.0-1)
+assert_contains "whatsnew: says why when no older package is cached" \
+  "$out" "no cached omarchy package older than 1.0-1"
+assert_equals "whatsnew: a quiet run leaves the saved digest alone" \
+  "$(cat "$state/loaf/whatsnew.md")" "$(cat "$home/saved-before")"
+
+# The hook's mode announces once. A second update that left Omarchy alone must not
+# repeat itself, or the headline becomes noise.
+# A manual run saves the digest with the pair's stamp, so the pair already counts as
+# seen; the hook starts from a state that has not seen it.
+rm -f "$state/loaf/whatsnew.md"
+out=$(whatsnew_run --announce --from 1.0-1 --to 2.0-1)
+status=$?
+assert_contains "whatsnew: announce prints headlines" "$out" "Bindings — 1 new · 1 changed"
+assert_not_contains "whatsnew: announce leaves the detail to the digest" "$out" "Kill everything"
+assert_contains "whatsnew: announce sends a notification" "$(cat "$stub_notified")" "Omarchy 1.0-1 → 2.0-1"
+assert_equals "whatsnew: announce exits 0" "$status" "0"
+out=$(whatsnew_run --announce --from 1.0-1 --to 2.0-1)
+assert_equals "whatsnew: announce is silent the second time" "$out" ""
+
+# Warn, never fail: a package that is not in the cache is a message, not an error.
+out=$(whatsnew_run --from 0.5-1 --to 2.0-1)
+status=$?
+assert_contains "whatsnew: says which package is missing" "$out" "omarchy 0.5-1 is not in"
+assert_equals "whatsnew: a missing package still exits 0" "$status" "0"
+rm "$cache/omarchy-settings-1.0-1-x86_64.pkg.tar.gz"
+out=$(whatsnew_run --from 1.0-1 --to 2.0-1)
+status=$?
+assert_contains "whatsnew: still reports the bar without omarchy-settings" "$out" "+ widgets/Fresh.qml"
+assert_contains "whatsnew: says it skipped the settings areas" "$out" "omarchy-settings 1.0-1 or 2.0-1 is not cached"
+assert_not_contains "whatsnew: does not guess at bindings it could not compare" "$out" "Bindings"
+assert_equals "whatsnew: a missing settings package still exits 0" "$status" "0"
+whatsnew_run --bogus >/dev/null
+assert_equals "whatsnew: an unknown flag is a usage error" "$?" "64"
+
+# The hook is only a wrapper: the comparison, the state file and the
+# notification all belong to loaf-whatsnew, as 20-forks-drift does for forks.
+WHATSNEW_HOOK="$ROOT/.config/omarchy/hooks/post-update.d/30-whatsnew"
+assert_contains "post-update: the digest delegates to loaf-whatsnew" \
+  "$(cat "$WHATSNEW_HOOK")" "loaf-whatsnew --announce"
+assert_equals "post-update: the digest runs after the drift warning" \
+  "${post_update_hooks[2]}" "30-whatsnew"
+# 1.0-1's settings package was removed above, so this pair has headlines to wrap.
+rm -f "$state/loaf/whatsnew.md"
+out=$(LOAF_HOME="$home" PKG_CACHE="$cache" XDG_STATE_HOME="$state" \
+  PATH="$BUILD/stub:$ROOT/.local/bin:$PATH" bash "$WHATSNEW_HOOK" 2>&1)
+assert_equals "post-update: the digest hook exits 0" "$?" "0"
+
 printf '\n1..%d\n' "$tests"
 if ((failures)); then
     printf '\n%d of %d failed.\n' "$failures" "$tests"

@@ -1,0 +1,243 @@
+#!/bin/bash
+
+# loaf:summary=Digest what the last Omarchy update changed in the bar, bindings and menu
+# loaf:args=[--from <ver>] [--to <ver>] [--announce]
+
+# An `omarchy update` replaces files the rice leans on — bar widgets, the
+# indicators, Hyprland toggles and window rules, bindings, menu rows — and
+# Omarchy ships no changelog at that granularity. New bindings and menu rows
+# arrive unannounced; a removed widget only shows as a gap. This diffs the
+# previous Omarchy package against the installed one and says what moved, so
+# the update is read once instead of discovered over the following weeks.
+#
+# The previous version comes from pacman's cache, since the update has already
+# replaced the files themselves. Hyprland defaults and the menu ship in
+# omarchy-settings, the shell in omarchy; both are compared. Packages are
+# extracted into a temp dir and never into the system. Files are hashed with
+# comments and blank lines stripped, so a reworded comment is not news.
+#
+# Warn, never fail — the same principle as 20-forks-drift: this runs after every
+# update and a broken digest must not break the update. Nothing moved means no
+# output and no state change. `--announce` is the hook's mode: headlines plus a
+# desktop notification, and only the first time a version pair is seen, so a
+# later update that does not change Omarchy stays quiet. The digest is always
+# saved for `loaf whatsnew` to show again.
+
+# The snap_* functions are only ever called through `section`.
+# shellcheck disable=SC2329
+set -uo pipefail
+
+LOAF_HOME="${LOAF_HOME:-$HOME}"
+PKG_CACHE="${PKG_CACHE:-/var/cache/pacman/pkg}"
+OMARCHY_SHARE="${OMARCHY_SHARE:-/usr/share/omarchy}"
+STATE_FILE="${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/loaf/whatsnew.md"
+# Longest list printed per area; the saved digest and the notification stay
+# readable, and the count in the headline still says how many moved.
+MAX_LINES=12
+
+from="" to="" announce=false
+while (($#)); do
+  case $1 in
+  --from) from=${2:-}; shift ;;
+  --to) to=${2:-}; shift ;;
+  --announce) announce=true ;;
+  *)
+    echo "usage: loaf whatsnew [--from <ver>] [--to <ver>] [--announce]" >&2
+    exit 64
+    ;;
+  esac
+  shift
+done
+
+warn() { echo "loaf whatsnew: $*" >&2; }
+# A missing older package is ordinary once the cache has been cleaned, so the
+# hook stays quiet about it; a manual run says why it has nothing to show.
+note() { $announce || warn "$*"; }
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# Cached versions of one package. The name is followed by a digit so that
+# `omarchy` does not match omarchy-settings, omarchy-dev or omarchy-nvim.
+cached_versions() {
+  local f
+  for f in "$PKG_CACHE/$1"-[0-9]*.pkg.tar.*; do
+    [[ -e $f && $f != *.sig ]] || continue
+    f=${f##*/}
+    f=${f#"$1"-}
+    printf '%s\n' "${f%-*.pkg.tar.*}"
+  done
+}
+
+package_path() {
+  local f
+  for f in "$PKG_CACHE/$1-$2"-{x86_64,any}.pkg.tar.*; do
+    [[ -e $f && $f != *.sig ]] && { printf '%s' "$f"; return 0; }
+  done
+  return 1
+}
+
+newest_below() {
+  { cached_versions "$1"; printf '%s\n' "$2"; } | sort -uV |
+    awk -v ver="$2" '$0 == ver { print prev; exit } { prev = $0 }'
+}
+
+extract() {
+  local archive=$1 dest=$2
+  mkdir -p "$dest"
+  if command -v bsdtar &>/dev/null; then
+    bsdtar -xf "$archive" -C "$dest" usr/share/omarchy
+  else
+    tar -xf "$archive" -C "$dest" usr/share/omarchy
+  fi
+}
+
+to_ver=${to:-$(pacman -Q omarchy 2>/dev/null | awk '{print $2}')}
+if [[ -z $to_ver ]]; then
+  note "omarchy is not installed and no --to was given"
+  exit 0
+fi
+from_ver=${from:-$(newest_below omarchy "$to_ver")}
+if [[ -z $from_ver ]]; then
+  note "no cached omarchy package older than $to_ver in $PKG_CACHE"
+  exit 0
+fi
+[[ $from_ver == "$to_ver" ]] && exit 0
+
+stamp="<!-- loaf-whatsnew $from_ver $to_ver -->"
+if $announce && [[ -f $STATE_FILE && $(head -1 "$STATE_FILE") == "$stamp" ]]; then
+  exit 0
+fi
+
+old=$tmp/old/usr/share/omarchy
+new=$tmp/new/usr/share/omarchy
+
+old_pkg=$(package_path omarchy "$from_ver") || { warn "omarchy $from_ver is not in $PKG_CACHE"; exit 0; }
+extract "$old_pkg" "$tmp/old" || { warn "could not extract $old_pkg"; exit 0; }
+
+# The installed side is the real tree unless a version was pinned: --to is how
+# a pair is replayed, and it has to read the same files on any machine.
+if [[ -n $to ]]; then
+  new_pkg=$(package_path omarchy "$to_ver") || { warn "omarchy $to_ver is not in $PKG_CACHE"; exit 0; }
+  extract "$new_pkg" "$tmp/new" || { warn "could not extract $new_pkg"; exit 0; }
+else
+  new=$OMARCHY_SHARE
+fi
+
+# omarchy-settings carries default/hypr and the menu. Without both sides the
+# areas that live there cannot be compared, and saying nothing about them would
+# read as "nothing changed".
+have_settings=false
+if old_settings=$(package_path omarchy-settings "$from_ver"); then
+  extract "$old_settings" "$tmp/old" || old_settings=""
+fi
+if [[ -n $to ]]; then
+  if new_settings=$(package_path omarchy-settings "$to_ver"); then
+    extract "$new_settings" "$tmp/new" || new_settings=""
+  fi
+else
+  new_settings=installed
+fi
+[[ -n ${old_settings:-} && -n ${new_settings:-} ]] && have_settings=true
+$have_settings || warn "omarchy-settings $from_ver or $to_ver is not cached — skipping toggles, bindings, rules and menu"
+
+# Content hash with comments and blank lines removed. A URL containing // is
+# mangled the same way on both sides, which is all a comparison needs.
+normalized_hash() {
+  sed -E 's@(--|//).*$@@; s/[[:space:]]+$//' "$1" | grep -v '^$' | sha256sum | cut -c1-16
+}
+
+# Snapshots print `key<TAB>value`, sorted; `section` compares two of them.
+# snap_paths: key is the path relative to $2, value the normalized hash.
+snap_paths() {
+  local root=$1 base=$2 rel f
+  shift 2
+  for rel in "$@"; do
+    [[ -e $root/$base/$rel ]] || continue
+    find "$root/$base/$rel" -type f ! -name '*.md' -print0 | sort -z |
+      while IFS= read -r -d '' f; do
+        printf '%s\t%s\n' "${f#"$root/$base/"}" "$(normalized_hash "$f")"
+      done
+  done
+}
+
+# key is the chord, value its description; a rebind or reword is a change.
+snap_bindings() {
+  grep -rhoE 'o\.bind[a-z_]*\("[^"]+", *"[^"]+"' "$1/default/hypr/bindings" 2>/dev/null |
+    sed -E 's/^o\.bind[a-z_]*\("([^"]+)", *"([^"]+)"$/\1\t\2/' | sort -u -t$'\t' -k1,1
+}
+
+# key is the dotted row id, value its label.
+snap_menu() {
+  sed -nE 's/^ *"([^"]+)": *\{.*"label": *"([^"]*)".*/\1\t\2/p' \
+    "$1/default/omarchy/omarchy-menu.jsonc" 2>/dev/null | sort -u -t$'\t' -k1,1
+}
+
+heads=""
+body=""
+
+# section <title> <files|values> <snapshot fn> [args…]
+section() {
+  local title=$1 kind=$2 snap=$3 diffs counts shown=0 total
+  shift 3
+  "$snap" "$old" "$@" | LC_ALL=C sort -t$'\t' -k1,1 >"$tmp/a"
+  "$snap" "$new" "$@" | LC_ALL=C sort -t$'\t' -k1,1 >"$tmp/b"
+  # Unit separator between fields: tab is IFS whitespace, so `read` would
+  # collapse the empty old value of a new row and shift the new one into it.
+  diffs=$(awk -F'\t' -v sep=$'\037' '
+    # FILENAME, not NR == FNR: an empty old snapshot would make the new one
+    # look like the old one too.
+    FILENAME == ARGV[1] { o[$1] = $2; next }
+    { n[$1] = $2 }
+    !($1 in o) { print "+" sep $1 sep sep $2; next }
+    o[$1] != $2 { print "~" sep $1 sep o[$1] sep $2 }
+    END { for (k in o) if (!(k in n)) print "-" sep k sep o[k] sep }
+  ' "$tmp/a" "$tmp/b" | LC_ALL=C sort -t$'\037' -k1,1 -k2,2)
+  [[ -n $diffs ]] || return 0
+
+  counts=$(cut -d$'\037' -f1 <<<"$diffs" | sort | uniq -c | awk '
+    { w = ($2 == "+") ? "new" : ($2 == "-") ? "removed" : "changed"; printf "%s%d %s", sep, $1, w; sep = " · " }')
+  heads+="$title — $counts"$'\n'
+  body+=$'\n'"## $title"$'\n'
+  total=$(wc -l <<<"$diffs")
+  while IFS=$'\037' read -r mark key oldv newv; do
+    ((shown++ >= MAX_LINES)) && break
+    if [[ $kind == files ]]; then
+      body+="- $mark $key"$'\n'
+    else
+      case $mark in
+      +) body+="- + $key — $newv"$'\n' ;;
+      -) body+="- − $key — $oldv"$'\n' ;;
+      "~") body+="- ~ $key — $oldv → $newv"$'\n' ;;
+      esac
+    fi
+  done <<<"$diffs"
+  ((total > MAX_LINES)) && body+="- … and $((total - MAX_LINES)) more"$'\n'
+  return 0
+}
+
+section "Bar widgets" files snap_paths shell/plugins/bar widgets
+section "Bar indicators" files snap_paths shell/plugins/bar indicators
+if $have_settings; then
+  section "Toggles" files snap_paths default/hypr toggles.lua toggles
+  section "Bindings" values snap_bindings
+  section "Window and workspace rules" files snap_paths default/hypr windows.lua workspace-layouts.lua apps
+  section "Menu rows" values snap_menu
+fi
+
+[[ -n $heads ]] || exit 0
+
+title="Omarchy $from_ver → $to_ver"
+if ! { mkdir -p "${STATE_FILE%/*}" &&
+  printf '%s\n# %s\n\n%s%s' "$stamp" "$title" "$heads" "$body" >"$STATE_FILE"; } 2>/dev/null; then
+  warn "could not save the digest to $STATE_FILE"
+fi
+
+if $announce; then
+  printf '%s\n%s' "$title" "$heads"
+  command -v notify-send &>/dev/null &&
+    notify-send -a loaf "$title" "${heads%$'\n'}" 2>/dev/null
+else
+  printf '# %s\n\n%s%s' "$title" "$heads" "$body"
+fi
+exit 0

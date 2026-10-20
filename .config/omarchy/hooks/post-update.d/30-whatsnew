@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Runs after every `omarchy update`, via Omarchy's sanctioned hook directory,
+# after 20-forks-drift — omarchy-hook globs post-update.d/ and runs each file in
+# turn with its own bash, so the numeric prefix is the order and nothing here
+# can reach the earlier hooks' exit status.
+#
+# Why this exists at all: an update adds bindings and menu rows, moves bar
+# widgets and rewrites window rules, and Omarchy publishes no changelog at that
+# granularity. The previous package is still in pacman's cache, so the update
+# is the one moment the difference can be read off rather than guessed at.
+#
+# Warn, never fail — 10-loaf-heal states that principle and this does not
+# weaken it. `loaf-whatsnew --announce` owns the comparison, the saved digest
+# and the desktop notification; it prints headlines only, and nothing at all
+# when nothing moved or the pair was already announced. Silence on a quiet
+# update is the point: a line printed every time is a line he learns to skip.
+
+command -v loaf-whatsnew &>/dev/null || exit 0
+
+moved=$(loaf-whatsnew --announce 2>/dev/null)
+
+if [[ -n $moved ]]; then
+  echo
+  echo "What changed in Omarchy:"
+  printf '%s\n' "$moved"
+  echo "Run 'loaf whatsnew' for the digest"
+fi
+
+exit 0

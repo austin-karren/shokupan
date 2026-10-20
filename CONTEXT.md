@@ -28,7 +28,7 @@ _Avoid_: the rice (ambiguous once there are others), dotfiles, shokupan-arch
 
 **Loaf**:
 The CLI that maintains Shokupan — `loaf doctor`, `loaf heal`, `loaf packages`,
-`loaf flatpaks`, `loaf debloat`, `loaf forks`, `loaf install`.
+`loaf flatpaks`, `loaf debloat`, `loaf forks`, `loaf whatsnew`, `loaf install`.
 Deliberately not named `shokupan`: it gets typed constantly, and four characters
 beat eight. Also deliberately not `pan`, which is a real package (a Usenet
 newsreader) in `cachyos-extra-znver4` and would collide if ever installed.
