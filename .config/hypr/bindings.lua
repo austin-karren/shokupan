@@ -538,3 +538,14 @@ o.bind("SUPER + N", "Notification centre", "omarchy-shell shell toggle jankeesvw
 -- SUPER+ALT plus a letter reading as "open a thing" is the reading this
 -- config already has.
 o.bind("SUPER + ALT + T", "Tailscale", "omarchy-shell shell toggle omarchy.tailscale")
+
+-- Single-window zen aspect ratio (shokupan-plugins ADR-0026) ------------------
+--
+-- Upstream binds SUPER+CTRL+BACKSPACE to
+-- omarchy-hyprland-window-single-square-aspect-toggle. The VALUE was already
+-- right - hyprland.lua rewrites it to 6:5 on the reload the toggle issues - but
+-- that script's toast still announces "square". ratio-toggle drives the same
+-- flag and announces "zen", so the chord now says what the bar and the Toggle
+-- Menu say.
+hl.unbind("SUPER + CTRL + BACKSPACE")
+o.bind("SUPER + CTRL + BACKSPACE", "Toggle single-window zen aspect ratio", "/home/austinkarren/.local/bin/ratio-toggle")
