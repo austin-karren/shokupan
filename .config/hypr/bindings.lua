@@ -8,14 +8,8 @@
 -- shokupan.launcher forked, and the generated shokupan-cmd-*.desktop entries
 -- went with it, so commands are reached through the Omarchy Menu now.
 -- SUPER+SPACE (root menu) and SUPER+ALT+SPACE (apps) are left exactly as
--- upstream binds them — no unbind, no replacement.
---
--- The one deviation is ADDITIVE: bare ALT+SPACE, ours since before the merge,
--- also opens the apps menu. Additive is the whole point — it collides with no
--- upstream chord, so upstream can keep moving its own and this survives
--- untouched. That is why there is no hl.unbind here: unbind pairs with
--- replacement, and nothing is being replaced.
-o.bind("ALT + SPACE", "Launch apps", "omarchy-menu toggle apps")
+-- upstream binds them — no unbind, no replacement. Bare ALT+SPACE belongs to
+-- the oma-cast launcher (hypr/oma-cast.lua, loaded after this file).
 
 -- The Close ladder (ADR-0020) ------------------------------------------------
 --
