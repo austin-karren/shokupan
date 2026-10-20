@@ -1,6 +1,6 @@
 # Draft issue: customize and extend first-party plugins without cloning
 
-**Status: draft — not posted.** Per shokupan-plugins ADR-0044 rule 5: issue
+**Status: posted 2026-10-20 as [omacom/omarchy#16096](https://github.com/omacom/omarchy/issues/16096)** (body reworded for the dropped network clone). Per shokupan-plugins ADR-0044 rule 5: issue
 first, PR only after upstream's temperature is known, nothing posted without an
 explicit go. Upstream: github.com/omacom/omarchy, branch quattro.
 
