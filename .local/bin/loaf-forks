@@ -18,7 +18,12 @@
 # board red instead of leaving stale drift. A changed watch is not breakage —
 # the coupling usually survives — so its message says re-verify, not re-diff.
 # `--record` re-stamps the hashes after a re-verification — the same by-hand
-# contract as packages/omarchy.pin. `--drifted` prints just the headline for each
+# contract as packages/omarchy.pin. A third kind, PATCH, records `patch` where
+# the hash would be and the patch file in the last field: the rice file is
+# generated as upstream + that patch (bin/indicators-regen in the plugins repo,
+# run by the post-update hook), so there is no hash to drift — the check is that
+# the patch still applies and the generated file is exactly that result.
+# `--drifted` prints just the headline for each
 # entry that moved and nothing at all when none did: it is what the post-update
 # hook consumes, so that the comparison has exactly one implementation here
 # rather than a second copy in the hook.
@@ -34,6 +39,8 @@ LOAF_ROOT="${LOAF_ROOT:-$LOAF_HOME/shokupan}"
 # drop-in that loads upstream's rc is one).
 PLUGINS_ROOT="${PLUGINS_ROOT:-$LOAF_HOME/.local/share/shokupan-plugins}"
 MANIFEST="$LOAF_ROOT/packages/forks"
+# Left by indicators-regen when its patch fails to apply; same default path.
+PATCH_MARKER="${INDICATORS_MARKER:-${XDG_STATE_HOME:-$LOAF_HOME/.local/state}/shokupan/indicators-patch.failed}"
 
 quiet=false
 record=false
@@ -91,6 +98,30 @@ while read -r rice_path upstream_path recorded_sha mode; do
     problem "✗ $rice_path — upstream $upstream_path no longer exists (renamed?)"
     continue
   fi
+  if [[ $recorded_sha == patch ]]; then
+    # Patch must apply, and the generated file must be upstream + patch.
+    rice_file=$(resolve_rice_path "$rice_path")
+    if ! patch_file=$(resolve_rice_path "${mode:-}") || [[ -z ${mode:-} ]]; then
+      problem "✗ $rice_path — patch file ${mode:-"(none named)"} missing from the repo"
+    elif [[ -f $PATCH_MARKER ]]; then
+      problem "✗ $rice_path — patch failed to apply at the last regenerate"
+      out+="    $(head -n1 "$PATCH_MARKER")"$'\n'
+      out+="    carry the patch across, then: indicators-regen"$'\n'
+    else
+      patched=$(mktemp)
+      if ! patch -s --no-backup-if-mismatch -r /dev/null -o "$patched" "$upstream_path" "$patch_file" >/dev/null 2>&1; then
+        problem "✗ $rice_path — $mode no longer applies to $upstream_path"
+        out+="    carry the patch across, then: indicators-regen"$'\n'
+      elif ! cmp -s "$patched" "$rice_file"; then
+        problem "✗ $rice_path — generated file is not upstream + $mode"
+        out+="    run: indicators-regen, then restart the shell"$'\n'
+      else
+        out+="✓ $rice_path — upstream + $mode applies, generated file matches"$'\n'
+      fi
+      rm -f "$patched"
+    fi
+    continue
+  fi
   current_sha=$(sha256sum "$upstream_path" | awk '{print $1}')
   if [[ $current_sha == "$recorded_sha" ]]; then
     out+="✓ $rice_path — upstream unchanged since verification"$'\n'
@@ -115,8 +146,13 @@ if $record; then
       printf '%s\n' "$line" >>"$tmp"
       continue
     fi
-    read -r rice_path upstream_path _ mode <<<"$stripped"
+    read -r rice_path upstream_path sha mode <<<"$stripped"
     [[ -n ${upstream_path:-} && -e $upstream_path ]] || continue
+    if [[ ${sha:-} == patch ]]; then
+      # No hash to stamp: the entry is verified by applying the patch.
+      printf '%s\n' "$line" >>"$tmp"
+      continue
+    fi
     printf '%s %s %s%s\n' "$rice_path" "$upstream_path" \
       "$(sha256sum "$upstream_path" | awk '{print $1}')" \
       "${mode:+ $mode}" >>"$tmp"

@@ -13,7 +13,13 @@
 #
 # Paths are relative to whichever checkout holds them — the plugins repo for
 # hosted QML, this repo for the rice's own files.
-bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml f64fc3a122d71e6cc1f9a8b8284416df29cac070306fa6df55e9f1053fe4cf65
+# The indicators cluster is a PATCH, not a copy: bar/modules/indicators.qml is
+# generated as upstream + patches/indicators.patch (plugins repo) by
+# bin/indicators-regen, which 15-indicators-regen runs after every `omarchy
+# update`. Nothing to hash — `patch must apply` stands in for the sha, and
+# `loaf forks` goes red if it stops applying or the generated file differs from
+# upstream + patch. Not stamped by --record.
+bar/modules/indicators.qml /usr/share/omarchy/shell/plugins/bar/widgets/Indicators.qml patch patches/indicators.patch
 # shokupan-plugins ADR-0029 addendum (2026-08-15): the network clone
 # (austinkarren.network, same sanctioned plugin-clone shape as the clock).
 # Model.js is the only patched file — connectionIcon()'s ethernet arm returns

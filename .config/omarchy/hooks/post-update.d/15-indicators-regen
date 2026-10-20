@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Runs after every `omarchy update`, after 10-loaf-heal (which links
+# bin/indicators-regen onto PATH) and BEFORE 20-forks-drift, so that board
+# compares the regenerated file. omarchy-hook runs post-update.d/ in numeric
+# order, each file in its own bash.
+#
+# The indicators cluster is upstream's Indicators.qml plus our loader patch,
+# generated into the plugins repo's bar/modules/indicators.qml. The update just
+# replaced the upstream copy, so regenerate. indicators-regen keeps the last good
+# file, notifies and leaves a marker when the patch no longer applies; `loaf
+# forks` reads that marker and goes red. The bar picks the new file up at the
+# next shell restart, which this hook never does.
+#
+# Warn, never fail — same principle as 10-loaf-heal.
+
+command -v indicators-regen &>/dev/null || exit 0
+
+echo
+echo "Regenerating the indicators cluster over the updated Omarchy..."
+indicators-regen || echo "indicators patch failed — run 'loaf forks' for detail"
+
+exit 0
