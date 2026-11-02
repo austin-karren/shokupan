@@ -355,3 +355,34 @@ at their best.
 Revisit only if one of these changes: MT7925 firmware or `btmtk` ships a *named*
 CIG fix; BlueZ drops the `Experimental` requirement for BAP; or the adapter is
 replaced.
+
+## Amendment, 2026-11-02 — btusb autosuspend off, as a mitigation
+
+A Meet call broke on 2026-11-02 at 10:27. The buds stayed connected (no
+disconnect chime), but the call-audio transport failed three times in 30s, and
+the kernel logged `Bluetooth: hci1: ACL packet for unknown connection handle
+3837`. That is the MT7925 firmware losing track of its own link. It is not
+PipeWire, which rebuilt the transport correctly, and it is not Helium.
+
+Upstream has no fix as of this date. The open report on this exact adapter is
+bluetooth-next PR #744 ("MT7925 (0e8d:0717): HFP microphone unusable"), and
+MediaTek attributes the related pseudo-handle traffic to firmware.
+`linux-firmware-mediatek 20260916` is current.
+
+**Mitigation:** `packages/btusb-no-autosuspend.conf` (installed by the
+matching migration to `/etc/modprobe.d/`) sets `btusb enable_autosuspend=0`.
+This reduces how often the adapter falls over. It cannot fix the firmware bug.
+
+Austin also rejected the StreamCam-mic split recorded in the 2026-08-21
+amendment. The buds' mic is back in use, and the plan is to replace the
+adapter with a USB dongle.
+
+**Revert when the adapter is replaced:** delete the conf and its migration,
+`sudo rm /etc/modprobe.d/btusb-no-autosuspend.conf`, and reboot.
+`cat /sys/module/btusb/parameters/enable_autosuspend` should then read `Y`
+again. At the same time, revisit the `lc3_swb` exclusion in
+`zz-shokupan-bluetooth-headset.conf`, which exists only because of this adapter.
+
+**Replacement chosen (2026-11-02):** an Intel AX210 in the internal M.2 slot,
+with an external USB Bluetooth adapter only if problems remain. When the AX210
+goes in, carry out the revert steps above.
