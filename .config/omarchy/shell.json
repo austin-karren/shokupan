@@ -1,30 +1,19 @@
 {
-  "version": 1,
-  "idle": {
-    "screensaver": 300,
-    "lock": 900
-  },
   "bar": {
-    "position": "top",
-    "transparent": true,
+    "background": "none",
     "centerAnchor": "omarchy.clock",
     "layout": {
-      "left": [
-        {
-          "id": "shokupan.omenu",
-          "trailingGap": 8
-        },
-        {
-          "id": "jankeesvw.workspace-name",
-          "indicators": true,
-          "numbers": true,
-          "alwaysShown": 10
-        }
-      ],
       "center": [
         {
+          "format": "dddd h:mm AP",
+          "formatAlt": "d MMMM 'W'ww yyyy",
+          "id": "omarchy.clock",
+          "verticalFormat": "h\n—\nmm"
+        }
+      ],
+      "centerBegin": [
+        {
           "id": "indicators",
-          "type": "qml",
           "items": [
             "Dictation",
             "ScreenRecording",
@@ -34,13 +23,30 @@
             "StayAwake",
             "Ratio",
             "Gaps"
-          ]
-        },
+          ],
+          "type": "qml"
+        }
+      ],
+      "centerEnd": [
         {
-          "id": "omarchy.clock",
-          "format": "dddd h:mm AP",
-          "formatAlt": "d MMMM 'W'ww yyyy",
-          "verticalFormat": "h\n—\nmm"
+          "cities": [
+            {
+              "lat": 35.6895,
+              "lon": 139.69171,
+              "name": "Tokyo",
+              "region": "JP",
+              "zone": "Asia/Tokyo"
+            },
+            {
+              "name": "Indianapolis",
+              "zone": "America/Indiana/Indianapolis"
+            }
+          ],
+          "here": {
+            "name": "Salt Lake City",
+            "zone": "America/Denver"
+          },
+          "id": "omarchy.elsewhen"
         },
         {
           "id": "omarchy.weather"
@@ -49,16 +55,24 @@
           "id": "omarchy.system-update"
         }
       ],
+      "left": [
+        {
+          "id": "shokupan.omenu",
+          "trailingGap": 8
+        },
+        {
+          "alwaysShown": 10,
+          "id": "jankeesvw.workspace-name",
+          "indicators": true,
+          "numbers": true
+        }
+      ],
       "right": [
         {
           "id": "omarchy.tray"
         },
         {
           "id": "omarchy.tailscale"
-        },
-        {
-          "id": "io.github.dicemans.docker-vms",
-          "showStats": false
         },
         {
           "id": "shokupan.apexshot"
@@ -79,7 +93,12 @@
           "id": "omarchy.power"
         }
       ]
-    }
+    },
+    "position": "top"
+  },
+  "idle": {
+    "lock": 900,
+    "screensaver": 300
   },
   "plugins": [
     {
@@ -88,5 +107,6 @@
     {
       "id": "typecraft.oma-cast"
     }
-  ]
+  ],
+  "version": 1
 }
