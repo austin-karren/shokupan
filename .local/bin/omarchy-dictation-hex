@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# omarchy:summary=Record dictation using Hex
+# omarchy:args=<start|stop|toggle>
+# Omarchy ships no Hex adapter; omarchy-dictation dispatches to
+# omarchy-dictation-<backend> on PATH, so this file is all it needs.
+
+case "${1:-}" in
+  start|toggle) hex start >/dev/null && hex dictation "$1" ;;
+  stop)
+    # Exit 3 = Hex not running: nothing to stop.
+    hex dictation stop; rc=$?
+    ((rc == 3)) && exit 0
+    exit $rc
+    ;;
+  *) echo "Usage: omarchy dictation hex <start|stop|toggle>" >&2; exit 1 ;;
+esac
