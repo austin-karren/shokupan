@@ -71,3 +71,8 @@ qmk
 # error nobody saw (keybind-launched, stderr discarded). Screenshots never
 # needed it; recording always did.
 wf-recorder
+
+# Dictation. Hex (Omarchy's repo) replaces Omarchy's picked backend: on-device,
+# with its own settings window. .local/bin/omarchy-dictation-hex is the adapter
+# omarchy-dictation needs; migration 1793993700 makes it the default.
+hex-bin

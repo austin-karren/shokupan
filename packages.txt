@@ -114,6 +114,7 @@ gvfs-smb
 hdparm
 helium-browser-bin
 herdr
+hex-bin
 hplip
 hwdetect
 hwinfo
