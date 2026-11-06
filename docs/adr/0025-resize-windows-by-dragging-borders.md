@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded
 ---
 
 # Resize windows by dragging their borders
@@ -127,3 +127,17 @@ Omarchy set `range = 2`, too short to fade, so it drew a hard near-black line ra
 a shadow. Quattro's `default/hypr/looknfeel.lua` now ships `shadow { enabled = false }`
 itself — measured as `decoration:shadow:enabled = false` with our file not mentioning it —
 so restating it would be a no-op impersonating a decision.
+
+## Addendum 2026-11-04: retired, upstream ships it
+
+omarchy-settings 4.5.0, which also brought the floating workspace layout
+(`SUPER + L`), sets `resize_on_border = true`, `extend_border_grab_area = 8` and
+`hover_icon_on_border = true` in `default/hypr/looknfeel.lua` for every layout,
+tiled included. Our three overrides became restatements and are removed.
+
+Austin does not want border-drag resize on tiled (dwindle) workspaces, only on
+scrolling and floating ones. Hyprland has a single global `resize_on_border`, so
+`.config/hypr/looknfeel.lua` switches it as the active workspace changes:
+on for `tiled_layout == "scrolling"` or a workspace whose windows carry
+Omarchy's `omarchy-floating-workspace` tag, off otherwise. Upstream's grab
+area (8) and hover icon apply wherever it is on. `snap` stays ours.

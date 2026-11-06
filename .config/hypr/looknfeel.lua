@@ -12,26 +12,9 @@ hl.config({
     gaps_out = 8,
     gaps_in = 4,
 
-    -- Drag any window edge to resize it, with no modifier held (ADR-0025).
-    -- Works on tiled windows too, where it moves the Parent split - the same
-    -- thing the SUPER+ALT arrow Size ladder does, but continuously.
-    -- Omarchy sets this to false explicitly; it is not merely unset.
-    resize_on_border = true,
-
-    -- border_size is 2, which is not a mouse target. This extends the draggable
-    -- strip OUTWARD from the border into the gap.
-    --
-    -- 10 rather than Hyprland's default of 15, because the gaps here are small:
-    -- 8px at the screen edge and 8px between windows (gaps_in twice). At 15 the
-    -- strip reaches well past the gap and into the neighbouring window. If edge
-    -- clicks still feel grabby, lower this - it is the only knob that matters,
-    -- and do not compensate by raising border_size.
-    extend_border_grab_area = 10,
-
-    -- Swap the cursor to a resize arrow over a draggable edge, so the strip above
-    -- is discoverable instead of invisible. Default is already true; stated
-    -- because it is what makes resize_on_border usable rather than surprising.
-    hover_icon_on_border = true,
+    -- Border-drag resize is Omarchy's default on every layout (omarchy-settings
+    -- 4.5.0+). Austin wants it on scrolling and floating workspaces only, so it
+    -- is switched per active workspace below. ADR-0025 is retired.
 
     -- Snap DRAGGED floating windows to screen edges and to each other. This is
     -- Drag snap, distinct from the Keyboard snap in ADR-0024 - it only applies
@@ -77,3 +60,52 @@ end
 -- ratio-toggle writes it to ~/.local/state/omarchy/toggles/hypr/ so it can be
 -- switched off. Setting it here would make it permanent. See shokupan-plugins
 -- ADR-0026.
+
+-- Opt another application in to Omarchy's standard transparency.
+-- Find its class with: hyprctl clients
+-- o.transparent_window("my-app")
+-- o.transparent_window("my-app", "0.9 0.85") -- Custom active/inactive opacity.
+
+-- Border-drag resize (resize cursor included) only off the dwindle layout.
+-- Hyprland has one global switch, so it follows the active workspace, the way
+-- Omarchy's workspace-modes.lua switches follow_mouse. A floating workspace
+-- still reports tiled_layout "dwindle"; Omarchy marks it by tagging each window
+-- on it, so that tag is the test.
+do
+  local FLOATING_TAG = "omarchy-floating-workspace"
+
+  local function has_tag(window, tag)
+    local tags = window.tags
+    if type(tags) == "table" then
+      for _, t in ipairs(tags) do
+        if t == tag then return true end
+      end
+      return false
+    end
+    return type(tags) == "string" and tags:find(tag, 1, true) ~= nil
+  end
+
+  local function wants_border_resize()
+    local workspace = hl.get_active_workspace()
+    if not workspace then return false end
+    if workspace.tiled_layout == "scrolling" then return true end
+    for _, window in ipairs(workspace:get_windows() or {}) do
+      if has_tag(window, FLOATING_TAG) then return true end
+    end
+    return false
+  end
+
+  local current
+  local function update()
+    local on = wants_border_resize()
+    if on == current then return end
+    current = on
+    hl.config({ general = { resize_on_border = on } })
+  end
+
+  update()
+  for _, event in ipairs({ "workspace.active", "monitor.focused", "window.open",
+    "window.move_to_workspace", "window.update_rules", "window.close" }) do
+    hl.on(event, update)
+  end
+end
