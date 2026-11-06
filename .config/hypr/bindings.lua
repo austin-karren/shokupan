@@ -544,3 +544,13 @@ o.bind("SUPER + ALT + T", "Tailscale", "omarchy-shell shell toggle omarchy.tails
 -- Menu say.
 hl.unbind("SUPER + CTRL + BACKSPACE")
 o.bind("SUPER + CTRL + BACKSPACE", "Toggle single-window zen aspect ratio", "/home/austinkarren/.local/bin/ratio-toggle")
+
+-- Container TUI on Podman (crumb ADR-0003) -------------------------------------
+--
+-- Docker is gone from this box; rootless Podman replaced it. Upstream binds
+-- SUPER+SHIFT+D to omarchy-launch-docker-tui, which runs lazydocker on the
+-- root Docker socket (via pkexec when the user is not in the docker group).
+-- That socket no longer exists. podman-tui (crumb, ~/.local/bin) runs the same
+-- lazydocker on the user's own Podman socket, so there is no prompt.
+hl.unbind("SUPER + SHIFT + D")
+o.bind("SUPER + SHIFT + D", "Containers", { tui = "podman-tui" })
