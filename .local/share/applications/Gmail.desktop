@@ -3,6 +3,7 @@ Version=1.0
 Name=Gmail
 Comment=Gmail
 Exec=omarchy-launch-webapp https://mail.google.com/
+StartupWMClass=chrome-mail.google.com__-Default
 Terminal=false
 Type=Application
 Icon=/home/austinkarren/.local/share/applications/icons/Gmail.png

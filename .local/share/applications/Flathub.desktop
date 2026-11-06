@@ -3,6 +3,7 @@ Version=1.0
 Name=Flathub
 Comment=Flathub
 Exec=omarchy-launch-webapp https://flathub.org/en
+StartupWMClass=chrome-flathub.org__en-Default
 Terminal=false
 Type=Application
 Icon=/home/austinkarren/.local/share/applications/icons/Flathub.png

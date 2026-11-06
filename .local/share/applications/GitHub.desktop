@@ -2,6 +2,7 @@
 Version=1.0
 Name=GitHub
 Exec=omarchy-launch-webapp https://github.com/
+StartupWMClass=chrome-github.com__-Default
 Terminal=false
 Type=Application
 Icon=github
