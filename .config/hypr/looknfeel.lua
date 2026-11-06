@@ -66,36 +66,27 @@ end
 -- o.transparent_window("my-app")
 -- o.transparent_window("my-app", "0.9 0.85") -- Custom active/inactive opacity.
 
--- Border-drag resize (resize cursor included) only off the dwindle layout.
--- Hyprland has one global switch, so it follows the active workspace, the way
--- Omarchy's workspace-modes.lua switches follow_mouse. A floating workspace
--- still reports tiled_layout "dwindle"; Omarchy marks it by tagging each window
--- on it, so that tag is the test.
+-- Border-drag resize (resize cursor included) only on scrolling and floating
+-- workspaces. Hyprland has one global switch and no per-window or per-workspace
+-- form, so it follows the active workspace, the way Omarchy's
+-- workspace-modes.lua switches follow_mouse. Every mode change (saved modes,
+-- the default, SUPER+L via hyprctl eval) goes through o.workspace_mode, so it
+-- is wrapped to learn each workspace's mode; a floating workspace still reports
+-- tiled_layout "dwindle", so the layout alone cannot tell. Like Omarchy, only
+-- workspace ids >= 1 carry a mode.
 do
-  local FLOATING_TAG = "omarchy-floating-workspace"
-
-  local function has_tag(window, tag)
-    local tags = window.tags
-    if type(tags) == "table" then
-      for _, t in ipairs(tags) do
-        if t == tag then return true end
-      end
-      return false
-    end
-    return type(tags) == "string" and tags:find(tag, 1, true) ~= nil
-  end
+  require("default.hypr.workspace-modes") -- defines o.workspace_mode
+  local modes, default_mode, current = {}, nil, nil
 
   local function wants_border_resize()
     local workspace = hl.get_active_workspace()
     if not workspace then return false end
-    if workspace.tiled_layout == "scrolling" then return true end
-    for _, window in ipairs(workspace:get_windows() or {}) do
-      if has_tag(window, FLOATING_TAG) then return true end
-    end
-    return false
+    local id = tonumber(workspace.id)
+    local mode = (id and id >= 1) and (modes[tostring(id)] or default_mode) or nil
+    if mode == "floating" then return true end
+    return (mode or workspace.tiled_layout) == "scrolling"
   end
 
-  local current
   local function update()
     local on = wants_border_resize()
     if on == current then return end
@@ -103,9 +94,18 @@ do
     hl.config({ general = { resize_on_border = on } })
   end
 
-  update()
-  for _, event in ipairs({ "workspace.active", "monitor.focused", "window.open",
-    "window.move_to_workspace", "window.update_rules", "window.close" }) do
-    hl.on(event, update)
+  local workspace_mode = o.workspace_mode
+  function o.workspace_mode(spec)
+    workspace_mode(spec)
+    if spec.default then
+      default_mode = spec.default
+    else
+      modes[tostring(spec.workspace)] = spec.mode
+    end
+    update()
   end
+
+  update()
+  hl.on("workspace.active", update)
+  hl.on("monitor.focused", update)
 end

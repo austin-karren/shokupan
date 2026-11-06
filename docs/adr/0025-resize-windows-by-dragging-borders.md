@@ -138,6 +138,8 @@ tiled included. Our three overrides became restatements and are removed.
 Austin does not want border-drag resize on tiled (dwindle) workspaces, only on
 scrolling and floating ones. Hyprland has a single global `resize_on_border`, so
 `.config/hypr/looknfeel.lua` switches it as the active workspace changes:
-on for `tiled_layout == "scrolling"` or a workspace whose windows carry
-Omarchy's `omarchy-floating-workspace` tag, off otherwise. Upstream's grab
+on for a workspace whose mode is scrolling or floating, off otherwise. The
+mode is learned by wrapping Omarchy's `o.workspace_mode`, the single entry
+point for saved modes, the default and `SUPER + L`, because a floating
+workspace still reports `tiled_layout = "dwindle"`. Upstream's grab
 area (8) and hover icon apply wherever it is on. `snap` stays ours.
