@@ -36,6 +36,7 @@ local persistent_layers = {
   ["omarchy-background"] = true,
   ["omarchy-osd"] = true,
   ["omarchy-notifications"] = true,
+  ["omarchy-dock"] = true,
   ["omarchy-lock"] = true,
 }
 
