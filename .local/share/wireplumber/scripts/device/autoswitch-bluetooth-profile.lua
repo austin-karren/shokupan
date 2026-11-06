@@ -24,6 +24,17 @@
 -- is empty, then we revert back to the old profile.
 
 -- settings file: bluetooth.conf
+--
+-- SHOKUPAN OVERRIDE of wireplumber 0.5.18's script (omarchy-desktop-on-cachyos
+-- ADR-0045). Two additions, marked [shokupan]; everything else is upstream.
+--  1. Call hold: never restore A2DP while a call is live, i.e. while an app
+--     plays to the device's headset sink AND records from any source. Moving
+--     the mic to another device mid-call used to flip the earbuds to A2DP,
+--     which the WF-1000XM6 refuses mid-call, leaving audio dead.
+--  2. Self-heal: when a bluez node of the device falls into "error", cycle
+--     the card profile off and back on, at most 3 times a minute.
+-- Re-diff against /usr/share/wireplumber/scripts/device/ after a wireplumber
+-- upgrade.
 
 lutils = require ("linking-utils")
 cutils = require ("common-utils")
@@ -38,6 +49,11 @@ local state = nil
 local headset_profiles = {}
 local non_headset_profiles = {}
 local capture_stream_links = {}
+-- [shokupan] Devices mid self-heal, keyed by device id string. Declared here
+-- so the upstream profile-changed hook below can see it.
+healing = {}
+local HOLD_RECHECK_MSEC = 2000
+local hold_recheck_source = {}
 local restore_timeout_source = {}
 local switch_timeout_source = {}
 
@@ -419,6 +435,44 @@ local restore_profile_hook = AsyncEventHook {
   }
 }
 
+-- [shokupan] Call hold. True while the device's headset sink is being played
+-- to by a process that also has a live capture stream on any source.
+function callHoldsHeadset (bt_dev_id, node_om, link_om)
+  for sink in node_om:iterate {
+      Constraint { "media.class", "matches", "Audio/Sink", type = "pw-global" },
+      Constraint { "device.id", "=", tostring (bt_dev_id), type = "pw" },
+      Constraint { "api.bluez5.profile", "matches", "headset-head-unit*", type = "pw" },
+  } do
+    for link in link_om:iterate {
+        Constraint { "link.input.node", "=", sink ["bound-id"], type = "pw-global" },
+    } do
+      local player = node_om:lookup {
+          Constraint { "bound-id", "=", link.properties ["link.output.node"], type = "gobject" },
+      }
+      local pid = player and player.properties ["application.process.id"]
+      if pid ~= nil then
+        -- A recorder only counts while it is running and linked to a source:
+        -- Chromium shares one audio pid across tabs, and a capture node can
+        -- outlive its link for a moment during teardown.
+        for recorder in node_om:iterate {
+            Constraint { "media.class", "matches", "Stream/Input/Audio", type = "pw-global" },
+            Constraint { "stream.monitor", "!", "true", type = "pw" },
+            Constraint { "bluez5.loopback", "!", "true", type = "pw" },
+            Constraint { "application.process.id", "=", pid, type = "pw" },
+        } do
+          local linked = link_om:lookup {
+              Constraint { "link.input.node", "=", recorder ["bound-id"], type = "pw-global" },
+          }
+          if recorder ["state"] == "running" and linked ~= nil then
+            return true
+          end
+        end
+      end
+    end
+  end
+  return false
+end
+
 local evaluate_bluetooth_profiles_hook = SimpleEventHook {
   name = "evaluate-bluetooth-profiles@autoswitch-bluetooth-profile",
   interests = {
@@ -450,6 +504,23 @@ local evaluate_bluetooth_profiles_hook = SimpleEventHook {
       if bt_node_state == "running" and
           isBluetoothLoopbackSourceNodeLinkedToStream (bt_node, node_om, link_om) then
         triggerSwitchDeviceToHeadsetProfile (source, bt_dev_id)
+      elseif callHoldsHeadset (bt_dev_id, node_om, link_om) then
+        -- [shokupan] Mic moved elsewhere mid-call: stay on the headset
+        -- profile, and drop any restore already armed.
+        if restore_timeout_source [bt_dev_id] ~= nil then
+          restore_timeout_source [bt_dev_id]:destroy ()
+          restore_timeout_source [bt_dev_id] = nil
+        end
+        log:info ("Call in progress on device " .. tostring (bt_dev_id) .. ", holding headset profile")
+        -- Closing the playback side of a call fires no event this script
+        -- listens to, so re-check until the hold releases.
+        if hold_recheck_source [bt_dev_id] == nil then
+          hold_recheck_source [bt_dev_id] = Core.timeout_add (HOLD_RECHECK_MSEC, function ()
+            hold_recheck_source [bt_dev_id] = nil
+            source:call ("push-event", "evaluate-bluetooth-profiles", nil, nil)
+            return false
+          end)
+        end
       else
         triggerRestoreProfile (source, bt_dev_id)
       end
@@ -581,6 +652,12 @@ local device_profile_changed_hook = SimpleEventHook {
 
     -- Always save the current profile when it changes
     local cur_profile = getCurrentProfile (device)
+    -- [shokupan] A self-heal cycle passes through "off" and back. Neither leg
+    -- is a user choice: saving "off" would make the next restore turn the
+    -- card off, and cancelling timers would drop a pending switch.
+    if healing [dev_id] or (cur_profile ~= nil and cur_profile.name == "off") then
+      return
+    end
     if cur_profile ~= nil then
       if isHeadsetProfile (device, cur_profile) then
         log:info (device, "Saving headset profile " .. cur_profile.name)
@@ -600,6 +677,94 @@ local device_profile_changed_hook = SimpleEventHook {
     end
   end
 }
+
+-- [shokupan] Self-heal. A failed transport leaves the node in "error" and
+-- nothing upstream rebuilds it. Cycle the card through "off" and back to the
+-- profile it was on, which is what a manual reconnect does.
+local HEAL_DELAY_MSEC = 1000
+local HEAL_MAX_PER_MINUTE = 3
+local heal_pending = {}
+local heal_history = {}
+
+function healDevice (device)
+  local dev_id = tostring (device ["bound-id"])
+  local now = os.time ()
+  local recent = {}
+  for _, t in ipairs (heal_history [dev_id] or {}) do
+    if now - t < 60 then table.insert (recent, t) end
+  end
+  if #recent >= HEAL_MAX_PER_MINUTE then
+    log:warning (device, "Self-heal limit reached, leaving device alone")
+    heal_history [dev_id] = recent
+    return
+  end
+  table.insert (recent, now)
+  heal_history [dev_id] = recent
+
+  local cur = getCurrentProfile (device)
+  local off = findProfile (device, nil, "off")
+  if cur == nil or off == nil or cur.name == "off" then
+    return
+  end
+  log:info (device, "Self-heal: cycling profile " .. cur.name .. " through off")
+  healing [dev_id] = true
+  device:set_params ("Profile", Pod.Object {
+      "Spa:Pod:Object:Param:Profile", "Profile", index = off.index, save = false })
+  Core.timeout_add (HEAL_DELAY_MSEC, function ()
+    -- The earbuds may have gone back in the case within that second, or come
+    -- back with new indices: look both up again rather than reuse them.
+    local again = device_om_for_heal:lookup {
+        Constraint { "bound-id", "=", dev_id, type = "gobject" } }
+    local target = again and findProfile (again, nil, cur.name)
+    if target ~= nil then
+      again:set_params ("Profile", Pod.Object {
+          "Spa:Pod:Object:Param:Profile", "Profile", index = target.index, save = false })
+    end
+    -- Clear after the switch back has been processed.
+    Core.sync (function () healing [dev_id] = nil end)
+    return false
+  end)
+end
+
+SimpleEventHook {
+  name = "bluez-node-error@shokupan-self-heal",
+  interests = {
+    EventInterest {
+      Constraint { "event.type", "=", "node-state-changed" },
+      Constraint { "event.subject.new-state", "=", "error" },
+      Constraint { "device.api", "=", "bluez5" },
+      Constraint { "device.id", "+" },
+    },
+  },
+  execute = function (event)
+    local source = event:get_source ()
+    local node = event:get_subject ()
+    local dev_id = node.properties ["device.id"]
+    if heal_pending [dev_id] then
+      return
+    end
+    heal_pending [dev_id] = true
+    -- Let a profile switch already in flight settle first; errors during an
+    -- ordinary switch often clear by themselves.
+    Core.timeout_add (HEAL_DELAY_MSEC, function ()
+      heal_pending [dev_id] = nil
+      local device_om = source:call ("get-object-manager", "device")
+      device_om_for_heal = device_om
+      local device = device_om:lookup {
+          Constraint { "bound-id", "=", dev_id, type = "gobject" } }
+      if device == nil then return false end
+      local still_broken = false
+      local node_om = source:call ("get-object-manager", "node")
+      for n in node_om:iterate {
+          Constraint { "device.id", "=", dev_id, type = "pw" },
+          Constraint { "device.api", "=", "bluez5", type = "pw" } } do
+        if n ["state"] == "error" then still_broken = true end
+      end
+      if still_broken then healDevice (device) end
+      return false
+    end)
+  end
+}:register ()
 
 function evaluatePersistentStorage ()
   if Settings.get_boolean ("bluetooth.use-persistent-storage") and

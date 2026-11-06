@@ -386,3 +386,74 @@ again. At the same time, revisit the `lc3_swb` exclusion in
 **Replacement chosen (2026-11-02):** an Intel AX210 in the internal M.2 slot,
 with an external USB Bluetooth adapter only if problems remain. When the AX210
 goes in, carry out the revert steps above.
+
+## Amendment, 2026-11-04 — LC3-SWB exclusion removed (AX210 installed)
+
+The `bluez5.codecs` whitelist in `zz-shokupan-bluetooth-headset.conf` left
+out `lc3_swb` only because of the MT7925 eSCO bug: that adapter could not run
+LC3-SWB's transparent eSCO, so calls looped with no mic. The Intel AX210 has
+replaced the MT7925, so the whitelist is removed. WirePlumber's default codec
+list applies again, and LC3-SWB is allowed. This also removes the LE Audio
+`lc3` trap that the whitelist set.
+
+The auto-connect list in the same file stays. It is not specific to the
+adapter.
+
+To verify, make an HFP call with the buds' mic. The profile must switch to
+headset, and the codec must be LC3-SWB (or mSBC as a fallback). If calls fail
+under LC3-SWB on the AX210, put the whitelist back from git history.
+
+## Amendment, 2026-11-06 — LC3-SWB fails on the AX210 too; call hold and self-heal
+
+**The 2026-11-04 amendment is reversed.** With the whitelist removed, the
+first call on the AX210 negotiated LC3-SWB and looped the same way it did on
+the MT7925: the HFP link dropped and reconnected about every 24s (11:23:01,
+:25, :50), with artifacts and then no audio. The `bluez5.codecs` whitelist
+without `lc3_swb` is restored from git, so calls run on mSBC. With
+LC3-SWB excluded, the same call held with no drops. LC3-SWB failing is
+therefore not specific to the MT7925, and the exclusion stays regardless of
+adapter. Its comment in `zz-shokupan-bluetooth-headset.conf` still blames
+only the MT7925, which is now known to be incomplete.
+
+**The btusb autosuspend mitigation is reverted,** as planned for the AX210:
+`packages/btusb-no-autosuspend.conf` and `migrations/1793641241.sh` are
+deleted. `/etc/modprobe.d/btusb-no-autosuspend.conf` is removed by hand.
+
+**WirePlumber's autoswitch script is overridden**
+(`.local/share/wireplumber/scripts/device/autoswitch-bluetooth-profile.lua`,
+upstream 0.5.18 plus two `[shokupan]` additions):
+
+1. *Call hold.* Upstream restores A2DP as soon as nothing records from the
+   buds' mic. Moving only the mic to the StreamCam mid-call therefore flipped
+   the buds to A2DP. The XM6 refused that mid-call, so the transport failed,
+   and switching the mic back left audio dead. Now, while a process plays to
+   the buds' headset sink and also has a running, linked capture stream on any
+   source, the headset profile is held. The hold is re-checked every 2s until
+   it releases. Austin chose stable headset audio for the whole call over
+   regaining A2DP when the mic moves elsewhere.
+2. *Self-heal.* If a bluez5 node is still in `error` 1s after entering it, the
+   card cycles through `off` and back to the same profile, at most 3 times a
+   minute. Neither leg of the cycle is saved as a user choice.
+
+An adversarial review found two serious bugs, both fixed before testing.
+Healing from HFP saved `off` as the profile to restore after the call, which
+would have switched the card off. The hold could also stick when the capture
+side of a call closed before the playback side.
+
+Tests on 2026-11-06 with Meet in Helium:
+- the script loads with no errors;
+- a call switches to mSBC headset;
+- moving the mic to the StreamCam and back mid-call held headset with no
+  audible drop (`holding headset profile`, 11:44:50–57);
+- ending the call restored A2DP/AAC.
+
+**Self-heal is not verified.** A forced mid-call switch to A2DP succeeded this
+time, so no node errored. The forced switch did show that a *manual* A2DP
+choice mid-call leaves the call's mic silent. Upstream respects manual
+profile choices, so this is left alone.
+
+Use Meet's **Default** devices. After any WirePlumber restart, Helium does not
+reopen a stream that was on "Default". Reload the tab.
+
+Re-diff the override against `/usr/share/wireplumber/scripts/device/` after
+every wireplumber upgrade.
