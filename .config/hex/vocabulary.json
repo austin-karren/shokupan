@@ -1,0 +1,211 @@
+[
+  {
+    "term": "RevTrac",
+    "sounds_like": [
+      "rev track",
+      "rev trak",
+      "revtrack"
+    ]
+  },
+  {
+    "term": "ShipTrac",
+    "sounds_like": [
+      "ship track",
+      "ship trak",
+      "shiptrack"
+    ]
+  },
+  {
+    "term": "Shipt",
+    "sounds_like": [
+      "shipped",
+      "ship t"
+    ]
+  },
+  {
+    "term": "CodeRabbit",
+    "sounds_like": [
+      "code rabbit"
+    ]
+  },
+  {
+    "term": "herdr",
+    "sounds_like": [
+      "herder",
+      "her dr",
+      "hurdler"
+    ]
+  },
+  {
+    "term": "Tailscale",
+    "sounds_like": [
+      "tail scale"
+    ]
+  },
+  {
+    "term": "Linear"
+  },
+  {
+    "term": "Stripe"
+  },
+  {
+    "term": "Stripe Connect"
+  },
+  {
+    "term": "Better Auth",
+    "sounds_like": [
+      "better off"
+    ]
+  },
+  {
+    "term": "Drizzle"
+  },
+  {
+    "term": "shadcn",
+    "sounds_like": [
+      "shad cn",
+      "shad c n",
+      "shad see en",
+      "shadcen"
+    ]
+  },
+  {
+    "term": "Omarchy",
+    "sounds_like": [
+      "o marky",
+      "omarky",
+      "oh marchy"
+    ]
+  },
+  {
+    "term": "SST",
+    "sounds_like": [
+      "s s t"
+    ]
+  },
+  {
+    "term": "pnpm",
+    "sounds_like": [
+      "p n p m",
+      "pee npm"
+    ]
+  },
+  {
+    "term": "SSO",
+    "sounds_like": [
+      "s s o"
+    ]
+  },
+  {
+    "term": "QA",
+    "sounds_like": [
+      "q a"
+    ]
+  },
+  {
+    "term": "ADR",
+    "sounds_like": [
+      "a d r"
+    ]
+  },
+  {
+    "term": "3PL",
+    "sounds_like": [
+      "three p l",
+      "3 p l"
+    ]
+  },
+  {
+    "term": "JSDoc",
+    "sounds_like": [
+      "js doc",
+      "j s doc",
+      "jay doc"
+    ]
+  },
+  {
+    "term": "DM",
+    "sounds_like": [
+      "d m"
+    ]
+  },
+  {
+    "term": "worktree",
+    "sounds_like": [
+      "work tree"
+    ]
+  },
+  {
+    "term": "dispatcher"
+  },
+  {
+    "term": "orchestrator"
+  },
+  {
+    "term": "Diego"
+  },
+  {
+    "term": "Dave Schmalz",
+    "sounds_like": [
+      "dave schmaltz",
+      "dave smalls"
+    ]
+  },
+  {
+    "term": "Ricardo Elias"
+  },
+  {
+    "term": "Emily"
+  },
+  {
+    "term": "Brandon"
+  },
+  {
+    "term": "T.J.",
+    "sounds_like": [
+      "tj",
+      "t j",
+      "teejay"
+    ]
+  },
+  {
+    "term": "Michelle"
+  },
+  {
+    "term": "Tyson Bearnson",
+    "sounds_like": [
+      "tyson bernson",
+      "tyson burnson"
+    ]
+  },
+  {
+    "term": "Matt Pocock",
+    "sounds_like": [
+      "matt pokok"
+    ]
+  },
+  {
+    "term": "Hyprland",
+    "sounds_like": [
+      "hyper land"
+    ]
+  },
+  {
+    "term": "Helium"
+  },
+  {
+    "term": "Ghostty",
+    "sounds_like": [
+      "ghosty"
+    ]
+  },
+  {
+    "term": "Podman",
+    "sounds_like": [
+      "pod man"
+    ]
+  },
+  {
+    "term": "Hex"
+  }
+]

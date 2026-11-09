@@ -1,0 +1,34 @@
+#!/bin/bash
+# hex-vocabulary <export|apply>
+#
+# Hex keeps its vocabulary inside ~/.local/share/hex/settings.json, next to
+# history and machine state, so that file is not tracked. This keeps the
+# vocabulary alone in ~/.config/hex/vocabulary.json (stowed from shokupan):
+#   export  write Hex's current vocabulary to the tracked file (after `hex vocabulary add`)
+#   apply   add every tracked term to the running Hex (new machine; safe to rerun:
+#           adding an existing term only adds missing spellings)
+
+set -euo pipefail
+file=${XDG_CONFIG_HOME:-$HOME/.config}/hex/vocabulary.json
+
+case "${1:-}" in
+  export)
+    hex vocabulary list --json | jq '[.entries[] | {term} + (if (.sounds_like // []) == [] then {} else {sounds_like} end)]' >"$file.tmp"
+    mv "$file.tmp" "$file"
+    echo "exported $(jq length "$file") terms to $file"
+    ;;
+  apply)
+    hex start >/dev/null
+    jq -c '.[]' "$file" | while read -r entry; do
+      term=$(jq -r .term <<<"$entry")
+      sounds=$(jq -r '(.sounds_like // []) | join(",")' <<<"$entry")
+      if [[ -n $sounds ]]; then
+        hex vocabulary add "$term" --sounds-like "$sounds" >/dev/null
+      else
+        hex vocabulary add "$term" >/dev/null
+      fi
+    done
+    echo "applied $(jq length "$file") terms from $file"
+    ;;
+  *) echo "Usage: hex-vocabulary <export|apply>" >&2; exit 2 ;;
+esac
