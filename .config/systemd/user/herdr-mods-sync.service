@@ -1,0 +1,7 @@
+[Unit]
+Description=Sync shokupan Herdr mods into Herdr
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 5
+ExecStart=%h/.local/bin/herdr-mods-sync

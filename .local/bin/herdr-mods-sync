@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Copy the shokupan Herdr mods into Herdr's mods folder and check each one.
+# The repo is the source; Herdr's copies are disposable, so an update that
+# rewrites them never reaches git. Run after a Herdr update (the
+# herdr-mods-sync.path unit does that) or by hand.
+set -euo pipefail
+
+src="$HOME/shokupan/.config/herdr-app/mods"
+dst="$HOME/.config/herdr-app/mods"
+failed=()
+
+for mod in "$src"/*/; do
+  name=$(basename "$mod")
+  target="$dst/$name"
+  # Replace a leftover link into the repo with a real folder.
+  [[ -L $target ]] && rm "$target"
+  mkdir -p "$target"
+  # Herdr's own type stubs live alongside; only our files are synced.
+  rsync -a --delete --exclude gpui-kit.d.ts --exclude jsconfig.json "$mod" "$target/"
+  if ! herdr-app check "$target" >/dev/null 2>&1; then
+    failed+=("$name")
+  fi
+done
+
+if ((${#failed[@]})); then
+  msg="Herdr mods failed check: ${failed[*]}"
+  echo "$msg" >&2
+  command -v notify-send >/dev/null && notify-send -u critical "herdr-mods-sync" "$msg"
+  exit 1
+fi
+echo "Herdr mods synced: $(ls "$src" | tr '\n' ' ')"

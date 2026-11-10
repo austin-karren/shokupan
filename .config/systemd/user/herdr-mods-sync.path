@@ -1,0 +1,8 @@
+[Unit]
+Description=Re-sync shokupan Herdr mods when Herdr updates
+
+[Path]
+PathChanged=%h/.local/share/herdr-app/herdr-app
+
+[Install]
+WantedBy=default.target

@@ -561,3 +561,25 @@ if o.dictation_installed and o.dictation_installed() then
   o.bind("SUPER + CTRL + X", "Toggle dictation", "omarchy-dictation toggle")
   o.bind_hold("F9", "Start dictation (push-to-talk)", "omarchy-dictation start", "Stop dictation (push-to-talk)", "omarchy-dictation stop")
 end
+
+-- Universal copy/paste: Omarchy picks the terminal chord by the "terminal" tag,
+-- which Herdr lacks (tagging it would also make it transparent). Treat
+-- herdr-app as a terminal here so SUPER+C doesn't send CTRL+C (interrupt).
+local function clipboard_chord(key)
+  return function()
+    local w = hl.get_active_window()
+    local terminal = w and w.class == "herdr-app"
+    for _, tag in ipairs((w and w.tags) or {}) do
+      if tag:gsub("%*$", "") == "terminal" then terminal = true end
+    end
+    local mods = terminal and "CTRL SHIFT" or "CTRL"
+    hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = key, state = "down" }))
+    hl.timer(function()
+      hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = key, state = "up" }))
+    end, { timeout = 50, type = "oneshot" })
+  end
+end
+hl.unbind("SUPER + C")
+hl.unbind("SUPER + V")
+o.bind("SUPER + C", "Universal copy", clipboard_chord("C"))
+o.bind("SUPER + V", "Universal paste", clipboard_chord("V"))
