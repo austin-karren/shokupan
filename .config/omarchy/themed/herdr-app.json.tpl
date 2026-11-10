@@ -8,6 +8,8 @@
     "{{ muted }}", "{{ bright_red }}", "{{ bright_green }}", "{{ bright_yellow }}", "{{ bright_blue }}", "{{ bright_magenta }}", "{{ bright_cyan }}", "{{ bright_foreground }}"
   ],
   "colors": {
-    "accent": "{{ accent }}"
+    "accent": "{{ accent }}",
+    "chrome": "{{ dark_background }}",
+    "canvas": "{{ darker_background }}"
   }
 }
