@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Hand the active Omarchy theme to the Herdr GUI.
+#
+# Omarchy renders herdr-app.json from ~/.config/omarchy/themed/herdr-app.json.tpl
+# into the current theme dir, in the shape Herdr's own themes/*.json use
+# (background, foreground, selection, cursor, 16 ansi, colors). The ansi order
+# mirrors Omarchy's alacritty template so Herdr's terminals match the others.
+# This hook copies it to Herdr's themes/omarchy.json, points settings.json at
+# it, and sets appearance from the theme's mode. Herdr reloads both live.
+
+set -uo pipefail
+
+THEME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current/theme"
+HERDR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/herdr-app"
+SRC="$THEME_DIR/herdr-app.json"
+
+[[ -f $SRC && -d $HERDR_DIR ]] || exit 0
+
+mkdir -p "$HERDR_DIR/themes"
+cp "$SRC" "$HERDR_DIR/themes/omarchy.json.tmp" && mv "$HERDR_DIR/themes/omarchy.json.tmp" "$HERDR_DIR/themes/omarchy.json"
+
+mode=$(sed -n 's/^mode[[:space:]]*=[[:space:]]*"\(light\|dark\)".*/\1/p' "$THEME_DIR/colors.toml" | head -1)
+mode=${mode:-dark}
+
+settings="$HERDR_DIR/settings.json"
+[[ -f $settings ]] || echo '{}' >"$settings"
+tmp=$(mktemp "$settings.XXXXXX")
+jq --arg mode "$mode" '.theme = "omarchy" | .appearance = $mode' "$settings" >"$tmp" && mv "$tmp" "$settings" || rm -f "$tmp"
