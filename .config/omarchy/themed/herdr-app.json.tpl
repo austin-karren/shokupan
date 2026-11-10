@@ -10,6 +10,7 @@
   "colors": {
     "accent": "{{ accent }}",
     "chrome": "{{ dark_background }}",
-    "canvas": "{{ darker_background }}"
+    "canvas": "{{ darker_background }}",
+    "border": "{{ lighter_background }}"
   }
 }
