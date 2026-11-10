@@ -1,6 +1,8 @@
 
 [Default Applications]
 text/plain=nvim.desktop
+text/markdown=dev.zed.Zed.desktop
+text/x-markdown=dev.zed.Zed.desktop
 text/english=nvim.desktop
 text/x-makefile=nvim.desktop
 text/x-c++hdr=nvim.desktop
