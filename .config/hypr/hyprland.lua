@@ -14,6 +14,7 @@ require("hypr.bindings")
 require("hypr.looknfeel")
 require("hypr.windows")
 require("hypr.autostart")
+require("hypr.omarchy-control") -- Managed by Omarchy Control; loads your choices made there.
 
 -- Toggle config flags dynamically.
 require("default.hypr.toggles")
