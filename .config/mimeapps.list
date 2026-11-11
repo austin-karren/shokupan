@@ -1,6 +1,6 @@
 
 [Default Applications]
-text/plain=nvim.desktop
+text/plain=dev.zed.Zed.desktop
 text/markdown=dev.zed.Zed.desktop
 text/x-markdown=dev.zed.Zed.desktop
 text/english=nvim.desktop
@@ -19,14 +19,14 @@ text/x-c=nvim.desktop
 text/x-c++=nvim.desktop
 application/xml=nvim.desktop
 text/xml=nvim.desktop
-inode/directory=org.gnome.Nautilus.desktop
-image/png=imv.desktop
+inode/directory=com.thisisgm.flea.desktop
+image/png=omarchy-imageview.desktop
 image/jpeg=imv.desktop
 image/gif=imv.desktop
 image/webp=imv.desktop
 image/bmp=imv.desktop
 image/tiff=imv.desktop
-application/pdf=org.gnome.Evince.desktop
+application/pdf=helium.desktop
 text/html=helium.desktop
 x-scheme-handler/http=omarchy-browser.desktop
 x-scheme-handler/https=helium.desktop
@@ -53,3 +53,4 @@ x-scheme-handler/slack=slack_slack.desktop
 application/vnd.flatpak.ref=flatpakref-install.desktop
 x-scheme-handler/flatpak+https=flatpakref-install.desktop
 x-scheme-handler/aether=li.oever.aether.url-handler.desktop
+audio/mpeg=mpv.desktop
