@@ -455,16 +455,17 @@ shokupan.window_resize = window_resize
 shokupan.float_snap = float_snap
 shokupan.usable_area = usable_area
 
--- Screenshots and recording: Omarchy's own capture tools (omasnap underneath).
+-- Screenshots and recording: omasnap run bare, the same launch as the app
+-- menu (preview, pin, Edit), and Omarchy's screen recorder.
 -- ApexShot is retired (2026-11-11, "Omasnap is good enough"); these keep its
 -- chords so muscle memory carries over. omasnap toggles itself -- firing it
 -- while its overlay is up closes the overlay -- so area capture needs no
 -- wrapper. ApexShot's crosshair and last-preview chords have no omasnap
 -- equivalent and are gone. SUPER+SHIFT+4 is the macOS muscle memory; SUPER+A
 -- matches a left click on the bar's capture button.
-o.bind("SUPER + SHIFT + 4", "Screenshot area", "omarchy-capture-screenshot region")
-o.bind("SUPER + A", "Screenshot area", "omarchy-capture-screenshot region")
-o.bind("SUPER + CTRL + ALT + S", "Screenshot screen", "omarchy-capture-screenshot fullscreen")
+o.bind("SUPER + SHIFT + 4", "Screenshot area", "omasnap")
+o.bind("SUPER + A", "Screenshot area", "omasnap")
+o.bind("SUPER + CTRL + ALT + S", "Screenshot screen", "omasnap --capture-fullscreen")
 o.bind("CTRL + ALT + R", "Record screen", "omarchy-capture-screenrecording")
 o.bind("CTRL + ALT + SHIFT + S", "Stop recording", "omarchy-capture-screenrecording --stop-recording")
 
