@@ -75,7 +75,8 @@
           "id": "omarchy.tailscale"
         },
         {
-          "id": "shokupan.podman"
+          "id": "shokupan.podman",
+          "showStats": true
         },
         {
           "id": "shokupan.capture"
@@ -95,7 +96,8 @@
         {
           "id": "omarchy.power"
         }
-      ]
+      ],
+      "tray": []
     },
     "position": "top"
   },
