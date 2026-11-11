@@ -455,61 +455,25 @@ shokupan.window_resize = window_resize
 shokupan.float_snap = float_snap
 shokupan.usable_area = usable_area
 
--- ApexShot. Its own docs say "add these lines to your hyprland.conf", and until
--- the quattro port they lived in apexshot.conf sourced from exactly there — a
--- file the Lua config manager never reads, which silently killed all six
--- shortcuts. The .conf pair is retired; these are the same chords verbatim.
--- Kept through the 2026-08-15 stock-first audit at the user's word: apexshot is
--- back over the native capture flow until that flow improves (shokupan-plugins
--- ADR-0044).
---
--- Area capture is the one that toggles. Fired while the selector is already up
--- it takes that selector down instead of stacking a second one on the first,
--- which is no use to anybody. The selector is a layer-shell surface (namespace
--- apexshot-area-selector), not a window, so nothing in the close ladder at the
--- top of this file sees it and killactive cannot reach it either -- ending the
--- process that owns it is the way to close it.
---
--- The pattern has no spaces in it on purpose: it goes through a shell, and it
--- must not match /usr/bin/apexshot-capture --worker, the long-lived helper that
--- outlives every capture and that captures stop working without. Matching on
--- `area` is what separates the two, the worker's command line having no such
--- word in it.
-local function apexshot_area()
-  for _, layer in ipairs(hl.get_layers()) do
-    if (layer.namespace or "") == "apexshot-area-selector" then
-      hl.exec_cmd("pkill -f apexshot.capture.area")
-      return
-    end
-  end
-
-  hl.exec_cmd("/usr/bin/apexshot capture area")
-end
-
--- Exposed for repl-driven verification, like the close family above: nothing
--- here can synthesise a real key press, so measuring means calling the closure
--- the bind holds.
-shokupan.apexshot_area = apexshot_area
-
--- Both chords reach the same toggle. SUPER+SHIFT+4 is the macOS muscle memory;
--- SUPER+A is what a left click on the bar widget does (BarWidget.qml: left is
--- capture area, middle record, right full screen) and is the one hand can find
--- without looking. SUPER+A was the last bare-SUPER A chord free -- CTRL+A is
--- Audio, SHIFT+A ChatGPT, ALT+SHIFT+A Grok, CTRL+SHIFT+A Agent.
-o.bind("SUPER + SHIFT + 4", "Screenshot area", apexshot_area)
-o.bind("SUPER + A", "Screenshot area", apexshot_area)
-o.bind("CTRL + ALT + X", "Screenshot crosshair", "/usr/bin/apexshot capture crosshair")
-o.bind("SUPER + CTRL + ALT + S", "Screenshot screen", "/usr/bin/apexshot capture screen")
-o.bind("CTRL + ALT + P", "Show last screenshot", "/usr/bin/apexshot show-last-preview")
-o.bind("CTRL + ALT + R", "Record screen", "/usr/bin/apexshot record ui")
-o.bind("CTRL + ALT + SHIFT + S", "Stop recording", "/usr/bin/apexshot record stop")
+-- Screenshots and recording: Omarchy's own capture tools (omasnap underneath).
+-- ApexShot is retired (2026-11-11, "Omasnap is good enough"); these keep its
+-- chords so muscle memory carries over. omasnap toggles itself -- firing it
+-- while its overlay is up closes the overlay -- so area capture needs no
+-- wrapper. ApexShot's crosshair and last-preview chords have no omasnap
+-- equivalent and are gone. SUPER+SHIFT+4 is the macOS muscle memory; SUPER+A
+-- matches a left click on the bar's capture button.
+o.bind("SUPER + SHIFT + 4", "Screenshot area", "omarchy-capture-screenshot region")
+o.bind("SUPER + A", "Screenshot area", "omarchy-capture-screenshot region")
+o.bind("SUPER + CTRL + ALT + S", "Screenshot screen", "omarchy-capture-screenshot fullscreen")
+o.bind("CTRL + ALT + R", "Record screen", "omarchy-capture-screenrecording")
+o.bind("CTRL + ALT + SHIFT + S", "Stop recording", "omarchy-capture-screenrecording --stop-recording")
 
 -- Workspace name (jankeesvw.workspace-name) ----------------------------------
 --
 -- The plugin's own docs bind this to a `hyper` chord this config does not
 -- define, so it gets a real one. SUPER+R is free: every stock R chord carries
 -- CTRL (SUPER+CTRL+R set reminder, +ALT show, +SHIFT clear), and CTRL+ALT+R is
--- ApexShot's recorder above. Bare SUPER+R is bound by nothing.
+-- the screen recorder above. Bare SUPER+R is bound by nothing.
 --
 -- The panel is otherwise only reachable by clicking the workspace button you
 -- are already standing on, which is a mouse trip to rename the thing you are
