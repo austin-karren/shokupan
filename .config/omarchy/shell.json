@@ -52,9 +52,6 @@
           "id": "omarchy.weather"
         },
         {
-          "id": "shokupan.capture"
-        },
-        {
           "id": "omarchy.system-update"
         }
       ],
@@ -79,6 +76,9 @@
         },
         {
           "id": "shokupan.podman"
+        },
+        {
+          "id": "shokupan.capture"
         },
         {
           "id": "omarchy.bluetooth"
