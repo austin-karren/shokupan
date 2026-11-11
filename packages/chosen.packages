@@ -66,10 +66,8 @@ breeze-cursors
 # in ~/.local/bin that shadows this one and is invisible to `loaf packages`.
 qmk
 
-# ApexShot's recording backend on wlroots. Not a dependency of the apexshot
-# package, so it was silently absent: every record attempt failed with an
-# error nobody saw (keybind-launched, stderr discarded). Screenshots never
-# needed it; recording always did.
+# Screen recording backend. omarchy-capture-screenrecording uses it (it was
+# first added for ApexShot, retired 2026-11-11).
 wf-recorder
 
 # Dictation. Hex (Omarchy's repo) replaces Omarchy's picked backend: on-device,

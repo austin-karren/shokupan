@@ -28,3 +28,10 @@
 # (measured 2026-08-15 with tokyo-night/shell.bar.toml). loaf heal installs
 # these as real files instead; loaf doctor checks them byte-for-byte.
 ^/\.config/omarchy/themes$
+
+# Herdr mods are COPY-class too: Herdr rewrites files inside its mod folders,
+# and through stow links those writes landed in this repo (2026-11-10: every
+# mod file became a self-referencing link, originals .displaced). The
+# herdr-mods-sync script copies them in instead, and its path unit re-runs it
+# whenever Herdr updates.
+^/\.config/herdr-app/mods$
