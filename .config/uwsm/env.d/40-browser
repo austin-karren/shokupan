@@ -1,0 +1,3 @@
+# Helium is the only browser. Tools that read $BROWSER (gh, xdg-open fallback,
+# CLIs that open a URL) launch it instead of falling back to Chromium.
+export BROWSER=/home/austinkarren/.local/bin/helium-launch
