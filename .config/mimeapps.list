@@ -1,4 +1,3 @@
-
 [Default Applications]
 text/plain=dev.zed.Zed.desktop
 text/markdown=dev.zed.Zed.desktop
@@ -54,3 +53,9 @@ application/vnd.flatpak.ref=flatpakref-install.desktop
 x-scheme-handler/flatpak+https=flatpakref-install.desktop
 x-scheme-handler/aether=li.oever.aether.url-handler.desktop
 audio/mpeg=mpv.desktop
+x-scheme-handler/grokbot=grok-bot.desktop
+x-scheme-handler/sand=grok-bot.desktop
+
+[Added Associations]
+x-scheme-handler/grokbot=grok-bot.desktop;
+x-scheme-handler/sand=grok-bot.desktop;
