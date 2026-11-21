@@ -22,6 +22,17 @@ for mod in "$src"/*/; do
   fi
 done
 
+# Seed keybindings and the layout choice on a fresh machine. Herdr owns both
+# files afterwards, so an existing copy is left alone.
+app="$HOME/.config/herdr-app"
+[[ -e $app/keys.json ]] || cp "$src/../keys.json" "$app/keys.json"
+shared="$app/shared.json"
+if [[ ! -e $shared ]]; then
+  echo '{"layout":"shokupan"}' > "$shared"
+elif ! jq -e '.layout' "$shared" >/dev/null; then
+  jq '.layout = "shokupan"' "$shared" > "$shared.tmp" && mv "$shared.tmp" "$shared"
+fi
+
 if ((${#failed[@]})); then
   msg="Herdr mods failed check: ${failed[*]}"
   echo "$msg" >&2

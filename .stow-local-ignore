@@ -35,3 +35,6 @@
 # herdr-mods-sync script copies them in instead, and its path unit re-runs it
 # whenever Herdr updates.
 ^/\.config/herdr-app/mods$
+# keys.json too: Herdr rewrites it when it migrates keybindings. herdr-mods-sync
+# installs it only when missing, so a live edit is never overwritten.
+^/\.config/herdr-app/keys\.json$
