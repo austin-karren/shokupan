@@ -41,7 +41,7 @@ export default class WorkspaceChrome extends View {
       const ready = div().size(6).rounded_full().bg(t.accent);
       return v_flex().size_full().bg(t.chrome).border_t(1).border_color(t.border).px(8).pt(4).pb(8).text_size(13)
         .when(collapsed, el => el.px(0).items_center())
-        .child(row("settings", "settings", "Settings", false, () => run("mod.open", { name: "shokupan-settings" }))
+        .child(row("settings", "settings", "Settings", false, () => run("app.settings"))
           .when(Boolean(updates().app.ready), el => el.child(collapsed ? ready.absolute().top(5).right(6) : ready)))
         .child(row("machine", "plus", "Add machine", true, () => run("mod.open", { name: "shokupan-machine-add" })));
     }
