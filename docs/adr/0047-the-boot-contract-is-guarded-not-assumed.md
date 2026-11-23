@@ -73,3 +73,19 @@ repo tracks is the *guard* — the same manifest-vs-record posture as packages.
 - Upstream should fix this properly — draft in
   `docs/upstream/omarchy-hooks-vs-existing-cmdline.md` (ADR-0044 rule 5:
   issues first, nothing posted without an explicit go).
+
+## Addendum: a second break of the same shape (2026-11-04)
+
+omarchy-settings 4.5.0 moved HOOKS ownership to `00-omarchy-hooks.conf`, which
+now includes `btrfs-overlayfs`. A CachyOS-installer leftover,
+`/etc/mkinitcpio.conf.d/10-limine-snapper-sync.conf` (owned by no package,
+`HOOKS+=(sd-btrfs-overlayfs)`), made mkinitcpio fail for the new kernel. The
+fix was deleting the leftover. One unowned drop-in remains on purpose:
+`omarchy_resume.conf` (`HOOKS+=(resume)`, compatible with the busybox flavour).
+
+The pattern: after an Omarchy update, files in `/etc/mkinitcpio.conf.d` that no
+package owns (`pacman -Qo` finds nothing) are the first suspects for a failed
+initramfs build.
+
+The live-USB recovery runbook from the first break (2026-08-14):
+https://claude.ai/code/artifact/43296fae-214a-4e91-8b22-d881a7262793

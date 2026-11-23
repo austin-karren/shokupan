@@ -1,6 +1,6 @@
 # Shokupan
 
-My rice: one CachyOS machine running [Omarchy](https://omarchy.org) on Hyprland,
+My rice: one Arch machine running [Omarchy](https://omarchy.org) on Hyprland,
 managed with [GNU Stow](https://www.gnu.org/software/stow/) and maintained by a
 small CLI called `loaf`.
 
@@ -9,8 +9,10 @@ glossary again: this repo is **Shokupan**, the rice, and the only one `loaf`
 manages. It consumes two dependencies rather than carrying them — the
 Quickshell plugins and Tokyo Night bar override in
 [shokupan-plugins](https://github.com/austin-karren/shokupan-plugins) (via
-`loaf plugins`), and the CachyOS layer contract in
+`loaf plugins`), and the layer contract and VM lab in
 [omarchy-desktop-on-cachyos](https://github.com/austin-karren/omarchy-desktop-on-cachyos).
+That repo's name is history: the base has been stock Arch on an Omarchy channel
+since 2026-09-29 ([ADR-0052](./docs/adr/0052-omarchy-on-arch-not-cachyos.md)).
 
 Named for 食パン, Japanese milk bread. A rice can be named anything — "rice" is
 just the term for a customized desktop, so the bread is a joke rather than a
@@ -53,8 +55,9 @@ loaf doctor      # confirm all three layers agree
 ```
 
 `--adopt` is the first-machine move — it captures a live system into the repo.
-A **fresh** machine goes the other way: install CachyOS normally, layer quattro
-(`lab/`, omarchy-desktop-on-cachyos ADR-0035), then run
+A **fresh** machine goes the other way: start from Omarchy on its `stable`
+channel (ADR-0052), layer quattro (`lab/`, omarchy-desktop-on-cachyos ADR-0035),
+then run
 `.local/bin/loaf-install` from the clone. It refuses an Omarchy other than
 `packages/omarchy.pin` (omarchy-desktop-on-cachyos ADR-0043), installs the
 chosen packages and flatpaks, stows, debloats and migrates — every step
@@ -153,6 +156,8 @@ mechanism and the reasoning; the record used to claim the opposite.
 | `.config/omarchy/plugins/shokupan-{omenu,apexshot,capture}/` | Bar-widget plugins: the menu button wearing the power glyph (converted from a QML module in shokupan-plugins ADR-0044's wave 1) and the ApexShot capture button — back on the bar at the user's word 2026-08-15, preferred over the native flow for now (shokupan-plugins ADR-0044 addendum). `shokupan-capture/` — the same three clicks on the native `omarchy-capture-*` tools — is parked with a DORMANT manifest, the drop-in swap when the native flow improves. Enabled by their `shokupan.*` ids in `shell.json`'s bar layout. `shokupan-calendar/` was deleted 2026-08-15 (git history is the tombstone) — the calendar bracket is off the bar, replaced by the clock clone's date clicks (shokupan-plugins ADR-0006 addendum) |
 | `.config/omarchy/plugins/jankeesvw.notification-center/` | **Not ours, and not to be managed from here.** A third-party plugin Austin installed himself with `omarchy plugin add` on 2026-08-24 — a real directory, not a `loaf plugins` symlink, deliberately absent from `packages/plugins`. It holds the bell slot after `omarchy.tailscale` in `shell.json`'s bar layout. It replaced `shokupan.notifications`, our carry-forward of the notification bell upstream deleted in `fc4caf3c`, which stopped displaying history; ours is retired rather than fixed, and its source now sits unlinked and unpublished in `shokupan-plugins`' `retired/` (shokupan-plugins ADR-0044's 2026-08-24 addendum). Do not add it to any manifest here, do not link it, do not re-diff it — a directory in `.config/omarchy/plugins/` that is not a symlink is the signal that it is not ours |
 | `.config/omarchy/plugins/austinkarren.clock/` | Clone of upstream's clock plugin via the sanctioned `omarchy plugin clone` shape (`clonedFrom: omarchy.clock` routes the bar entry and IPC automatically). `Panel.qml` and `BarWidget.qml` are patched — marked `// SHOKUPAN:` — so day cells and the hero date open GNOME Calendar through `calendar-toggle --date`, and a second click on the clock closes the popup (shokupan-plugins ADR-0006 addendum). Both are re-diffed via `packages/forks` at upgrades; `Model.js` and the manifest are refreshed by re-cloning |
+| `docs/known-issues.md` | Problems understood well enough to clean up after but not yet fixed at the cause, with the cleanup recipe |
+| `docs/unifi.md` | The home network's rules (pin every radio setting, no auto modes) and topology |
 | `docs/upstream/` | Vetted drafts of issues and PRs for Omarchy and other upstreams — shokupan-plugins ADR-0044 rule 5: written here for review, posted only on an explicit go, never automatically. Also holds evidence captures too large or personal to version |
 | `.config/wireplumber/wireplumber.conf.d/` | One `zz-`named drop-in that excludes the LC3-SWB call codec — the MT7925 adapter can't run its eSCO mode, so calls silently died on it — and restores the full Bluetooth auto-connect list (ADR-0045 + addenda). Omarchy's A2DP-only fragment lives in the same real directory; `conf.d` fragments merge in filename order and the later matching rule wins, so this overrides without touching Omarchy's file |
 | `.config/mimeapps.list` | Which application handles what. Load-bearing, not incidental: it is the half of ADR-0032 that actually activates the Flatpak ref handler, and the half of ADR-0036 that decides which browser every web app and browser bind opens |
@@ -171,7 +176,7 @@ mechanism and the reasoning; the record used to claim the opposite.
 ## The `loaf` command
 
 Stow installs the symlinks once. It has no opinion about what happens to them
-afterwards — and on this machine CachyOS and Omarchy both update underneath the
+afterwards — and on this machine Omarchy updates underneath the
 rice, with Omarchy's migrations rewriting files in `~/.config` that are our
 symlinks. `loaf` is the part that notices.
 
@@ -186,7 +191,7 @@ loaf forks        # check recorded forks and watched upstream files for drift
 loaf whatsnew     # digest what the last Omarchy update changed in the bar, bindings and menu
 loaf wallpapers   # assemble the full Omarchy wallpaper pool under Tokyo Night (ADR-0048)
 loaf widevine     # donate a Widevine CDM into Helium's profile for DRM playback (ADR-0038)
-loaf install      # bootstrap a fresh CachyOS + Omarchy machine, bound to the pin
+loaf install      # bootstrap a fresh Omarchy machine, bound to the pin
 ```
 
 `loaf heal` runs automatically after every `omarchy update`, via
@@ -344,7 +349,7 @@ are the to-do list.
 | [0031](./docs/adr/0031-the-bar-remembers-the-weather.md) | The bar remembers the weather, so a failed fetch cannot blank it | superseded — stock omarchy.weather covers it |
 | [0032](./docs/adr/0032-flathub-on-the-web-with-a-ref-handler.md) | Flathub on the web, with a ref handler | accepted |
 | 0033 | Quattro is a Hyprland rewrite, not a bar swap | accepted — recorded in `omarchy-desktop-on-cachyos` |
-| 0034 | Omarchy is clay; CachyOS is the base | accepted — recorded in `omarchy-desktop-on-cachyos` |
+| [0034](./docs/adr/0034-omarchy-is-clay-cachyos-is-the-base.md) | Omarchy is clay; CachyOS is the base | superseded by 0052 |
 | 0035 | Shokupan owns the install path; the bridge is retired | proposed — recorded in `omarchy-desktop-on-cachyos` |
 | [0036](./docs/adr/0036-middle-click-autoscroll-via-the-flags-file.md) | Middle-click autoscroll, set where the browser reads it | accepted |
 | [0037](./docs/adr/0037-the-about-window-is-sized-to-fastfetch.md) | The About window is sized to fastfetch, by measuring the cell | accepted |
@@ -356,11 +361,14 @@ are the to-do list.
 | 0043 | Loaf installs and debloats, bound to the Omarchy pin | accepted — recorded in `omarchy-desktop-on-cachyos` |
 | 0044 | Plugins are the default shape for new shell work | accepted — recorded in `shokupan-plugins` |
 | [0045](./docs/adr/0045-headset-profiles-back-in-the-autoconnect-list.md) | Headset profiles go back in the Bluetooth auto-connect list | accepted |
-| [0046](./docs/adr/0046-meet-controls-its-own-pip-popup.md) | Meet controls its own PiP popup, and the main window keeps its border | accepted |
-| 0047 | The boot contract is guarded, not assumed | accepted — recorded in `omarchy-desktop-on-cachyos` |
+| [0046](./docs/adr/0046-meet-controls-its-own-pip-popup.md) | Meet controls its own PiP popup, and the main window keeps its border | accepted — addendum 2026-10-19 |
+| [0047](./docs/adr/0047-the-boot-contract-is-guarded-not-assumed.md) | The boot contract is guarded, not assumed | accepted — addendum 2026-11-04 |
 | [0048](./docs/adr/0048-the-wallpaper-pool-is-a-manifest-not-a-payload.md) | The wallpaper pool is a manifest, not a payload | accepted |
+| [0049](./docs/adr/0049-omarchy-path-does-not-survive-ssh-box-somecommand.md) | `OMARCHY_PATH` does not survive `ssh box somecommand`, and that is accepted | accepted |
 | [0050](./docs/adr/0050-herdrs-config-lives-in-shokupan-as-a-plain-tracked-file.md) | herdr's config lives in shokupan, as a plain tracked file | accepted |
 | [0051](./docs/adr/0051-airwire-runs-r8152-dkms-not-cdc-ncm.md) | The AirWire runs r8152-dkms, not cdc_ncm | accepted |
+| [0052](./docs/adr/0052-omarchy-on-arch-not-cachyos.md) | Omarchy on Arch, not CachyOS | accepted — supersedes 0034 |
+| [0053](./docs/adr/0053-helium-profiles-follow-the-theme-unless-chosen.md) | Helium profiles follow the Omarchy theme unless chosen | accepted |
 
 ## To do
 

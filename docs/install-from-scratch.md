@@ -7,16 +7,25 @@ hardware, not the first-machine case.
 
 ## 1. What this is layering
 
-Three layers, bottom to top. **CachyOS is the base** — kernel, znver4 repos,
-bootloader, snapper — and it is not Omarchy's to manage (ADR-0034). **Omarchy is
-the desktop**, installed as ordinary distro packages (`omarchy-dev`,
-`omarchy-settings-dev`) from the `[omarchy]` repo, not from Omarchy's own ISO
-(ADR-0035). **Shokupan (this repo) is the rice** — the deliberate deviations from
+Three layers, bottom to top. **The base is stock Arch on an Omarchy channel**
+(ADR-0052): `pacman.conf` and the mirrorlist are whatever `omarchy-channel-set`
+writes, the kernel is `linux-omarchy`, and `omarchy-update` is the only updater.
+**Omarchy is the desktop**, installed as distro packages from the `[omarchy]`
+repo. **Shokupan (this repo) is the rice** — the deliberate deviations from
 a stock Omarchy install, stowed on top and kept in sync by `loaf`. Each layer is
 installed by a different mechanism, and section 4 below exists because one of
 those mechanisms reaches into a layer it does not own.
 
 ## 2. CachyOS installer choices that matter
+
+> **History, not the current path.** Sections 2 and 3 record how this machine
+> was built on CachyOS (2026-08). Since ADR-0052 the base is Arch on an Omarchy
+> channel, and `loaf install` refuses a `pacman.conf` that still has `[cachyos*]`
+> sections. A blank-disk install on the Arch base has not been walked end to
+> end yet; until it is, start from Omarchy on the `stable` channel
+> (`omarchy-channel-set stable`), then go to section 4. The sections stay
+> because this machine still carries their consequences — above all the
+> installer's `rd.luks.uuid=` cmdline that section 4 guards.
 
 Install CachyOS normally, before anything Omarchy-related touches the disk
 (ADR-0035, "The shape of the replacement", step 1). Four choices matter enough
@@ -128,7 +137,7 @@ and `/proc/cmdline`.
 
 ## 5. Installing the rice
 
-With CachyOS and Omarchy both in place, clone the repo and run the installer
+With the base on an Omarchy channel and Omarchy installed, clone the repo and run the installer
 (`.local/bin/loaf-install`):
 
 ```bash
@@ -140,11 +149,12 @@ cd shokupan
 
 In order, it:
 
-1. **Confirms the base is CachyOS** — checks for a `[cachyos*]` section in
-   `/etc/pacman.conf` and installs `linux-cachyos` if it is missing (a reboot
-   into it is left to the user).
+1. **Confirms the base is an Omarchy channel** — requires an `[omarchy]`
+   section in `/etc/pacman.conf`, stops if a `[cachyos*]` section is left over,
+   and installs `linux-omarchy` if it is missing (a reboot into it is left to
+   the user).
 2. **Confirms Omarchy matches the pin** — compares `pacman -Q omarchy` against
-   `packages/omarchy.pin` (currently `4.0.0.r1744.gf002044-1`), since the rice
+   `packages/omarchy.pin`, since the rice
    reaches into upstream files whose shape is only verified against one
    version. A mismatch is a hard stop unless `--force` accepts the drift.
 3. **Runs the boot-contract step** described in section 4.
@@ -180,7 +190,8 @@ loaf doctor           # all three layers agree; read-only, no sudo
 bash test/loaf-test.sh
 ```
 
-`loaf doctor` green means: CachyOS repos and mirrorlist intact, Omarchy at the
+`loaf doctor` green means: the `[omarchy]` repo present with no CachyOS
+leftovers, the channel's mirrorlist, `linux-omarchy` running, Omarchy at the
 pinned version (or an accepted `--force` drift), the boot contract's
 pre-detonation window closed, packages and flatpaks matching their manifests,
 no displaced symlinks, and the wallpaper pool and Widevine donation in their

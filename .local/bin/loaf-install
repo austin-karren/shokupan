@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# loaf:summary=Bootstrap the rice onto a fresh CachyOS + Omarchy machine
+# loaf:summary=Bootstrap the rice onto a fresh Omarchy machine
 # loaf:args=[--force]
 
 # The install path omarchy-desktop-on-cachyos ADR-0035 says this repo owes: take
-# a machine that already has the two base layers — CachyOS installed normally,
+# a machine that already has the two base layers — Arch on an Omarchy channel (ADR-0052),
 # quattro layered onto it per the lab's patched upgrade script — and put
 # everything this repo decides on top: chosen packages, flatpaks, the stowed
 # config, the debloat list, migrations. It BINDS to the Omarchy version in

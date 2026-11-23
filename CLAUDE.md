@@ -67,3 +67,54 @@ The operational facts, because they are why this gets missed:
 The VM harness itself (`lab/` in `omarchy-desktop-on-cachyos`) has no stop
 script, so there is nothing to call — the teardown is manual and therefore has
 to be reported rather than assumed.
+
+## Stock first, then own boldly
+
+Stock Omarchy wins unless a deviation earns its keep today. When an Omarchy
+update breaks a deviation, the default answer is to go back to stock and mark
+the ADR regressed, not to re-port the fork. Waybar-era carryovers (bar spacers,
+ADR-0029's question-grouped layout, glyph nudges) are the canonical example:
+they regressed on every upgrade and were dropped.
+
+When a deviation does earn its keep, don't stop at "that's upstream's file".
+Use the lowest rung that works — our own value, a sanctioned extension point
+(settings, hooks, plugins, Herdr mods), a hosted wrapper, a full fork as an
+overlay. The one hard rule is update-compatibility: never edit a file the
+`omarchy` package owns, and anything forked or wrapped carries a
+re-diff-after-updates duty (`loaf forks`).
+
+## Derive UI values, don't hand-measure them
+
+When a visual value is needed — an offset, a width, an underline position —
+compute it from metrics (TextMetrics, implicitWidth chains, expressions)
+instead of tuning a constant until it looks right. Hand-measured constants rot
+when fonts, scale or upstream change; ADR-0029's measured CSS is the repo's own
+example.
+
+## Edit only the task Austin names
+
+Work only on the thing the current message names. A finished task mentioned as
+context ("same as the audio thing") is a reference point, not a work order:
+read its code if it helps diagnosis, but don't edit, "improve" or revert it
+unless Austin says it is broken. On 2026-08-10 an approved audio fix was
+patched and then half-reverted because a complaint about a different tool was
+misattributed to it.
+
+If the target is ambiguous, ask one pointed question. If the ask is general
+enough to risk a regression, grill it (`/grilling` with `/domain-modeling`)
+until it names a specific component.
+
+## Herdr sub-agents get worktrees, never split panes
+
+Every Herdr sub-agent gets its own worktree-backed workspace (`herdr worktree
+create --label "Task" --no-focus`), even a read-only diagnosis agent — use a
+`debug/*` branch and delete it at cleanup. Never `herdr pane split` to host an
+agent: panes carve up the workspace Austin is looking at.
+
+## System details in public posts
+
+The machine runs Omarchy on Arch (ADR-0052). It has not been CachyOS since
+2026-09-29, whatever the `omarchy-desktop-on-cachyos` repo name or leftover
+files suggest. In upstream issues and comments, give the Omarchy version
+(`pacman -Q omarchy`) and the hardware — Framework Desktop, BenQ RD280UG over
+USB-C — and check before naming a distro.

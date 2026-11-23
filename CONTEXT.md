@@ -1,6 +1,6 @@
 # Shokupan
 
-The configuration of one desktop: CachyOS running Omarchy on Hyprland. This
+The configuration of one desktop: Omarchy on Arch, on Hyprland. This
 glossary exists because the vocabulary here is genuinely ambiguous — Omarchy,
 Hyprland, Quickshell and this repo all use words like "theme", "menu" and "toggle"
 to mean different things, and three of the menus are one keystroke apart.
@@ -31,7 +31,7 @@ The CLI that maintains Shokupan — `loaf doctor`, `loaf heal`, `loaf packages`,
 `loaf flatpaks`, `loaf debloat`, `loaf forks`, `loaf whatsnew`, `loaf install`.
 Deliberately not named `shokupan`: it gets typed constantly, and four characters
 beat eight. Also deliberately not `pan`, which is a real package (a Usenet
-newsreader) in `cachyos-extra-znver4` and would collide if ever installed.
+newsreader) and would collide if ever installed.
 _Avoid_: rice (the old name), shokupan (that is the rice, not the tool)
 
 **Crumb**:
@@ -72,13 +72,15 @@ Crumb's tracked files rather than this repo's since 2026-08-19; `~/.XCompose.loc
 is the rice's own instance of the term.
 _Avoid_: secrets file, private config
 
-**Base**: CachyOS: the kernel, the znver4 repos, the bootloader and snapper. The
-bottom of the three layers, and **not Omarchy's to manage**
-(omarchy-desktop-on-cachyos ADR-0034). Layered onto by the bridge repo when this
-machine was built (omarchy-desktop-on-cachyos ADR-0001); that bridge is retired
-going forward and the install path becomes this repo's
-(omarchy-desktop-on-cachyos ADR-0035). _Avoid_: distro, system, OS (each is
-ambiguous between the base and Omarchy)
+**Base**: stock Arch on an Omarchy channel since 2026-09-29 (ADR-0052):
+`pacman.conf` and the mirrorlist are what `omarchy-channel-set` writes, the
+kernel is `linux-omarchy`, `omarchy-update` is the updater. Until then it was
+CachyOS, kept apart from Omarchy (omarchy-desktop-on-cachyos ADR-0034,
+superseded). The machine still carries CachyOS-era state on purpose: the
+installer's `rd.luks.uuid=` cmdline, which is why the boot contract
+(ADR-0047) stays guarded, and the tuning drop-ins copied into `/etc`
+(ADR-0052). _Avoid_: distro, system, OS (each is ambiguous between the base and
+Omarchy); CachyOS for the current base
 
 **Bridge**:
 [mroboff/omarchy-on-cachyos][bridge], which patches Omarchy's installer so it

@@ -47,7 +47,7 @@ fi
 $quiet && exit 0
 
 # The other direction is advisory, not a failure: most explicitly-installed
-# packages are CachyOS base and Omarchy dependencies, not choices. Only worth
+# packages are Arch base and Omarchy dependencies, not choices. Only worth
 # surfacing when the record has grown since it was last regenerated.
 if [[ -f $LOAF_ROOT/packages.txt ]]; then
   untracked=$(comm -13 <(sort -u "$LOAF_ROOT/packages.txt") <(pacman -Qqe | sort -u) | wc -l)

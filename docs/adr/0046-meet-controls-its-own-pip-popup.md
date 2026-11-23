@@ -48,3 +48,17 @@ on a title only real PiP windows carry and causes neither symptom. The Meet
 rule's title match is a candidate for an upstream report (`docs/upstream/`):
 matching a live title that the main window also adopts mid-call is the root
 defect.
+
+## Addendum: a look-alike that was Helium (2026-10-19)
+
+Meet's popup stopped repainting (stale mute icon, tile grid ignoring a resize,
+the frame offset from its content) until the main Meet tab became visible.
+Video kept playing, and the Hyprland geometry and this ADR's rules were
+correct. It was helium-browser-bin 0.19.3.1 (Chromium 155.0.8059.79); 0.19.4.1
+fixed it. A residual case (stale mic icon only when the popup sat on a
+different workspace than the main window, 2026-11-09) did not reproduce on
+0.20.3.1.
+
+If Meet's popup glitches again, check the Helium version and update it before
+touching `windows.lua`; update rather than roll back. Helium reads
+`~/.config/helium-browser-flags.conf`, not `chromium-flags.conf`.
