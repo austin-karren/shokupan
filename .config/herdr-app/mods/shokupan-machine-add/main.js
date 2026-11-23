@@ -31,7 +31,7 @@ async function openLogin(args, key) {
 // connection open while it waits for the browser. Past this, offer a login.
 const ADD_TIMEOUT_S = 25;
 // No answer at all (asleep, powered off, off the network) isn't a login problem.
-const OFFLINE = /timed out|no route to host|network is unreachable|host is down|could not resolve|name or service not known|connection refused/i;
+const OFFLINE = /timed out|no answer within|no route to host|network is unreachable|host is down|could not resolve|name or service not known|connection refused/i;
 
 
 const I = (name) => `mods/workspace-chrome/${name}.svg`;

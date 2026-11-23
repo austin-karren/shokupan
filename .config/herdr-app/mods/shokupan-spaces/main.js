@@ -43,7 +43,7 @@ async function openLogin(args, key) {
 }
 
 // No answer at all (asleep, powered off, off the network) isn't a login problem.
-const OFFLINE = /timed out|no route to host|network is unreachable|host is down|could not resolve|name or service not known|connection refused/i;
+const OFFLINE = /timed out|no answer within|no route to host|network is unreachable|host is down|could not resolve|name or service not known|connection refused/i;
 
 const rowHeight = ({ tree }) => (tree ? 28 : 30);
 const RAIL_CELL = 32;
