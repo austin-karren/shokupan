@@ -438,7 +438,7 @@ export default class Spaces extends View {
       const cell = collapsed ? railCell : (el) => el;
       const loginError = this.loginErrors?.[m];
       const guidance = !collapsed && trouble ? [v_flex().px(8).pb(6).gap(3).flex_none()
-        .child(div().text_size(11).text_color(t.blocked).truncate().tooltip(login ? login : `Can't connect${why}`).child(login ? "needs a login" : `can't connect${why}`))
+        .when(Boolean(login), el => el.child(div().text_size(11).text_color(t.blocked).truncate().tooltip(login).child("needs a login")))
         .when(Boolean(loginError), el => el.child(div().text_size(11).text_color(t.blocked).child(loginError)))
         .child(h_flex().gap(5).items_center()
           .child(div().id(`machine-login-${m}`).flex_none().px(8).py(2).rounded(4)
