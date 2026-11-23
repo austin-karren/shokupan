@@ -67,6 +67,15 @@ printf '\033[1mHealing %s\033[0m%s\n' "$LOAF_ROOT" "$($dry_run && echo ' (dry ru
 
 while IFS= read -r f; do
   target="$LOAF_HOME/$f"
+  # A folder that is itself a link into the repo (a pre-no-folding stow left
+  # ~/.config/hex as one) makes $target the repo's own file. Displacing it moved
+  # the tracked file aside and linked it to itself (2026-11-23, Hex vocabulary).
+  [[ $(realpath -m "$target") == "$(realpath -m "$LOAF_ROOT/$f")" ]] && continue
+  # Herdr mods and keys.json are copy-class: herdr-mods-sync installs them as
+  # real files on purpose (see .stow-local-ignore), so they are not displaced.
+  [[ $f =~ ^\.config/herdr-app/(mods/|keys\.json$) ]] && continue
+  # Theme files are copy-class too; step 2b keeps them in sync.
+  [[ $f =~ ^\.config/omarchy/themes/ ]] && continue
   # A real file where a symlink belongs means something overwrote us.
   if [[ -e $target && ! -L $target ]]; then
     if $dry_run; then
