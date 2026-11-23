@@ -509,3 +509,30 @@ An entry the user has explicitly pinned to the top of a list, independent of
 usage. Aspirational: Elephant has no pin primitive, so nothing in the rice
 implements this today.
 _Avoid_: pinned (that word is taken by wallpapers), starred, bookmark
+
+## Herdr
+
+**Remote machine**:
+Another computer Herdr reaches over ssh, such as grokbot-box or the MacBook.
+Bare *machine* means this desktop, as in **Machine-side**.
+_Avoid_: host, box (except in a name), machine (alone, for a remote one)
+
+**Herdr mod**:
+A piece of the Herdr desktop app's interface, written as a small JavaScript
+program. Not a **Plugin**: that word belongs to the Omarchy shell.
+_Avoid_: plugin, extension
+
+**Offline**:
+A remote machine that doesn't answer at all, usually because it is asleep or
+off. Not a problem to fix; it comes back when the machine wakes.
+_Avoid_: disconnected, down, unreachable
+
+**Needs a login**:
+A remote machine that answers but wants a person first: a Tailscale browser
+check, a password, a new host key. Shown red, and clicking it opens a login.
+_Avoid_: auth error, unauthenticated
+
+**Unreachable**:
+A remote machine that answers but can't be used for some other reason.
+Shown red with the reason.
+_Avoid_: offline (that is the no-answer case)
