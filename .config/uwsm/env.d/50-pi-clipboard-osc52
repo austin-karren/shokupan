@@ -1,0 +1,12 @@
+# Make pi send copies to the terminal with OSC 52 as well as the local clipboard.
+#
+# pi only does this on its own when it sees SSH variables. pi sessions in herdr
+# run under herdr-core on this box with no SSH variables, so a copy made from a
+# herdr-app client on another machine (the MacBook) landed on this box's
+# clipboard and never reached the client. The client's herdr-app writes OSC 52
+# to its own clipboard (clipboard_write defaults to true for remote terminals).
+# Locally the OSC 52 write duplicates the wl-copy, which is harmless.
+#
+# Changes require a session restart; herdr-core serve and every pi it starts
+# inherit this from the systemd user environment.
+export PI_CLIPBOARD_OSC52=1
